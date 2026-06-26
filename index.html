@@ -2408,7 +2408,7 @@ function sendNotification(task){
   if(!CFG.recipients||!CFG.recipients.length) return;
   // O envio SMTP é feito pelo its-email-service (backend nodemailer) na rede interna.
   const destinatarios = CFG.recipients.map(r=>r.email).join(',');
-  const emailServiceUrl = `http://${location.hostname}:3101/send`;
+  const emailServiceUrl = `http://${location.hostname}:3001/send`;
   fetch(emailServiceUrl, {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
@@ -2436,7 +2436,7 @@ function sendNotificacaoConclusao(task){
   if(!CFG.ativo||!CFG.smtpEmail||!CFG.smtpHost) return;
   if(!CFG.recipients||!CFG.recipients.length) return;
   const destinatarios=CFG.recipients.map(r=>r.email).join(',');
-  const emailServiceUrl=`http://${location.hostname}:3101/send`;
+  const emailServiceUrl=`http://${location.hostname}:3001/send`;
   fetch(emailServiceUrl,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
