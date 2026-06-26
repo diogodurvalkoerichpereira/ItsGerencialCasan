@@ -490,10 +490,7 @@ textarea{resize:vertical;min-height:72px}
               <label>Cidade *</label>
               <input type="text" id="eCidade" placeholder="Ex: Florianópolis, São José...">
             </div>
-            <div class="form-group">
-              <label>Supervisor *</label>
-              <input type="text" id="eSupervisor" placeholder="Nome do supervisor...">
-            </div>
+            <div class="form-group"></div>
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -1245,8 +1242,7 @@ function registrarEmerg(){
   if(!recebido){alert('Informe o horário recebido.');return}
   const cidade=document.getElementById('eCidade').value.trim();
   if(!cidade){alert('Informe a cidade.');return}
-  const supervisor=document.getElementById('eSupervisor').value.trim();
-  if(!supervisor){alert('Informe o supervisor.');return}
+  const supervisor='';
   const servico=document.getElementById('eServico').value;
   if(!servico){alert('Selecione o serviço.');return}
   const now=new Date();
@@ -1267,7 +1263,7 @@ function registrarEmerg(){
     prazo,
     status:'Em Atendimento'
   });
-  ['eData','eRecebido','eCidade','eSupervisor','eProtocolo'].forEach(id=>document.getElementById(id).value='');
+  ['eData','eRecebido','eCidade','eProtocolo'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('eServico').selectedIndex=0;
   const firstTab=document.querySelector('#emergTabs .tab');
   switchEmergTab('lista',firstTab);
