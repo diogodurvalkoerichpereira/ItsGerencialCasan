@@ -3,14 +3,14 @@ services:
     build: .
     container_name: its-gerencial-casan
     restart: unless-stopped
-    ports:
-      - "3100:80"
 
   its-email-service:
     build: ./email-service
     container_name: its-email-service
     restart: unless-stopped
-    ports:
-      - "3101:3001"
-    env_file:
-      - ./email-service/.env
+    environment:
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_SECURE=${SMTP_SECURE}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
