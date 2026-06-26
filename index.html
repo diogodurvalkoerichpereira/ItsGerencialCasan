@@ -668,8 +668,11 @@ textarea{resize:vertical;min-height:72px}
           </div>
           <input type="file" id="pontoFile" accept=".xls,.xlsx" style="display:none" onchange="importarPonto(this.files[0])">
           <div id="importStatus" style="margin-top:14px;display:none"></div>
-          <div style="margin-top:14px;font-size:.78rem;color:var(--its-muted)">
-            <strong>Colunas lidas:</strong> Matrícula, Nome, Superior, Data, Início/Fim Jornada, Início/Fim Intervalo, Tipo de Jornada, Situação, Inconsistência.
+          <div style="margin-top:16px;border-top:1px solid var(--its-border);padding-top:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <div style="font-size:.78rem;color:var(--its-muted)">
+              <strong>Colunas obrigatórias:</strong> Matrícula · Nome · Superior · Data · Início Jornada · Início Intervalo · Fim Intervalo · Fim Jornada · Situação
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="baixarModeloPonto()"><i class="ti ti-download"></i> Baixar Modelo .xlsx</button>
           </div>
         </div>
       </div>
@@ -1466,6 +1469,24 @@ function calcularResumoMensal(){
     </tr>`).join('');
   const totalDias=rows.reduce((s,r)=>s+r.dias,0);
   document.getElementById('resumoTotal').textContent=`${rows.length} funcionário(s) · ${totalDias} dia(s) com horas registradas`;
+}
+
+function baixarModeloPonto(){
+  const header=['Matrícula','Nome','Superior','Data','Início Jornada','Início Intervalo','Fim Intervalo','Fim Jornada','Tempo Abono','Situação','Inconsistência'];
+  const exemplos=[
+    ['185460001','ANA SILVA','JOAO SUPERVISOR','01/06/2026','08:00:00','12:00:00','13:00:00','17:00:00','00:00:00','Presença',''],
+    ['185460001','ANA SILVA','JOAO SUPERVISOR','02/06/2026','08:00:00','12:00:00','13:00:00','17:00:00','00:00:00','Presença',''],
+    ['185460001','ANA SILVA','JOAO SUPERVISOR','03/06/2026','','','','','','Falta',''],
+    ['185460002','CARLOS SOUZA','JOAO SUPERVISOR','01/06/2026','11:57:00 PM','04:30:00','05:30:00','8:00:00 AM','00:00:00','Presença',''],
+    ['185460002','CARLOS SOUZA','JOAO SUPERVISOR','02/06/2026','11:58:00 PM','04:40:00','05:40:00','8:10:00 AM','00:00:00','Presença',''],
+  ];
+  const ws=XLSX.utils.aoa_to_sheet([header,...exemplos]);
+  // Largura das colunas
+  ws['!cols']=[{wch:14},{wch:28},{wch:22},{wch:12},{wch:16},{wch:18},{wch:14},{wch:14},{wch:13},{wch:12},{wch:16}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Ponto');
+  XLSX.writeFile(wb,'modelo-ponto-its.xlsx');
+  showToast('Modelo baixado!');
 }
 
 function handlePontoDrop(e){
