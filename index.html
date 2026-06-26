@@ -222,7 +222,6 @@ textarea{resize:vertical;min-height:72px}
   <div class="content">
     <div class="tabs" id="mainTabs">
       <button class="tab active" onclick="switchTab('tarefas',this)"><i class="ti ti-list-check"></i> Tarefas</button>
-      <button class="tab" onclick="switchTab('relatorio',this)"><i class="ti ti-file-analytics"></i> Relatório</button>
       <button class="tab" onclick="switchTab('dashboard',this)"><i class="ti ti-chart-pie"></i> Dashboard</button>
     </div>
     <div class="tabs" id="emergTabs" style="display:none">
@@ -1971,9 +1970,10 @@ function setNav(el,tab){
   const isPonto=tab==='ponto';
   const isConfig=tab==='config';
   const isUsuarios=tab==='usuarios';
+  const isRelatorio=tab==='relatorio';
   const titulos={tarefas:'Gestão de Tarefas',relatorio:'Relatórios',dashboard:'Dashboard',emergencias:'Emergências',avisos:'Quadro de Avisos',ponto:'Controle de Ponto',usuarios:'Gestão de Usuários',config:'Configurações'};
   if(titulos[tab])document.getElementById('pageTitle').textContent=titulos[tab];
-  document.getElementById('mainTabs').style.display=(!isEmerg&&!isAvisos&&!isPonto&&!isConfig&&!isUsuarios)?'flex':'none';
+  document.getElementById('mainTabs').style.display=(!isEmerg&&!isAvisos&&!isPonto&&!isConfig&&!isUsuarios&&!isRelatorio)?'flex':'none';
   document.getElementById('emergTabs').style.display=isEmerg?'flex':'none';
   document.getElementById('avisosTabs').style.display=isAvisos?'flex':'none';
   document.getElementById('pontoTabs').style.display=isPonto?'flex':'none';
