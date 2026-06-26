@@ -19,7 +19,7 @@ const transporter = nodemailer.createTransport({
 // Cores por prioridade (alinhadas ao design kit ITS)
 const PRIO_COLORS = {
   'Simples':       { bg: '#f0fdf4', text: '#16a34a', border: '#bbf7d0' },
-  'Intermediária': { bg: '#fff3ee', text: '#E85928', border: '#fdd0be' },
+  'Intermediária': { bg: '#fefce8', text: '#a16207', border: '#fde68a' },
   'Complexa':      { bg: '#fef2f2', text: '#dc2626', border: '#fecaca' },
 };
 

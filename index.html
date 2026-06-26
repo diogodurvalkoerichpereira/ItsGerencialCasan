@@ -81,6 +81,7 @@ textarea{resize:vertical;min-height:72px}
 .badge-blue{background:#eef4fb;color:var(--its-sidebar);border:1px solid #b8d0ea}
 .badge-green{background:#f0fdf4;color:var(--its-success);border:1px solid #bbf7d0}
 .badge-red{background:#fef2f2;color:var(--its-danger);border:1px solid #fecaca}
+.badge-yellow{background:#fefce8;color:#a16207;border:1px solid #fde68a}
 .badge-gray{background:#f8fafc;color:var(--its-muted);border:1px solid var(--its-border)}
 
 /* TABLE */
@@ -129,7 +130,7 @@ textarea{resize:vertical;min-height:72px}
 .filter-row .form-group{margin-bottom:0;flex:1;min-width:140px}
 .report-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .priority-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}
-.p-alta{background:#dc2626}.p-media{background:#d97706}.p-baixa{background:#16a34a}
+.p-alta{background:#dc2626}.p-media{background:#eab308}.p-baixa{background:#16a34a}
 .empty-state{text-align:center;padding:40px;color:var(--its-muted);font-size:.85rem}
 .empty-state i{font-size:36px;display:block;margin-bottom:10px}
 </style>
@@ -842,8 +843,8 @@ function statusBadge(s){
   return `<span class="badge ${m[s]||'badge-gray'}"><span class="badge-dot"></span>${s}</span>`;
 }
 function prioBadge(p){
-  const m={'Simples':'badge-green','Intermediária':'badge-orange','Complexa':'badge-red'};
-  return `<span class="badge ${m[p]||'badge-gray'}">${p}</span>`;
+  const m={'Simples':'badge-green','Intermediária':'badge-yellow','Complexa':'badge-red'};
+  return `<span class="badge ${m[p]||'badge-gray'}"><span class="badge-dot"></span>${p}</span>`;
 }
 function prioClass(p){return p==='Complexa'?'p-alta':p==='Intermediária'?'p-media':'p-baixa'}
 
