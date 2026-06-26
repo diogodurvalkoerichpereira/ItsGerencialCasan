@@ -882,9 +882,11 @@ textarea{resize:vertical;min-height:72px}
               <option>Encerrado</option><option>Prorrogado</option>
             </select>
           </div>
-          <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:var(--radius-sm);padding:10px 13px;font-size:.82rem;color:#075985;margin-bottom:14px;display:flex;gap:8px;align-items:center">
-            <i class="ti ti-info-circle" style="font-size:16px;flex-shrink:0"></i>
-            O horário <strong>Inserido</strong> será registrado automaticamente no momento de salvar.
+          <div class="form-row">
+            <div class="form-group">
+              <label>Horário Inserido <span style="font-weight:400;color:var(--its-muted)">(deixe em branco para automático)</span></label>
+              <input type="time" id="aInserido">
+            </div>
           </div>
           <div style="display:flex;gap:8px;justify-content:flex-end">
             <button class="btn btn-ghost" onclick="switchAvisosTab('lista',document.querySelector('#avisosTabs .tab'))"><i class="ti ti-x"></i> Cancelar</button>
@@ -1692,7 +1694,8 @@ function registrarAviso(){
   const canal=document.getElementById('aCanal').value;
   if(!canal){alert('Selecione o canal de envio.');return}
   const now=new Date();
-  const inserido=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const _inseridoManual=document.getElementById('aInserido').value;
+  const inserido=_inseridoManual||String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   const [dy,dm,dd]=data.split('-');
   AVISOS.unshift({
     id:nextAvisoId++,
@@ -1701,7 +1704,7 @@ function registrarAviso(){
     canal,
     situacao:document.getElementById('aSituacao').value
   });
-  ['aData','aRecebido','aCidade','aBairro','aPrevNorm'].forEach(id=>document.getElementById(id).value='');
+  ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aInserido'].forEach(id=>document.getElementById(id).value='');
   ['aServico','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
   const firstTab=document.querySelector('#avisosTabs .tab');
   switchAvisosTab('lista',firstTab);
