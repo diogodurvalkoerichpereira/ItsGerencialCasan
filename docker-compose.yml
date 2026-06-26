@@ -1,0 +1,9 @@
+services:
+  its-gerencial-casan:
+    build: .
+    container_name: its-gerencial-casan
+    restart: unless-stopped
+    ports:
+      - "3100:80"
+    labels:
+      - "caddy.reverse_proxy={{upstreams 80}}"
