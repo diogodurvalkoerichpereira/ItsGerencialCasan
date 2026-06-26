@@ -628,11 +628,7 @@ textarea{resize:vertical;min-height:72px}
               <thead>
                 <tr>
                   <th>Matrícula</th><th>Nome</th><th>Superior</th>
-                  <th style="text-align:center">Dias Trab.</th>
-                  <th style="text-align:center">Faltas</th>
-                  <th style="text-align:center">Folgas</th>
                   <th style="text-align:center">Total Horas</th>
-                  <th style="text-align:center">Inconsist.</th>
                 </tr>
               </thead>
               <tbody id="resumoBody"></tbody>
@@ -1467,11 +1463,7 @@ function calcularResumoMensal(){
       <td style="font-size:.75rem;color:var(--its-muted)">${r.mat||'—'}</td>
       <td style="font-size:.83rem;font-weight:600">${r.nome}</td>
       <td style="font-size:.78rem;color:var(--its-muted)">${r.sup||'—'}</td>
-      <td style="text-align:center">${r.dias}</td>
-      <td style="text-align:center;color:${r.faltas?'var(--its-danger)':'inherit'}">${r.faltas}</td>
-      <td style="text-align:center;color:var(--its-muted)">${r.folgas}</td>
       <td style="text-align:center;font-weight:700;color:var(--its-sidebar)">${fmtHM(r.minutos)}</td>
-      <td style="text-align:center;color:${r.diasSemRegistro?'var(--its-orange)':r.inc?'var(--its-danger)':'var(--its-muted)'}">${r.diasSemRegistro?`${r.diasSemRegistro} sem registro`:r.inc||'—'}</td>
     </tr>`).join('');
   const totalDias=rows.reduce((s,r)=>s+r.dias,0);
   document.getElementById('resumoTotal').textContent=`${rows.length} funcionário(s) · ${totalDias} dia(s) com horas registradas`;
