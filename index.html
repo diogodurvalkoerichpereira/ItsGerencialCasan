@@ -249,7 +249,7 @@ textarea{resize:vertical;min-height:72px}
           <select id="filterStatus" onchange="applyFilters()">
             <option value="">Todos</option>
             <option>Em andamento</option><option>Concluído</option>
-            <option>Aguardando</option><option>Cancelado</option>
+            <option>Aguardando</option><option>Cancelado pela ITS</option><option>Cancelado pela CASAN</option>
           </select>
         </div>
         <div class="form-group">
@@ -352,7 +352,7 @@ textarea{resize:vertical;min-height:72px}
             <select id="rptStatus">
               <option value="">Todos</option>
               <option>Em andamento</option><option>Concluído</option>
-              <option>Aguardando</option><option>Cancelado</option>
+              <option>Aguardando</option><option>Cancelado pela ITS</option><option>Cancelado pela CASAN</option>
             </select>
           </div>
           <div class="form-group"><label>Responsável</label>
@@ -1008,7 +1008,7 @@ function fmtPrazo(p){
 }
 
 function statusBadge(s){
-  const m={'Em andamento':'badge-orange','Concluído':'badge-green','Aguardando':'badge-blue','Cancelado':'badge-red'};
+  const m={'Em andamento':'badge-orange','Concluído':'badge-green','Aguardando':'badge-blue','Cancelado pela ITS':'badge-red','Cancelado pela CASAN':'badge-red'};
   return `<span class="badge ${m[s]||'badge-gray'}"><span class="badge-dot"></span>${s}</span>`;
 }
 function prioBadge(p){
@@ -1076,7 +1076,7 @@ function buildForm(t={}){
   const areas=['Operações'];
   const resps=['Diogo','Ana Lima','Carlos Souza','Mariana R.'];
   const prios=['Simples','Intermediária','Complexa'];
-  const statuses=['Em andamento','Aguardando','Concluído','Cancelado'];
+  const statuses=['Em andamento','Aguardando','Concluído','Cancelado pela ITS','Cancelado pela CASAN'];
   const sel=(arr,cur)=>arr.map(v=>`<option${cur===v?' selected':''}>${v}</option>`).join('');
   return `
     <div class="form-group"><label>Título *</label><input type="text" id="fTitulo" value="${t.titulo||''}" placeholder="Descreva a tarefa..."></div>
@@ -1132,7 +1132,7 @@ function saveTask(id){
 }
 function cycleStatus(id){
   const t=TASKS.find(x=>x.id===id);if(!t)return;
-  const opts=['Em andamento','Aguardando','Concluído','Cancelado'];
+  const opts=['Em andamento','Aguardando','Concluído'];
   const prev=t.status;
   t.status=opts[(opts.indexOf(t.status)+1)%opts.length];
   if(t.status==='Concluído'&&prev!=='Concluído'&&t.criadoPorCliente) sendNotificacaoConclusao(t);
@@ -1533,8 +1533,8 @@ function updateDashboard(){
   document.getElementById('d-conc-bar').style.width=(total?Math.round(conc/total*100):0)+'%';
   document.getElementById('d-and-bar').style.width=(total?Math.round(and/total*100):0)+'%';
   document.getElementById('d-alta-pct').textContent=total?Math.round(alta/total*100)+'% do total':'';
-  const statuses=['Em andamento','Concluído','Aguardando','Cancelado'];
-  const sColors=['var(--its-orange)','var(--its-success)','var(--its-info)','var(--its-danger)'];
+  const statuses=['Em andamento','Concluído','Aguardando','Cancelado pela ITS','Cancelado pela CASAN'];
+  const sColors=['var(--its-orange)','var(--its-success)','var(--its-info)','var(--its-danger)','var(--its-danger)'];
   const maxS=Math.max(...statuses.map(s=>TASKS.filter(t=>t.status===s).length),1);
   document.getElementById('chartStatus').innerHTML=statuses.map((s,i)=>{
     const cnt=TASKS.filter(t=>t.status===s).length;
@@ -1552,7 +1552,7 @@ function updateDashboard(){
   const todayStr=today();
   const in7=new Date();in7.setDate(in7.getDate()+7);
   const in7Str=in7.toISOString().slice(0,10);
-  const up=TASKS.filter(t=>t.prazo&&t.prazo.slice(0,10)>=todayStr&&t.prazo.slice(0,10)<=in7Str&&t.status!=='Concluído'&&t.status!=='Cancelado')
+  const up=TASKS.filter(t=>t.prazo&&t.prazo.slice(0,10)>=todayStr&&t.prazo.slice(0,10)<=in7Str&&t.status!=='Concluído'&&t.status!=='Cancelado pela ITS'&&t.status!=='Cancelado pela CASAN')
     .sort((a,b)=>a.prazo.localeCompare(b.prazo));
   document.getElementById('upcoming').innerHTML=up.length
     ?up.map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--its-border)"><span class="priority-dot ${prioClass(t.prio)}"></span><div style="flex:1"><div style="font-size:.83rem;font-weight:600">${t.titulo}</div><div style="font-size:.75rem;color:var(--its-muted)">${t.resp} · ${t.area}</div></div><span style="font-size:.78rem;color:var(--its-danger);font-weight:600">${fmtPrazo(t.prazo)}</span>${statusBadge(t.status)}</div>`).join('')
