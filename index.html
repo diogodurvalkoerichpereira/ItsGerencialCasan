@@ -571,6 +571,12 @@ textarea{resize:vertical;min-height:72px}
         <div id="ponto-data-wrap" style="display:none">
           <div class="filter-row">
             <div class="form-group">
+              <label>Mês</label>
+              <select id="pMonthSel" onchange="filterPonto()">
+                <option value="">— selecione —</option>
+              </select>
+            </div>
+            <div class="form-group">
               <label>Buscar funcionário</label>
               <input type="text" id="pSearch" placeholder="Nome ou matrícula..." oninput="filterPonto()">
             </div>
@@ -620,6 +626,14 @@ textarea{resize:vertical;min-height:72px}
           <button class="btn btn-primary" onclick="switchPontoTab('importar',document.querySelectorAll('#pontoTabs .tab')[2])"><i class="ti ti-upload"></i> Importar Planilha</button>
         </div>
         <div id="resumo-data-wrap" style="display:none">
+          <div class="filter-row" style="margin-bottom:12px">
+            <div class="form-group">
+              <label>Mês</label>
+              <select id="pMonthSelResumo" onchange="calcularResumoMensal()">
+                <option value="">— selecione —</option>
+              </select>
+            </div>
+          </div>
           <div class="card" style="padding:0;overflow:hidden">
             <table class="task-table" id="resumoTable">
               <thead>
@@ -1305,7 +1319,55 @@ function switchEmergTab(name,el){
 }
 
 // ── PONTO ────────────────────────────────────────────────────────────
-let PONTO_DATA = [];
+let PONTO_DB = JSON.parse(localStorage.getItem('its_ponto_db')||'{}');
+let _pendingPonto = null; // dados aguardando confirmação de duplicata
+
+function savePontoDB(){ localStorage.setItem('its_ponto_db', JSON.stringify(PONTO_DB)); }
+
+function extractMesAno(dateStr){
+  if(!dateStr) return null;
+  const s=dateStr.toString().trim();
+  let m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m) return `${m[2].padStart(2,'0')}/${m[3]}`;
+  m=s.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if(m) return `${m[2].padStart(2,'0')}/${new Date().getFullYear()}`;
+  m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return `${m[2]}/${m[1]}`;
+  return null;
+}
+
+function fmtMesLabel(key){
+  const MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const [mm,yyyy]=key.split('/');
+  return `${MESES[parseInt(mm,10)-1]||mm}/${yyyy}`;
+}
+
+function populateMesSelectors(selectKey){
+  const keys=Object.keys(PONTO_DB).sort((a,b)=>{
+    const [ma,ya]=a.split('/'), [mb,yb]=b.split('/');
+    return (parseInt(ya)-parseInt(yb))||(parseInt(ma)-parseInt(mb));
+  });
+  ['pMonthSel','pMonthSelResumo'].forEach(id=>{
+    const sel=document.getElementById(id); if(!sel)return;
+    sel.innerHTML=keys.length
+      ? keys.map(k=>`<option value="${k}">${fmtMesLabel(k)}</option>`).join('')
+      : '<option value="">— nenhum mês importado —</option>';
+    if(selectKey&&keys.includes(selectKey)) sel.value=selectKey;
+    else if(keys.length) sel.value=keys[keys.length-1];
+  });
+}
+
+function getPontoData(){
+  const sel=document.getElementById('pMonthSel');
+  const k=sel?sel.value:'';
+  return k&&PONTO_DB[k] ? PONTO_DB[k].registros : [];
+}
+
+function getPontoDataResumo(){
+  const sel=document.getElementById('pMonthSelResumo');
+  const k=sel?sel.value:'';
+  return k&&PONTO_DB[k] ? PONTO_DB[k].registros : [];
+}
 
 function switchPontoTab(name, el){
   document.querySelectorAll('#pontoTabs .tab').forEach(t=>t.classList.remove('active'));
@@ -1313,8 +1375,8 @@ function switchPontoTab(name, el){
   document.getElementById('ppanel-lista').style.display = name==='lista' ? 'block' : 'none';
   document.getElementById('ppanel-resumo').style.display = name==='resumo' ? 'block' : 'none';
   document.getElementById('ppanel-importar').style.display = name==='importar' ? 'block' : 'none';
-  if(name==='lista') filterPonto();
-  if(name==='resumo') calcularResumoMensal();
+  if(name==='lista'){ populateMesSelectors(); filterPonto(); }
+  if(name==='resumo'){ populateMesSelectors(); calcularResumoMensal(); }
 }
 
 function parseMinutes(t){
@@ -1335,13 +1397,15 @@ function fmtHM(minutes){
 }
 
 function calcularResumoMensal(){
-  if(!PONTO_DATA.length){
+  const hasMonths=Object.keys(PONTO_DB).length>0;
+  if(!hasMonths){
     document.getElementById('resumo-empty').style.display='block';
     document.getElementById('resumo-data-wrap').style.display='none';
     return;
   }
   document.getElementById('resumo-empty').style.display='none';
   document.getElementById('resumo-data-wrap').style.display='block';
+  const PONTO_DATA=getPontoDataResumo();
   const map={};
   PONTO_DATA.forEach(r=>{
     const key=r.mat||r.nome;
@@ -1410,7 +1474,7 @@ function importarPonto(file){
         sit: header.findIndex(h=>h.toString().toLowerCase()==='situação'||h.toString().toLowerCase()==='situacao'),
         inc: header.findIndex(h=>h.toString().toLowerCase().includes('inconsist')),
       };
-      PONTO_DATA = rows.slice(1).filter(r=>r.some(c=>c!=='')).map((r,i)=>({
+      const newData = rows.slice(1).filter(r=>r.some(c=>c!=='')).map((r,i)=>({
         id: i,
         mat: idx.mat>=0 ? r[idx.mat] : '',
         nome: idx.nome>=0 ? r[idx.nome] : '',
@@ -1424,18 +1488,51 @@ function importarPonto(file){
         sit: idx.sit>=0 ? r[idx.sit] : '',
         inc: idx.inc>=0 ? r[idx.inc] : '',
       }));
-      const sups = [...new Set(PONTO_DATA.map(r=>r.sup).filter(Boolean))].sort();
-      const sel = document.getElementById('pFilterSup');
-      sel.innerHTML = '<option value="">Todos</option>' + sups.map(s=>`<option>${s}</option>`).join('');
-      status.innerHTML=`<div class="alert alert-success"><i class="ti ti-check"></i> <strong>${PONTO_DATA.length}</strong> registros importados com sucesso.</div>`;
-      setTimeout(()=>{
-        switchPontoTab('resumo', document.querySelectorAll('#pontoTabs .tab')[1]);
-      }, 1200);
+      // Detecta mês predominante na planilha
+      const meses=[...new Set(newData.map(r=>extractMesAno(r.data)).filter(Boolean))];
+      const mesKey=meses[0]||`${String(new Date().getMonth()+1).padStart(2,'0')}/${new Date().getFullYear()}`;
+      const newSups=[...new Set(newData.map(r=>r.sup).filter(Boolean))];
+      // Verifica duplicata: mesmo mês E supervisores em comum
+      if(PONTO_DB[mesKey]){
+        const oldSups=new Set(PONTO_DB[mesKey].sups||[]);
+        const overlap=newSups.filter(s=>oldSups.has(s));
+        if(overlap.length){
+          _pendingPonto={data:newData,mesKey,sups:newSups};
+          status.innerHTML=`<div class="alert alert-warning" style="display:flex;flex-direction:column;gap:10px">
+            <div><i class="ti ti-alert-triangle"></i> <strong>Duplicata detectada!</strong> Já existem dados de <strong>${fmtMesLabel(mesKey)}</strong> para os supervisores: <em>${overlap.join(', ')}</em>.</div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-primary btn-sm" onclick="confirmarImportPonto()"><i class="ti ti-replace"></i> Substituir dados do mês</button>
+              <button class="btn btn-outline btn-sm" onclick="cancelarImportPonto()"><i class="ti ti-x"></i> Cancelar</button>
+            </div>
+          </div>`;
+          return;
+        }
+      }
+      finalizarImportPonto(newData, mesKey, newSups);
     } catch(err){
       status.innerHTML=`<div class="alert alert-error"><i class="ti ti-x"></i> Erro ao ler o arquivo: ${err.message}</div>`;
     }
   };
   reader.readAsArrayBuffer(file);
+}
+
+function finalizarImportPonto(data, mesKey, sups){
+  PONTO_DB[mesKey]={registros:data, sups};
+  savePontoDB();
+  populateMesSelectors(mesKey);
+  const status=document.getElementById('importStatus');
+  status.innerHTML=`<div class="alert alert-success"><i class="ti ti-check"></i> <strong>${data.length}</strong> registros de <strong>${fmtMesLabel(mesKey)}</strong> importados com sucesso.</div>`;
+  setTimeout(()=>{ switchPontoTab('resumo', document.querySelectorAll('#pontoTabs .tab')[1]); }, 1200);
+}
+function confirmarImportPonto(){
+  if(!_pendingPonto) return;
+  const {data,mesKey,sups}=_pendingPonto;
+  _pendingPonto=null;
+  finalizarImportPonto(data, mesKey, sups);
+}
+function cancelarImportPonto(){
+  _pendingPonto=null;
+  document.getElementById('importStatus').innerHTML='<div class="alert alert-info"><i class="ti ti-info-circle"></i> Importação cancelada.</div>';
 }
 
 function sitPontoBadge(s){
@@ -1447,13 +1544,20 @@ function sitPontoBadge(s){
 }
 
 function filterPonto(){
-  if(!PONTO_DATA.length){
+  const hasMonths=Object.keys(PONTO_DB).length>0;
+  if(!hasMonths){
     document.getElementById('ponto-empty-import').style.display='block';
     document.getElementById('ponto-data-wrap').style.display='none';
     return;
   }
   document.getElementById('ponto-empty-import').style.display='none';
   document.getElementById('ponto-data-wrap').style.display='block';
+  const PONTO_DATA=getPontoData();
+  // Atualiza filtro de supervisor com os do mês selecionado
+  const sel=document.getElementById('pMonthSel');
+  const mesKey=sel?sel.value:'';
+  const sups=mesKey&&PONTO_DB[mesKey]?[...new Set(PONTO_DATA.map(r=>r.sup).filter(Boolean))].sort():[];
+  document.getElementById('pFilterSup').innerHTML='<option value="">Todos</option>'+sups.map(s=>`<option>${s}</option>`).join('');
   const q=(document.getElementById('pSearch').value||'').toLowerCase();
   const sit=document.getElementById('pFilterSit').value;
   const dt=document.getElementById('pFilterData').value;
@@ -1668,7 +1772,8 @@ function setNav(el,tab){
     filterAvisos();
   } else if(isPonto){
     btn.innerHTML='<i class="ti ti-upload"></i> Importar XLS';
-    btn.onclick=()=>switchPontoTab('importar',document.querySelectorAll('#pontoTabs .tab')[1]);
+    btn.onclick=()=>switchPontoTab('importar',document.querySelectorAll('#pontoTabs .tab')[2]);
+    populateMesSelectors();
     filterPonto();
   } else if(isConfig){
     btn.innerHTML='<i class="ti ti-device-floppy"></i> Salvar Config.';
