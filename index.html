@@ -854,6 +854,7 @@ function renderTasks(list){
   const em=document.getElementById('emptyMsg');
   if(!list.length){tb.innerHTML='';em.style.display='block';return}
   em.style.display='none';
+  list=list.slice().sort((a,b)=>b.id-a.id);
   tb.innerHTML=list.map(t=>`
     <tr>
       <td><span class="priority-dot ${prioClass(t.prio)}"></span><strong style="font-size:.83rem">${t.titulo}</strong></td>
