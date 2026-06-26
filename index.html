@@ -1426,15 +1426,18 @@ function calcularResumoMensal(){
     const iniInt=parseMinutes(r.iniIntervalo);
     const fimInt=parseMinutes(r.fimIntervalo);
     const fim=parseMinutes(r.fimJornada);
-    if(ini!=null&&iniInt!=null&&fimInt!=null&&fim!=null){
-      map[key].dias++;
-      map[key].minutos+=(fim-ini)-(fimInt-iniInt);
-    } else if(ini!=null&&fim!=null){
-      // Dia sem intervalo registrado — conta apenas entrada/saída
-      map[key].dias++;
-      map[key].minutos+=fim-ini;
+    if(ini!=null&&fim!=null&&fim>ini){
+      const intervalo=(iniInt!=null&&fimInt!=null&&fimInt>iniInt)?(fimInt-iniInt):0;
+      const worked=(fim-ini)-intervalo;
+      if(worked>0){
+        map[key].dias++;
+        map[key].minutos+=worked;
+      } else {
+        // Dados inconsistentes (ex: intervalo maior que jornada)
+        map[key].diasSemRegistro++;
+      }
     } else {
-      // Registro incompleto — contabiliza mas não soma horas
+      // Registro incompleto (entrada ou saída ausente/inválida)
       map[key].diasSemRegistro++;
     }
   });
