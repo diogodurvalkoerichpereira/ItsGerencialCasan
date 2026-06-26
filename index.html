@@ -1416,20 +1416,27 @@ function calcularResumoMensal(){
   const map={};
   PONTO_DATA.forEach(r=>{
     const key=r.mat||r.nome;
-    if(!map[key])map[key]={mat:r.mat,nome:r.nome,sup:r.sup,dias:0,minutos:0,faltas:0,folgas:0,inc:0};
+    if(!map[key])map[key]={mat:r.mat,nome:r.nome,sup:r.sup,dias:0,minutos:0,faltas:0,folgas:0,inc:0,diasSemRegistro:0};
     const sit=(r.sit||'').toLowerCase();
-    if(sit.includes('presen')){
+    if(sit.includes('falt')){ map[key].faltas++; return; }
+    if(sit==='folga'){ map[key].folgas++; return; }
+    if(r.inc&&r.inc.trim()!=='') map[key].inc++;
+    // Só conta dias com os 4 registros de ponto (entrada + saída intervalo + retorno + saída)
+    const ini=parseMinutes(r.iniJornada);
+    const iniInt=parseMinutes(r.iniIntervalo);
+    const fimInt=parseMinutes(r.fimIntervalo);
+    const fim=parseMinutes(r.fimJornada);
+    if(ini!=null&&iniInt!=null&&fimInt!=null&&fim!=null){
       map[key].dias++;
-      const ini=parseMinutes(r.iniJornada),fim=parseMinutes(r.fimJornada);
-      const iniInt=parseMinutes(r.iniIntervalo),fimInt=parseMinutes(r.fimIntervalo);
-      if(ini!=null&&fim!=null){
-        let worked=fim-ini;
-        if(iniInt!=null&&fimInt!=null)worked-=(fimInt-iniInt);
-        map[key].minutos+=worked;
-      }
-    }else if(sit.includes('falt'))map[key].faltas++;
-    else if(sit==='folga')map[key].folgas++;
-    if(r.inc&&r.inc.trim()!=='')map[key].inc++;
+      map[key].minutos+=(fim-ini)-(fimInt-iniInt);
+    } else if(ini!=null&&fim!=null){
+      // Dia sem intervalo registrado — conta apenas entrada/saída
+      map[key].dias++;
+      map[key].minutos+=fim-ini;
+    } else {
+      // Registro incompleto — contabiliza mas não soma horas
+      map[key].diasSemRegistro++;
+    }
   });
   const rows=Object.values(map).sort((a,b)=>a.nome.localeCompare(b.nome));
   document.getElementById('resumoBody').innerHTML=rows.map(r=>`
@@ -1441,9 +1448,10 @@ function calcularResumoMensal(){
       <td style="text-align:center;color:${r.faltas?'var(--its-danger)':'inherit'}">${r.faltas}</td>
       <td style="text-align:center;color:var(--its-muted)">${r.folgas}</td>
       <td style="text-align:center;font-weight:700;color:var(--its-sidebar)">${fmtHM(r.minutos)}</td>
-      <td style="text-align:center;color:${r.inc?'var(--its-danger)':'var(--its-muted)'}">${r.inc||'—'}</td>
+      <td style="text-align:center;color:${r.diasSemRegistro?'var(--its-orange)':r.inc?'var(--its-danger)':'var(--its-muted)'}">${r.diasSemRegistro?`${r.diasSemRegistro} sem registro`:r.inc||'—'}</td>
     </tr>`).join('');
-  document.getElementById('resumoTotal').textContent=`${rows.length} funcionário(s) · Total calculado a partir dos registros de presença`;
+  const totalDias=rows.reduce((s,r)=>s+r.dias,0);
+  document.getElementById('resumoTotal').textContent=`${rows.length} funcionário(s) · ${totalDias} dia(s) com horas registradas`;
 }
 
 function handlePontoDrop(e){
