@@ -426,7 +426,7 @@ textarea{resize:vertical;min-height:72px}
         <div class="filter-row">
           <div class="form-group">
             <label>Buscar ocorrência</label>
-            <input type="text" id="eSearch" placeholder="Cidade, protocolo..." oninput="filterEmerg()">
+            <input type="text" id="eSearch" name="busca-ocorrencia" placeholder="Cidade, protocolo..." oninput="filterEmerg()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')">
           </div>
           <div class="form-group">
             <label>Status</label>
@@ -567,7 +567,7 @@ textarea{resize:vertical;min-height:72px}
             </div>
             <div class="form-group">
               <label>Buscar funcionário</label>
-              <input type="text" id="pSearch" placeholder="Nome ou matrícula..." oninput="filterPonto()">
+              <input type="text" id="pSearch" name="busca-ponto" placeholder="Nome ou matrícula..." oninput="filterPonto()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')">
             </div>
             <div class="form-group">
               <label>Situação</label>
@@ -728,7 +728,7 @@ textarea{resize:vertical;min-height:72px}
       <div class="filter-row">
         <div class="form-group">
           <label>Buscar usuário</label>
-          <input type="text" id="userSearch" placeholder="Nome, e-mail..." oninput="filterUsers()">
+          <input type="text" id="userSearch" name="busca-usuario" placeholder="Nome, e-mail..." oninput="filterUsers()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')">
         </div>
         <div class="form-group">
           <label>Cargo</label>
@@ -792,7 +792,7 @@ textarea{resize:vertical;min-height:72px}
         <div class="filter-row">
           <div class="form-group">
             <label>Buscar</label>
-            <input type="text" id="aSearch" placeholder="Cidade, supervisor..." oninput="filterAvisos()">
+            <input type="text" id="aSearch" name="busca-aviso" placeholder="Cidade, supervisor..." oninput="filterAvisos()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')">
           </div>
           <div class="form-group">
             <label>Supervisor</label>
