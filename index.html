@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ITS — Gestão de Tarefas</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --its-sidebar:#183c5a;--its-orange:#E85928;--its-bg:#f0f2f5;
+  --its-white:#ffffff;--its-text:#1e293b;--its-muted:#64748b;
+  --its-border:#e2e8f0;--its-danger:#dc2626;--its-success:#16a34a;
+  --its-warning:#d97706;--its-info:#0284c7;
+  --radius-sm:6px;--radius-md:10px;--radius-lg:14px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.08);--shadow-md:0 4px 16px rgba(0,0,0,.10);
+}
+html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var(--its-bg);color:var(--its-text)}
+body{display:flex;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:200px;background:var(--its-sidebar);display:flex;flex-direction:column;flex-shrink:0;padding:14px 10px}
+.sidebar-logo{display:flex;align-items:center;gap:8px;padding:4px 2px 18px}
+.logo-icon{background:var(--its-orange);width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;color:#fff;flex-shrink:0}
+.logo-text{color:#fff;font-size:.82rem;font-weight:700;line-height:1.2}
+.logo-sub{color:rgba(255,255,255,.5);font-size:.65rem;font-weight:400}
+.nav-section{font-size:.62rem;color:rgba(255,255,255,.35);text-transform:uppercase;letter-spacing:.08em;padding:12px 10px 5px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;color:rgba(255,255,255,.65);font-size:.8rem;cursor:pointer;transition:background .15s,color .15s;margin-bottom:2px;user-select:none}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-item.active{background:var(--its-orange);color:#fff}
+.nav-item i{font-size:15px;flex-shrink:0}
+.sidebar-bottom{margin-top:auto;border-top:1px solid rgba(255,255,255,.1);padding-top:10px}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:#fff;border-bottom:1px solid var(--its-border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:var(--shadow-sm)}
+.topbar-title{font-size:.95rem;font-weight:700;color:var(--its-sidebar)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--its-sidebar);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.7rem;font-weight:700}
+.content{flex:1;overflow-y:auto;padding:18px 20px}
+
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:18px;background:#fff;border:1px solid var(--its-border);border-radius:var(--radius-md);padding:4px}
+.tab{flex:1;padding:7px 12px;border-radius:7px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--its-muted);transition:background .15s,color .15s;text-align:center;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px}
+.tab.active{background:var(--its-sidebar);color:#fff}
+.tab:hover:not(.active){background:var(--its-bg)}
+.panel{display:none}
+.panel.active{display:block}
+.section-title{font-size:.88rem;font-weight:700;color:var(--its-sidebar);border-left:3px solid var(--its-orange);padding-left:10px;margin-bottom:16px;text-transform:uppercase;letter-spacing:.06em}
+
+/* CARDS */
+.card{background:#fff;border:1px solid var(--its-border);border-radius:var(--radius-md);padding:16px 18px;margin-bottom:14px;box-shadow:var(--shadow-sm)}
+
+/* FORM */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.form-group{margin-bottom:13px}
+label{display:block;font-size:.76rem;font-weight:600;color:var(--its-text);margin-bottom:5px}
+input,select,textarea{width:100%;padding:8px 11px;border:1.5px solid var(--its-border);border-radius:var(--radius-sm);font-size:.88rem;color:var(--its-text);outline:none;transition:border-color .15s;background:#fff;font-family:inherit}
+input:focus,select:focus,textarea:focus{border-color:var(--its-sidebar)}
+textarea{resize:vertical;min-height:72px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border:none;border-radius:var(--radius-sm);font-size:.85rem;font-weight:600;cursor:pointer;transition:filter .15s,transform .1s;font-family:inherit}
+.btn:hover{filter:brightness(1.08)}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--its-orange);color:#fff}
+.btn-secondary{background:var(--its-sidebar);color:#fff}
+.btn-outline{background:transparent;color:var(--its-sidebar);border:1.5px solid var(--its-sidebar)}
+.btn-ghost{background:transparent;color:var(--its-muted);border:1.5px solid var(--its-border)}
+.btn-danger{background:var(--its-danger);color:#fff}
+.btn-sm{padding:5px 10px;font-size:.78rem}
+.btn-full{width:100%;justify-content:center}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:600}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.badge-orange{background:#fff3ee;color:var(--its-orange);border:1px solid #fdd0be}
+.badge-blue{background:#eef4fb;color:var(--its-sidebar);border:1px solid #b8d0ea}
+.badge-green{background:#f0fdf4;color:var(--its-success);border:1px solid #bbf7d0}
+.badge-red{background:#fef2f2;color:var(--its-danger);border:1px solid #fecaca}
+.badge-gray{background:#f8fafc;color:var(--its-muted);border:1px solid var(--its-border)}
+
+/* TABLE */
+.task-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.task-table th{background:var(--its-sidebar);color:#fff;padding:9px 14px;text-align:left;font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.task-table th:first-child{border-radius:8px 0 0 0}
+.task-table th:last-child{border-radius:0 8px 0 0}
+.task-table td{padding:9px 14px;border-bottom:1px solid var(--its-border)}
+.task-table tr:last-child td{border-bottom:none}
+.task-table tr:hover td{background:#f8fafc}
+
+/* STAT CARDS */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.stat-card{background:#fff;border:1px solid var(--its-border);border-radius:var(--radius-md);padding:14px 16px;box-shadow:var(--shadow-sm)}
+.stat-value{font-size:1.6rem;font-weight:800;color:var(--its-sidebar)}
+.stat-label{font-size:.73rem;color:var(--its-muted);margin-top:2px}
+.stat-delta-pos{font-size:.73rem;color:var(--its-success);font-weight:600;margin-top:4px}
+.stat-delta-neg{font-size:.73rem;color:var(--its-danger);font-weight:600;margin-top:4px}
+.stat-icon{float:right;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.progress-bar{height:6px;background:var(--its-border);border-radius:4px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;border-radius:4px;background:var(--its-orange)}
+
+/* CHART */
+.chart-bar-wrap{display:flex;flex-direction:column;gap:8px}
+.chart-row{display:flex;align-items:center;gap:10px;font-size:.8rem}
+.chart-label{width:90px;color:var(--its-muted);font-size:.76rem;text-align:right;flex-shrink:0}
+.chart-track{flex:1;height:18px;background:var(--its-border);border-radius:4px;overflow:hidden}
+.chart-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:6px;font-size:.7rem;font-weight:600;color:#fff}
+.chart-val{width:36px;text-align:right;font-weight:700;color:var(--its-sidebar);font-size:.8rem}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:var(--radius-lg);padding:24px;width:500px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.modal-title{font-size:1rem;font-weight:700;color:var(--its-sidebar)}
+.close-btn{background:none;border:none;cursor:pointer;color:var(--its-muted);font-size:20px;line-height:1;padding:2px}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--its-sidebar);color:#fff;padding:10px 16px;border-radius:var(--radius-md);font-size:.85rem;font-weight:600;display:flex;align-items:center;gap:8px;opacity:0;transform:translateY(10px);transition:opacity .25s,transform .25s;pointer-events:none;z-index:999;box-shadow:var(--shadow-md)}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* MISC */
+.divider{border:none;border-top:1px solid var(--its-border);margin:14px 0}
+.filter-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px}
+.filter-row .form-group{margin-bottom:0;flex:1;min-width:140px}
+.report-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.priority-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}
+.p-alta{background:#dc2626}.p-media{background:#d97706}.p-baixa{background:#16a34a}
+.empty-state{text-align:center;padding:40px;color:var(--its-muted);font-size:.85rem}
+.empty-state i{font-size:36px;display:block;margin-bottom:10px}
+</style>
+</head>
+<body>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Nova Tarefa</span>
+      <button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><i class="ti ti-check"></i> <span id="toastMsg"></span></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">ITS</div>
+    <div class="logo-text">Portal ITS<div class="logo-sub">Customer Service</div></div>
+  </div>
+  <div class="nav-section">Gestão</div>
+  <div class="nav-item active" onclick="setNav(this,'tarefas')"><i class="ti ti-checklist"></i> Tarefas</div>
+  <div class="nav-item" onclick="setNav(this,'relatorio')"><i class="ti ti-file-analytics"></i> Relatórios</div>
+  <div class="nav-item" onclick="setNav(this,'dashboard')"><i class="ti ti-chart-pie"></i> Dashboard</div>
+  <div class="nav-item"><i class="ti ti-users"></i> Equipe</div>
+  <div class="nav-item"><i class="ti ti-calendar"></i> Agenda</div>
+  <div class="nav-section">Sistema</div>
+  <div class="nav-item"><i class="ti ti-settings"></i> Configurações</div>
+  <div class="sidebar-bottom">
+    <div class="nav-item"><i class="ti ti-user"></i> Meu Perfil</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-title" id="pageTitle">Gestão de Tarefas</div>
+    <div class="topbar-right">
+      <button class="btn btn-primary btn-sm" onclick="openNewTask()"><i class="ti ti-plus"></i> Nova Tarefa</button>
+      <div class="avatar" title="Diogo Pereira">DP</div>
+    </div>
+  </header>
+
+  <div class="content">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('tarefas',this)"><i class="ti ti-list-check"></i> Tarefas</button>
+      <button class="tab" onclick="switchTab('relatorio',this)"><i class="ti ti-file-analytics"></i> Relatório</button>
+      <button class="tab" onclick="switchTab('dashboard',this)"><i class="ti ti-chart-pie"></i> Dashboard</button>
+    </div>
+
+    <!-- ===== TAREFAS ===== -->
+    <div class="panel active" id="panel-tarefas">
+      <div class="filter-row">
+        <div class="form-group">
+          <label>Buscar tarefa</label>
+          <input type="text" id="searchInput" placeholder="Título, área, responsável..." oninput="applyFilters()">
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="filterStatus" onchange="applyFilters()">
+            <option value="">Todos</option>
+            <option>Em andamento</option><option>Concluído</option>
+            <option>Aguardando</option><option>Cancelado</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Prioridade</label>
+          <select id="filterPrio" onchange="applyFilters()">
+            <option value="">Todas</option>
+            <option>Alta</option><option>Média</option><option>Baixa</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Responsável</label>
+          <select id="filterResp" onchange="applyFilters()">
+            <option value="">Todos</option>
+            <option>Diogo</option><option>Ana Lima</option>
+            <option>Carlos Souza</option><option>Mariana R.</option>
+          </select>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="task-table">
+          <thead>
+            <tr>
+              <th>Título</th><th>Área</th><th>Responsável</th>
+              <th>Prazo</th><th>Prioridade</th><th>Status</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="taskBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyMsg" class="empty-state" style="display:none">
+        <i class="ti ti-inbox"></i>Nenhuma tarefa encontrada
+      </div>
+    </div>
+
+    <!-- ===== RELATÓRIO ===== -->
+    <div class="panel" id="panel-relatorio">
+      <div class="report-header">
+        <div class="section-title" style="margin-bottom:0">Emissão de Relatório</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="exportCSV()"><i class="ti ti-table-export"></i> Exportar CSV</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.print()"><i class="ti ti-printer"></i> Imprimir</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-title">Filtros do Relatório</div>
+        <div class="form-row">
+          <div class="form-group"><label>Período — De</label><input type="date" id="rptDe" value="2026-06-01"></div>
+          <div class="form-group"><label>Período — Até</label><input type="date" id="rptAte" value="2026-06-30"></div>
+        </div>
+        <div class="form-row-3">
+          <div class="form-group"><label>Área</label>
+            <select id="rptArea">
+              <option value="">Todas</option>
+              <option>TI</option><option>Operações</option><option>Financeiro</option>
+              <option>RH</option><option>Comercial</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Status</label>
+            <select id="rptStatus">
+              <option value="">Todos</option>
+              <option>Em andamento</option><option>Concluído</option>
+              <option>Aguardando</option><option>Cancelado</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Responsável</label>
+            <select id="rptResp">
+              <option value="">Todos</option>
+              <option>Diogo</option><option>Ana Lima</option>
+              <option>Carlos Souza</option><option>Mariana R.</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>Tipo de Relatório</label>
+          <select id="rptTipo">
+            <option>Resumo executivo</option><option>Detalhado por tarefa</option>
+            <option>Por responsável</option><option>Por área</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="generateReport()"><i class="ti ti-file-report"></i> Gerar Relatório</button>
+      </div>
+      <div id="reportResult" style="display:none">
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div>
+              <div style="font-size:1rem;font-weight:700;color:var(--its-sidebar)">Relatório de Tarefas — ITS Customer Service</div>
+              <div style="font-size:.76rem;color:var(--its-muted)" id="rptSubtitle"></div>
+            </div>
+            <div class="logo-icon" style="width:40px;height:40px;font-size:13px">ITS</div>
+          </div>
+          <div class="stat-grid" id="rptStats"></div>
+          <hr class="divider">
+          <div class="section-title" style="font-size:.78rem">Tarefas no período</div>
+          <table class="task-table">
+            <thead><tr><th>Título</th><th>Área</th><th>Responsável</th><th>Prazo</th><th>Prioridade</th><th>Status</th></tr></thead>
+            <tbody id="rptBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== DASHBOARD ===== -->
+    <div class="panel" id="panel-dashboard">
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#eef4fb;color:var(--its-sidebar)"><i class="ti ti-checklist"></i></div>
+          <div class="stat-value" id="d-total">0</div>
+          <div class="stat-label">Total de Tarefas</div>
+          <div class="stat-delta-pos">↑ Atualizado agora</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#f0fdf4;color:var(--its-success)"><i class="ti ti-circle-check"></i></div>
+          <div class="stat-value" id="d-conc">0</div>
+          <div class="stat-label">Concluídas</div>
+          <div class="progress-bar"><div class="progress-fill" id="d-conc-bar" style="background:var(--its-success)"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#fff3ee;color:var(--its-orange)"><i class="ti ti-loader"></i></div>
+          <div class="stat-value" id="d-and">0</div>
+          <div class="stat-label">Em Andamento</div>
+          <div class="progress-bar"><div class="progress-fill" id="d-and-bar"></div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#fef2f2;color:var(--its-danger)"><i class="ti ti-alert-triangle"></i></div>
+          <div class="stat-value" id="d-alta">0</div>
+          <div class="stat-label">Prioridade Alta</div>
+          <div class="stat-delta-neg" id="d-alta-pct"></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="card">
+          <div class="section-title" style="font-size:.78rem">Tarefas por Status</div>
+          <div class="chart-bar-wrap" id="chartStatus"></div>
+        </div>
+        <div class="card">
+          <div class="section-title" style="font-size:.78rem">Tarefas por Área</div>
+          <div class="chart-bar-wrap" id="chartArea"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="section-title" style="font-size:.78rem">Próximas a Vencer (7 dias)</div>
+        <div id="upcoming"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────────
+let nextId = 11;
+const TASKS = [
+  {id:1,titulo:'Atualizar base de conhecimento CRM',area:'TI',resp:'Carlos Souza',prazo:'2026-06-28',prio:'Alta',status:'Em andamento',desc:'Revisar e atualizar os artigos de suporte no sistema CRM para refletir novos produtos.'},
+  {id:2,titulo:'Revisar contratos de fornecedores',area:'Financeiro',resp:'Diogo',prazo:'2026-06-30',prio:'Alta',status:'Aguardando',desc:'Análise dos contratos vigentes com fornecedores de telecom e TI.'},
+  {id:3,titulo:'Treinamento equipe operações',area:'Operações',resp:'Ana Lima',prazo:'2026-07-05',prio:'Média',status:'Em andamento',desc:'Ministrar treinamento sobre novos procedimentos de atendimento.'},
+  {id:4,titulo:'Emissão de notas fiscais junho',area:'Financeiro',resp:'Mariana R.',prazo:'2026-06-27',prio:'Alta',status:'Concluído',desc:'Emissão das NFs referentes às competências de junho 2026.'},
+  {id:5,titulo:'Configurar VPN para acesso remoto',area:'TI',resp:'Carlos Souza',prazo:'2026-07-10',prio:'Média',status:'Aguardando',desc:'Implementar solução de VPN para colaboradores home office.'},
+  {id:6,titulo:'Relatório de indicadores Q2',area:'Operações',resp:'Diogo',prazo:'2026-07-01',prio:'Alta',status:'Em andamento',desc:'Consolidar indicadores de atendimento do segundo trimestre.'},
+  {id:7,titulo:'Processo seletivo analistas',area:'RH',resp:'Ana Lima',prazo:'2026-07-15',prio:'Baixa',status:'Em andamento',desc:'Conduzir processo seletivo para 3 vagas de analistas de suporte.'},
+  {id:8,titulo:'Auditoria de acessos sistemas',area:'TI',resp:'Carlos Souza',prazo:'2026-06-26',prio:'Alta',status:'Concluído',desc:'Revisar permissões e acessos de todos os colaboradores.'},
+  {id:9,titulo:'Proposta comercial cliente X',area:'Comercial',resp:'Mariana R.',prazo:'2026-07-03',prio:'Média',status:'Em andamento',desc:'Elaborar proposta de contact center para cliente do setor bancário.'},
+  {id:10,titulo:'Backup mensal dados operacionais',area:'TI',resp:'Carlos Souza',prazo:'2026-06-30',prio:'Baixa',status:'Concluído',desc:'Realizar backup e verificação de integridade dos dados.'},
+];
+
+// ── HELPERS ───────────────────────────────────────────────────────────
+function fmtDate(d){if(!d)return'—';const[y,m,dd]=d.split('-');return`${dd}/${m}/${y}`}
+function today(){return new Date().toISOString().slice(0,10)}
+
+function statusBadge(s){
+  const m={'Em andamento':'badge-orange','Concluído':'badge-green','Aguardando':'badge-blue','Cancelado':'badge-red'};
+  return `<span class="badge ${m[s]||'badge-gray'}"><span class="badge-dot"></span>${s}</span>`;
+}
+function prioBadge(p){
+  const m={'Alta':'badge-red','Média':'badge-orange','Baixa':'badge-green'};
+  return `<span class="badge ${m[p]||'badge-gray'}">${p}</span>`;
+}
+function prioClass(p){return p==='Alta'?'p-alta':p==='Média'?'p-media':'p-baixa'}
+
+// ── RENDER TASKS ──────────────────────────────────────────────────────
+function renderTasks(list){
+  const tb=document.getElementById('taskBody');
+  const em=document.getElementById('emptyMsg');
+  if(!list.length){tb.innerHTML='';em.style.display='block';return}
+  em.style.display='none';
+  tb.innerHTML=list.map(t=>`
+    <tr>
+      <td><span class="priority-dot ${prioClass(t.prio)}"></span><strong style="font-size:.83rem">${t.titulo}</strong></td>
+      <td style="color:var(--its-muted);font-size:.8rem">${t.area}</td>
+      <td style="font-size:.82rem">${t.resp}</td>
+      <td style="font-size:.8rem">${fmtDate(t.prazo)}</td>
+      <td>${prioBadge(t.prio)}</td>
+      <td>${statusBadge(t.status)}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-sm" onclick="editTask(${t.id})" title="Editar"><i class="ti ti-edit"></i></button>
+          <button class="btn btn-ghost btn-sm" onclick="cycleStatus(${t.id})" title="Próximo status"><i class="ti ti-refresh"></i></button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteTask(${t.id})" title="Excluir"><i class="ti ti-trash"></i></button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function applyFilters(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const st=document.getElementById('filterStatus').value;
+  const pr=document.getElementById('filterPrio').value;
+  const rs=document.getElementById('filterResp').value;
+  renderTasks(TASKS.filter(t=>
+    (!q||t.titulo.toLowerCase().includes(q)||t.area.toLowerCase().includes(q)||t.resp.toLowerCase().includes(q))&&
+    (!st||t.status===st)&&(!pr||t.prio===pr)&&(!rs||t.resp===rs)
+  ));
+}
+
+// ── MODAL / FORM ──────────────────────────────────────────────────────
+function openNewTask(){
+  document.getElementById('modalTitle').textContent='Nova Tarefa';
+  document.getElementById('modalContent').innerHTML=buildForm();
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function editTask(id){
+  const t=TASKS.find(x=>x.id===id);if(!t)return;
+  document.getElementById('modalTitle').textContent='Editar Tarefa';
+  document.getElementById('modalContent').innerHTML=buildForm(t);
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function buildForm(t={}){
+  const areas=['TI','Operações','Financeiro','RH','Comercial'];
+  const resps=['Diogo','Ana Lima','Carlos Souza','Mariana R.'];
+  const prios=['Alta','Média','Baixa'];
+  const statuses=['Em andamento','Aguardando','Concluído','Cancelado'];
+  const sel=(arr,cur)=>arr.map(v=>`<option${cur===v?' selected':''}>${v}</option>`).join('');
+  return `
+    <div class="form-group"><label>Título *</label><input type="text" id="fTitulo" value="${t.titulo||''}" placeholder="Descreva a tarefa..."></div>
+    <div class="form-row">
+      <div class="form-group"><label>Área *</label><select id="fArea">${sel(areas,t.area)}</select></div>
+      <div class="form-group"><label>Responsável *</label><select id="fResp">${sel(resps,t.resp)}</select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Prazo *</label><input type="date" id="fPrazo" value="${t.prazo||''}"></div>
+      <div class="form-group"><label>Prioridade</label><select id="fPrio">${sel(prios,t.prio)}</select></div>
+    </div>
+    <div class="form-group"><label>Status</label><select id="fStatus">${sel(statuses,t.status)}</select></div>
+    <div class="form-group"><label>Descrição</label><textarea id="fDesc" placeholder="Detalhes adicionais...">${t.desc||''}</textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveTask(${t.id||0})"><i class="ti ti-device-floppy"></i> Salvar</button>
+    </div>`;
+}
+function saveTask(id){
+  const titulo=document.getElementById('fTitulo').value.trim();
+  if(!titulo){alert('Informe o título da tarefa.');return}
+  const prazo=document.getElementById('fPrazo').value;
+  if(!prazo){alert('Informe o prazo.');return}
+  const obj={titulo,area:document.getElementById('fArea').value,resp:document.getElementById('fResp').value,
+    prazo,prio:document.getElementById('fPrio').value,status:document.getElementById('fStatus').value,
+    desc:document.getElementById('fDesc').value};
+  if(id){const i=TASKS.findIndex(x=>x.id===id);if(i>-1)Object.assign(TASKS[i],obj)}
+  else{obj.id=nextId++;TASKS.push(obj)}
+  closeModal();applyFilters();updateDashboard();
+  showToast(id?'Tarefa atualizada com sucesso!':'Tarefa criada com sucesso!');
+}
+function cycleStatus(id){
+  const t=TASKS.find(x=>x.id===id);if(!t)return;
+  const opts=['Em andamento','Aguardando','Concluído','Cancelado'];
+  t.status=opts[(opts.indexOf(t.status)+1)%opts.length];
+  applyFilters();updateDashboard();
+  showToast('Status: '+t.status);
+}
+function deleteTask(id){
+  if(!confirm('Excluir esta tarefa?'))return;
+  const i=TASKS.findIndex(x=>x.id===id);if(i>-1)TASKS.splice(i,1);
+  applyFilters();updateDashboard();showToast('Tarefa excluída.');
+}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('open')}
+document.getElementById('modalOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal()});
+
+// ── RELATÓRIO ─────────────────────────────────────────────────────────
+function generateReport(){
+  const de=document.getElementById('rptDe').value;
+  const ate=document.getElementById('rptAte').value;
+  const area=document.getElementById('rptArea').value;
+  const status=document.getElementById('rptStatus').value;
+  const resp=document.getElementById('rptResp').value;
+  const list=TASKS.filter(t=>
+    (!area||t.area===area)&&(!status||t.status===status)&&(!resp||t.resp===resp)&&
+    (!de||t.prazo>=de)&&(!ate||t.prazo<=ate)
+  );
+  const total=list.length;
+  const conc=list.filter(t=>t.status==='Concluído').length;
+  const and=list.filter(t=>t.status==='Em andamento').length;
+  const alta=list.filter(t=>t.prio==='Alta').length;
+  document.getElementById('rptSubtitle').textContent=`Período: ${fmtDate(de)} a ${fmtDate(ate)} · Gerado em ${fmtDate(today())}`;
+  document.getElementById('rptStats').innerHTML=[
+    {v:total,l:'Total',bg:'#eef4fb',c:'var(--its-sidebar)'},
+    {v:conc,l:'Concluídas',bg:'#f0fdf4',c:'var(--its-success)'},
+    {v:and,l:'Em Andamento',bg:'#fff3ee',c:'var(--its-orange)'},
+    {v:alta,l:'Prioridade Alta',bg:'#fef2f2',c:'var(--its-danger)'},
+  ].map(s=>`<div class="stat-card" style="background:${s.bg}"><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('');
+  document.getElementById('rptBody').innerHTML=list.map(t=>
+    `<tr><td>${t.titulo}</td><td>${t.area}</td><td>${t.resp}</td><td>${fmtDate(t.prazo)}</td><td>${prioBadge(t.prio)}</td><td>${statusBadge(t.status)}</td></tr>`
+  ).join('');
+  document.getElementById('reportResult').style.display='block';
+  showToast('Relatório gerado!');
+}
+function exportCSV(){
+  const rows=[['Título','Área','Responsável','Prazo','Prioridade','Status'],
+    ...TASKS.map(t=>[t.titulo,t.area,t.resp,t.prazo,t.prio,t.status])];
+  const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv);
+  a.download='tarefas-its.csv';a.click();
+  showToast('CSV exportado!');
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────
+function updateDashboard(){
+  const total=TASKS.length;
+  const conc=TASKS.filter(t=>t.status==='Concluído').length;
+  const and=TASKS.filter(t=>t.status==='Em andamento').length;
+  const alta=TASKS.filter(t=>t.prio==='Alta').length;
+  document.getElementById('d-total').textContent=total;
+  document.getElementById('d-conc').textContent=conc;
+  document.getElementById('d-and').textContent=and;
+  document.getElementById('d-alta').textContent=alta;
+  document.getElementById('d-conc-bar').style.width=(total?Math.round(conc/total*100):0)+'%';
+  document.getElementById('d-and-bar').style.width=(total?Math.round(and/total*100):0)+'%';
+  document.getElementById('d-alta-pct').textContent=total?Math.round(alta/total*100)+'% do total':'';
+  const statuses=['Em andamento','Concluído','Aguardando','Cancelado'];
+  const sColors=['var(--its-orange)','var(--its-success)','var(--its-info)','var(--its-danger)'];
+  const maxS=Math.max(...statuses.map(s=>TASKS.filter(t=>t.status===s).length),1);
+  document.getElementById('chartStatus').innerHTML=statuses.map((s,i)=>{
+    const cnt=TASKS.filter(t=>t.status===s).length;
+    const pct=Math.round(cnt/maxS*100);
+    return `<div class="chart-row"><div class="chart-label">${s}</div><div class="chart-track"><div class="chart-fill" style="width:${pct}%;background:${sColors[i]}">${cnt||''}</div></div><div class="chart-val">${cnt}</div></div>`;
+  }).join('');
+  const areas=['TI','Operações','Financeiro','RH','Comercial'];
+  const aColors=['#183c5a','#E85928','#0284c7','#16a34a','#d97706'];
+  const maxA=Math.max(...areas.map(a=>TASKS.filter(t=>t.area===a).length),1);
+  document.getElementById('chartArea').innerHTML=areas.map((a,i)=>{
+    const cnt=TASKS.filter(t=>t.area===a).length;
+    const pct=Math.round(cnt/maxA*100);
+    return `<div class="chart-row"><div class="chart-label">${a}</div><div class="chart-track"><div class="chart-fill" style="width:${pct}%;background:${aColors[i]}">${cnt||''}</div></div><div class="chart-val">${cnt}</div></div>`;
+  }).join('');
+  const todayStr=today();
+  const in7=new Date();in7.setDate(in7.getDate()+7);
+  const in7Str=in7.toISOString().slice(0,10);
+  const up=TASKS.filter(t=>t.prazo>=todayStr&&t.prazo<=in7Str&&t.status!=='Concluído'&&t.status!=='Cancelado')
+    .sort((a,b)=>a.prazo.localeCompare(b.prazo));
+  document.getElementById('upcoming').innerHTML=up.length
+    ?up.map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--its-border)"><span class="priority-dot ${prioClass(t.prio)}"></span><div style="flex:1"><div style="font-size:.83rem;font-weight:600">${t.titulo}</div><div style="font-size:.75rem;color:var(--its-muted)">${t.resp} · ${t.area}</div></div><span style="font-size:.78rem;color:var(--its-danger);font-weight:600">${fmtDate(t.prazo)}</span>${statusBadge(t.status)}</div>`).join('')
+    :`<div class="empty-state"><i class="ti ti-circle-check" style="color:var(--its-success)"></i>Nenhuma tarefa vencendo nos próximos 7 dias</div>`;
+}
+
+// ── NAV / TABS ────────────────────────────────────────────────────────
+function switchTab(name,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  if(name==='dashboard')updateDashboard();
+}
+function setNav(el,tab){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  const tabEl=document.querySelectorAll('.tab');
+  const names=['tarefas','relatorio','dashboard'];
+  const idx=names.indexOf(tab);
+  if(idx>-1){tabEl.forEach(t=>t.classList.remove('active'));tabEl[idx].classList.add('active');
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.getElementById('panel-'+tab).classList.add('active');
+    if(tab==='dashboard')updateDashboard();}
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────
+function showToast(msg){
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').textContent=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+renderTasks(TASKS);
+updateDashboard();
+</script>
+</body>
+</html>
