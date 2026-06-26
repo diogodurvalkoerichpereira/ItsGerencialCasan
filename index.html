@@ -599,33 +599,39 @@ textarea{resize:vertical;min-height:72px}
     <div class="panel" id="panel-config">
       <div style="max-width:620px">
         <div class="card">
-          <div class="section-title">Notificações por E-mail — Novas Tarefas</div>
-          <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:var(--radius-sm);padding:10px 13px;font-size:.82rem;color:#075985;margin-bottom:16px;display:flex;gap:8px;align-items:flex-start">
-            <i class="ti ti-info-circle" style="font-size:16px;flex-shrink:0;margin-top:1px"></i>
-            <div>Utilize o <strong>EmailJS</strong> para envio gratuito de e-mails direto do browser (até 200/mês).
-            Crie uma conta em <strong>emailjs.com</strong>, configure um serviço e um template, e cole as credenciais abaixo.</div>
-          </div>
-
-          <div class="form-group">
-            <label>Public Key (User ID)</label>
-            <input type="text" id="cfgPublicKey" placeholder="Ex: user_aBcDeFgHiJkLmNoPqRsTu">
-          </div>
+          <div class="section-title">Configuração de E-mail</div>
           <div class="form-row">
             <div class="form-group">
-              <label>Service ID</label>
-              <input type="text" id="cfgServiceId" placeholder="Ex: service_xxxxxxx">
+              <label>E-mail (remetente)</label>
+              <input type="email" id="cfgEmail" placeholder="email@empresa.com.br">
             </div>
             <div class="form-group">
-              <label>Template ID</label>
-              <input type="text" id="cfgTemplateId" placeholder="Ex: template_xxxxxxx">
+              <label>Senha</label>
+              <input type="password" id="cfgSenha" placeholder="••••••••">
+            </div>
+          </div>
+          <div class="form-row-3">
+            <div class="form-group">
+              <label>Servidor SMTP</label>
+              <input type="text" id="cfgSmtpHost" placeholder="mail.empresa.com.br">
+            </div>
+            <div class="form-group">
+              <label>Porta SMTP</label>
+              <input type="number" id="cfgSmtpPort" placeholder="465">
+            </div>
+            <div class="form-group">
+              <label>Segurança</label>
+              <select id="cfgSeguranca">
+                <option value="SSL">SSL/TLS (465)</option>
+                <option value="STARTTLS">STARTTLS (587)</option>
+                <option value="none">Sem criptografia</option>
+              </select>
             </div>
           </div>
 
           <hr class="divider">
           <div class="section-title" style="font-size:.8rem;margin-bottom:12px">Destinatários das Notificações</div>
-
           <div id="recipientList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
-
           <div style="display:flex;gap:8px">
             <input type="email" id="newRecipientEmail" placeholder="nome@empresa.com.br" style="flex:1">
             <input type="text" id="newRecipientName" placeholder="Nome" style="width:160px">
@@ -635,29 +641,12 @@ textarea{resize:vertical;min-height:72px}
           <hr class="divider">
           <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
             <div style="display:flex;align-items:center;gap:8px">
-              <label style="margin:0;font-size:.82rem;font-weight:600">Ativar notificações</label>
+              <label style="margin:0;font-size:.82rem;font-weight:600">Ativar notificações ao criar tarefa</label>
               <input type="checkbox" id="cfgAtivo" style="width:auto;accent-color:var(--its-orange)">
             </div>
-            <div style="display:flex;gap:8px">
-              <button class="btn btn-ghost btn-sm" onclick="testEmail()"><i class="ti ti-send"></i> Testar envio</button>
-              <button class="btn btn-primary" onclick="saveConfig()"><i class="ti ti-device-floppy"></i> Salvar Configurações</button>
-            </div>
+            <button class="btn btn-primary" onclick="saveConfig()"><i class="ti ti-device-floppy"></i> Salvar</button>
           </div>
-        </div>
-
-        <div class="card">
-          <div class="section-title" style="font-size:.8rem;margin-bottom:10px">Template EmailJS recomendado</div>
-          <div style="background:#1e293b;border-radius:var(--radius-sm);padding:14px 16px;font-size:.78rem;color:#e2e8f0;font-family:monospace;line-height:1.8">
-            <div style="color:#94a3b8"><!-- Variáveis disponíveis no template --></div>
-            <div><span style="color:#7dd3fc">Nova tarefa:</span> <span style="color:#fde68a">{{titulo}}</span></div>
-            <div><span style="color:#7dd3fc">Área:</span> <span style="color:#fde68a">{{area}}</span></div>
-            <div><span style="color:#7dd3fc">Responsável:</span> <span style="color:#fde68a">{{responsavel}}</span></div>
-            <div><span style="color:#7dd3fc">Prazo:</span> <span style="color:#fde68a">{{prazo}}</span></div>
-            <div><span style="color:#7dd3fc">Prioridade:</span> <span style="color:#fde68a">{{prioridade}}</span></div>
-            <div><span style="color:#7dd3fc">Descrição:</span> <span style="color:#fde68a">{{descricao}}</span></div>
-            <div><span style="color:#7dd3fc">Para:</span> <span style="color:#fde68a">{{to_email}}</span></div>
-            <div><span style="color:#7dd3fc">Nome destinatário:</span> <span style="color:#fde68a">{{to_name}}</span></div>
-          </div>
+          <div id="cfgStatus" style="margin-top:10px"></div>
         </div>
       </div>
     </div>
@@ -1489,24 +1478,29 @@ function setNav(el,tab){
 }
 
 // ── CONFIGURAÇÕES / E-MAIL ────────────────────────────────────────────
-let CFG = JSON.parse(localStorage.getItem('its_cfg')||'{"publicKey":"","serviceId":"","templateId":"","ativo":false,"recipients":[]}');
+let CFG = JSON.parse(localStorage.getItem('its_cfg')||'{"smtpEmail":"","smtpSenha":"","smtpHost":"","smtpPort":"465","smtpSeg":"SSL","ativo":false,"recipients":[]}');
 
 function loadConfig(){
-  document.getElementById('cfgPublicKey').value = CFG.publicKey||'';
-  document.getElementById('cfgServiceId').value = CFG.serviceId||'';
-  document.getElementById('cfgTemplateId').value = CFG.templateId||'';
-  document.getElementById('cfgAtivo').checked = !!CFG.ativo;
+  document.getElementById('cfgEmail').value      = CFG.smtpEmail||'';
+  document.getElementById('cfgSenha').value      = CFG.smtpSenha||'';
+  document.getElementById('cfgSmtpHost').value   = CFG.smtpHost||'';
+  document.getElementById('cfgSmtpPort').value   = CFG.smtpPort||'465';
+  document.getElementById('cfgSeguranca').value  = CFG.smtpSeg||'SSL';
+  document.getElementById('cfgAtivo').checked    = !!CFG.ativo;
   renderRecipients();
 }
 
 function saveConfig(){
-  CFG.publicKey = document.getElementById('cfgPublicKey').value.trim();
-  CFG.serviceId = document.getElementById('cfgServiceId').value.trim();
-  CFG.templateId = document.getElementById('cfgTemplateId').value.trim();
-  CFG.ativo = document.getElementById('cfgAtivo').checked;
+  CFG.smtpEmail = document.getElementById('cfgEmail').value.trim();
+  CFG.smtpSenha = document.getElementById('cfgSenha').value;
+  CFG.smtpHost  = document.getElementById('cfgSmtpHost').value.trim();
+  CFG.smtpPort  = document.getElementById('cfgSmtpPort').value.trim();
+  CFG.smtpSeg   = document.getElementById('cfgSeguranca').value;
+  CFG.ativo     = document.getElementById('cfgAtivo').checked;
   localStorage.setItem('its_cfg', JSON.stringify(CFG));
-  if(CFG.publicKey) emailjs.init(CFG.publicKey);
-  showToast('Configurações salvas!');
+  const st = document.getElementById('cfgStatus');
+  st.innerHTML='<div class="its-alert alert-success"><i class="ti ti-check"></i> Configurações salvas com sucesso!</div>';
+  setTimeout(()=>st.innerHTML='',3000);
 }
 
 function renderRecipients(){
@@ -1541,37 +1535,18 @@ function removeRecipient(i){
   renderRecipients();
 }
 
-function testEmail(){
-  if(!CFG.publicKey||!CFG.serviceId||!CFG.templateId){
-    alert('Preencha e salve as credenciais do EmailJS antes de testar.');return;
-  }
-  if(!CFG.recipients||!CFG.recipients.length){
-    alert('Adicione ao menos um destinatário.');return;
-  }
-  sendNotification({titulo:'[TESTE] Tarefa de exemplo',area:'TI',resp:'Diogo',prazo:'2026-12-31',prio:'Intermediária',desc:'Este é um e-mail de teste do sistema ITS.'});
-}
-
 function sendNotification(task){
-  if(!CFG.ativo||!CFG.publicKey||!CFG.serviceId||!CFG.templateId) return;
+  if(!CFG.ativo||!CFG.smtpEmail||!CFG.smtpHost) return;
   if(!CFG.recipients||!CFG.recipients.length) return;
-  emailjs.init(CFG.publicKey);
+  // O envio SMTP direto não é suportado pelo browser por segurança.
+  // Para envio real, configure um serviço backend (ex: its-email-service) na rede interna.
   const prazoFmt = task.prazo ? task.prazo.split('-').reverse().join('/') : '';
-  CFG.recipients.forEach(r=>{
-    emailjs.send(CFG.serviceId, CFG.templateId, {
-      to_email: r.email,
-      to_name: r.name,
-      titulo: task.titulo,
-      area: task.area,
-      responsavel: task.resp,
-      prazo: prazoFmt,
-      prioridade: task.prio,
-      descricao: task.desc||'—',
-    }).then(()=>{
-      console.log('E-mail enviado para',r.email);
-    }).catch(err=>{
-      console.error('Erro ao enviar para',r.email,err);
-    });
-  });
+  const corpo = `Nova tarefa criada no ITS Gerencial CASAN:\n\nTítulo: ${task.titulo}\nÁrea: ${task.area}\nResponsável: ${task.resp}\nPrazo: ${prazoFmt}\nPrioridade: ${task.prio}\nDescrição: ${task.desc||'—'}`;
+  const destinatarios = CFG.recipients.map(r=>r.email).join(',');
+  const subject = encodeURIComponent(`[ITS Gerencial] Nova Tarefa: ${task.titulo}`);
+  const body = encodeURIComponent(corpo);
+  // Abre cliente de e-mail do usuário como fallback
+  window.open(`mailto:${destinatarios}?subject=${subject}&body=${body}`,'_blank');
 }
 
 // ── TOAST ─────────────────────────────────────────────────────────────
