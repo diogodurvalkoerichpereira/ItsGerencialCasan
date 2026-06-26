@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ITS — Gestão de Tarefas</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -160,6 +161,7 @@ textarea{resize:vertical;min-height:72px}
   <div class="nav-item" onclick="setNav(this,'dashboard')"><i class="ti ti-chart-pie"></i> Dashboard</div>
   <div class="nav-item" onclick="setNav(this,'emergencias')"><i class="ti ti-alert-octagon"></i> Emergências</div>
   <div class="nav-item" onclick="setNav(this,'avisos')"><i class="ti ti-speakerphone"></i> Quadro de Avisos</div>
+  <div class="nav-item" onclick="setNav(this,'ponto')"><i class="ti ti-clock"></i> Ponto</div>
   <div class="nav-item"><i class="ti ti-users"></i> Equipe</div>
   <div class="nav-item"><i class="ti ti-calendar"></i> Agenda</div>
   <div class="nav-section">Sistema</div>
@@ -188,6 +190,10 @@ textarea{resize:vertical;min-height:72px}
     <div class="tabs" id="emergTabs" style="display:none">
       <button class="tab active" onclick="switchEmergTab('lista',this)"><i class="ti ti-list"></i> Ocorrências</button>
       <button class="tab" onclick="switchEmergTab('nova',this)"><i class="ti ti-plus"></i> Nova Emergência</button>
+    </div>
+    <div class="tabs" id="pontoTabs" style="display:none">
+      <button class="tab active" onclick="switchPontoTab('lista',this)"><i class="ti ti-table"></i> Registros</button>
+      <button class="tab" onclick="switchPontoTab('importar',this)"><i class="ti ti-upload"></i> Importar XLS</button>
     </div>
     <div class="tabs" id="avisosTabs" style="display:none">
       <button class="tab active" onclick="switchAvisosTab('lista',this)"><i class="ti ti-list"></i> Registros</button>
@@ -483,6 +489,106 @@ textarea{resize:vertical;min-height:72px}
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
             <button class="btn btn-ghost" onclick="switchEmergTab('lista', document.querySelector('#emergTabs .tab'))"><i class="ti ti-x"></i> Cancelar</button>
             <button class="btn btn-danger" onclick="registrarEmerg()"><i class="ti ti-device-floppy"></i> Salvar Emergência</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== PONTO ===== -->
+    <div class="panel" id="panel-ponto">
+
+      <!-- SUB-PANEL: LISTA -->
+      <div id="ppanel-lista">
+        <div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#eef4fb;color:var(--its-sidebar)"><i class="ti ti-users"></i></div>
+            <div class="stat-value" id="p-funcionarios">0</div>
+            <div class="stat-label">Funcionários</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#f0fdf4;color:var(--its-success)"><i class="ti ti-circle-check"></i></div>
+            <div class="stat-value" id="p-presenca">0</div>
+            <div class="stat-label">Presenças</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#f8fafc;color:var(--its-muted)"><i class="ti ti-sun"></i></div>
+            <div class="stat-value" id="p-folga">0</div>
+            <div class="stat-label">Folgas</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#fef2f2;color:var(--its-danger)"><i class="ti ti-alert-triangle"></i></div>
+            <div class="stat-value" id="p-inconsistencia">0</div>
+            <div class="stat-label">Inconsistências</div>
+          </div>
+        </div>
+
+        <div id="ponto-empty-import" style="text-align:center;padding:48px 20px">
+          <div style="width:64px;height:64px;background:#eef4fb;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;color:var(--its-sidebar)"><i class="ti ti-table-import"></i></div>
+          <div style="font-size:.95rem;font-weight:700;color:var(--its-sidebar);margin-bottom:6px">Nenhum arquivo importado</div>
+          <div style="font-size:.83rem;color:var(--its-muted);margin-bottom:16px">Importe a planilha XLS de ponto para visualizar os registros</div>
+          <button class="btn btn-primary" onclick="switchPontoTab('importar',document.querySelectorAll('#pontoTabs .tab')[1])"><i class="ti ti-upload"></i> Importar Planilha</button>
+        </div>
+
+        <div id="ponto-data-wrap" style="display:none">
+          <div class="filter-row">
+            <div class="form-group">
+              <label>Buscar funcionário</label>
+              <input type="text" id="pSearch" placeholder="Nome ou matrícula..." oninput="filterPonto()">
+            </div>
+            <div class="form-group">
+              <label>Situação</label>
+              <select id="pFilterSit" onchange="filterPonto()">
+                <option value="">Todas</option>
+                <option>Presença</option><option>Folga</option>
+                <option>Falta</option><option>Afastamento</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Data</label>
+              <input type="date" id="pFilterData" onchange="filterPonto()">
+            </div>
+            <div class="form-group">
+              <label>Superior</label>
+              <select id="pFilterSup" onchange="filterPonto()">
+                <option value="">Todos</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="card" style="padding:0;overflow:hidden">
+            <table class="task-table" id="pontoTable">
+              <thead>
+                <tr>
+                  <th>Matrícula</th><th>Nome</th><th>Superior</th>
+                  <th>Data</th><th>Início Jornada</th><th>Início Intervalo</th>
+                  <th>Fim Intervalo</th><th>Fim Jornada</th>
+                  <th>Tipo Jornada</th><th>Situação</th><th>Inconsistência</th>
+                </tr>
+              </thead>
+              <tbody id="pontoBody"></tbody>
+            </table>
+          </div>
+          <div style="padding:8px 4px;font-size:.75rem;color:var(--its-muted)" id="pontoCount"></div>
+        </div>
+      </div>
+
+      <!-- SUB-PANEL: IMPORTAR -->
+      <div id="ppanel-importar" style="display:none">
+        <div class="card" style="max-width:560px;margin:0 auto">
+          <div class="section-title">Importar Planilha de Ponto</div>
+          <div id="dropZone" onclick="document.getElementById('pontoFile').click()"
+            style="border:2px dashed var(--its-border);border-radius:var(--radius-md);padding:40px 20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s"
+            ondragover="event.preventDefault();this.style.borderColor='var(--its-orange)';this.style.background='#fff3ee'"
+            ondragleave="this.style.borderColor='var(--its-border)';this.style.background=''"
+            ondrop="handlePontoDrop(event)">
+            <i class="ti ti-file-spreadsheet" style="font-size:40px;color:var(--its-muted);display:block;margin-bottom:10px"></i>
+            <div style="font-size:.9rem;font-weight:600;color:var(--its-text);margin-bottom:4px">Clique ou arraste o arquivo aqui</div>
+            <div style="font-size:.8rem;color:var(--its-muted)">Formato aceito: .xls · .xlsx</div>
+          </div>
+          <input type="file" id="pontoFile" accept=".xls,.xlsx" style="display:none" onchange="importarPonto(this.files[0])">
+          <div id="importStatus" style="margin-top:14px;display:none"></div>
+          <div style="margin-top:14px;font-size:.78rem;color:var(--its-muted)">
+            <strong>Colunas lidas:</strong> Matrícula, Nome, Superior, Data, Início/Fim Jornada, Início/Fim Intervalo, Tipo de Jornada, Situação, Inconsistência.
           </div>
         </div>
       </div>
@@ -994,6 +1100,135 @@ function switchEmergTab(name,el){
   if(name==='lista')filterEmerg();
 }
 
+// ── PONTO ────────────────────────────────────────────────────────────
+let PONTO_DATA = [];
+
+function switchPontoTab(name, el){
+  document.querySelectorAll('#pontoTabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('ppanel-lista').style.display = name==='lista' ? 'block' : 'none';
+  document.getElementById('ppanel-importar').style.display = name==='importar' ? 'block' : 'none';
+  if(name==='lista') filterPonto();
+}
+
+function handlePontoDrop(e){
+  e.preventDefault();
+  const dz = document.getElementById('dropZone');
+  dz.style.borderColor='var(--its-border)'; dz.style.background='';
+  const file = e.dataTransfer.files[0];
+  if(file) importarPonto(file);
+}
+
+function importarPonto(file){
+  if(!file) return;
+  const status = document.getElementById('importStatus');
+  status.style.display='block';
+  status.innerHTML=`<div class="alert alert-info"><i class="ti ti-loader"></i> Lendo arquivo <strong>${file.name}</strong>...</div>`;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, {type:'array', cellText:true, cellDates:false, raw:false});
+      const sh = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sh, {header:1, raw:false, defval:''});
+      if(rows.length < 2){ status.innerHTML='<div class="alert alert-error"><i class="ti ti-x"></i> Planilha vazia ou formato inválido.</div>'; return; }
+      const header = rows[0];
+      const idx = {
+        mat: header.findIndex(h=>h.toString().toLowerCase().includes('matr')),
+        nome: header.findIndex(h=>h.toString().toLowerCase().includes('nome')),
+        sup: header.findIndex(h=>h.toString().toLowerCase().includes('superior')),
+        data: header.findIndex(h=>h.toString().toLowerCase()==='data'),
+        ini: header.findIndex(h=>h.toString().toLowerCase().includes('início jornada')||h.toString().toLowerCase().includes('inicio jornada')),
+        iniInt: header.findIndex(h=>h.toString().toLowerCase().includes('início intervalo')||h.toString().toLowerCase().includes('inicio intervalo')),
+        fimInt: header.findIndex(h=>h.toString().toLowerCase().includes('fim intervalo')),
+        fim: header.findIndex(h=>h.toString().toLowerCase().includes('fim jornada')),
+        tipo: header.findIndex(h=>h.toString().toLowerCase().includes('tipo')),
+        sit: header.findIndex(h=>h.toString().toLowerCase()==='situação'||h.toString().toLowerCase()==='situacao'),
+        inc: header.findIndex(h=>h.toString().toLowerCase().includes('inconsist')),
+      };
+      PONTO_DATA = rows.slice(1).filter(r=>r.some(c=>c!=='')).map((r,i)=>({
+        id: i,
+        mat: idx.mat>=0 ? r[idx.mat] : '',
+        nome: idx.nome>=0 ? r[idx.nome] : '',
+        sup: idx.sup>=0 ? r[idx.sup] : '',
+        data: idx.data>=0 ? r[idx.data] : '',
+        iniJornada: idx.ini>=0 ? r[idx.ini] : '',
+        iniIntervalo: idx.iniInt>=0 ? r[idx.iniInt] : '',
+        fimIntervalo: idx.fimInt>=0 ? r[idx.fimInt] : '',
+        fimJornada: idx.fim>=0 ? r[idx.fim] : '',
+        tipo: idx.tipo>=0 ? r[idx.tipo] : '',
+        sit: idx.sit>=0 ? r[idx.sit] : '',
+        inc: idx.inc>=0 ? r[idx.inc] : '',
+      }));
+      const sups = [...new Set(PONTO_DATA.map(r=>r.sup).filter(Boolean))].sort();
+      const sel = document.getElementById('pFilterSup');
+      sel.innerHTML = '<option value="">Todos</option>' + sups.map(s=>`<option>${s}</option>`).join('');
+      status.innerHTML=`<div class="alert alert-success"><i class="ti ti-check"></i> <strong>${PONTO_DATA.length}</strong> registros importados com sucesso.</div>`;
+      setTimeout(()=>{
+        switchPontoTab('lista', document.querySelectorAll('#pontoTabs .tab')[0]);
+      }, 1200);
+    } catch(err){
+      status.innerHTML=`<div class="alert alert-error"><i class="ti ti-x"></i> Erro ao ler o arquivo: ${err.message}</div>`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function sitPontoBadge(s){
+  const sl = (s||'').toLowerCase();
+  if(sl==='presença'||sl==='presenca') return `<span class="badge badge-green"><span class="badge-dot"></span>${s}</span>`;
+  if(sl==='folga') return `<span class="badge badge-gray"><span class="badge-dot"></span>${s}</span>`;
+  if(sl==='falta') return `<span class="badge badge-red"><span class="badge-dot"></span>${s}</span>`;
+  return `<span class="badge badge-orange"><span class="badge-dot"></span>${s||'—'}</span>`;
+}
+
+function filterPonto(){
+  if(!PONTO_DATA.length){
+    document.getElementById('ponto-empty-import').style.display='block';
+    document.getElementById('ponto-data-wrap').style.display='none';
+    return;
+  }
+  document.getElementById('ponto-empty-import').style.display='none';
+  document.getElementById('ponto-data-wrap').style.display='block';
+  const q=(document.getElementById('pSearch').value||'').toLowerCase();
+  const sit=document.getElementById('pFilterSit').value;
+  const dt=document.getElementById('pFilterData').value;
+  const sup=document.getElementById('pFilterSup').value;
+  let list = PONTO_DATA.filter(r=>
+    (!q || r.nome.toLowerCase().includes(q) || r.mat.toLowerCase().includes(q)) &&
+    (!sit || (r.sit||'').toLowerCase().includes(sit.toLowerCase())) &&
+    (!sup || r.sup===sup) &&
+    (!dt || r.data===dt)
+  );
+  const total = list.length;
+  const presenca = list.filter(r=>(r.sit||'').toLowerCase().includes('presen')).length;
+  const folga = list.filter(r=>(r.sit||'').toLowerCase()==='folga').length;
+  const incons = list.filter(r=>r.inc && r.inc.trim()!=='').length;
+  const funcs = new Set(list.map(r=>r.mat)).size;
+  document.getElementById('p-funcionarios').textContent = funcs;
+  document.getElementById('p-presenca').textContent = presenca;
+  document.getElementById('p-folga').textContent = folga;
+  document.getElementById('p-inconsistencia').textContent = incons;
+  const MAX = 500;
+  const shown = list.slice(0, MAX);
+  document.getElementById('pontoBody').innerHTML = shown.map(r=>`
+    <tr>
+      <td style="font-size:.75rem;color:var(--its-muted)">${r.mat}</td>
+      <td style="font-size:.82rem;font-weight:600;white-space:nowrap">${r.nome}</td>
+      <td style="font-size:.78rem;color:var(--its-muted);white-space:nowrap">${r.sup}</td>
+      <td style="font-size:.8rem">${r.data}</td>
+      <td style="font-size:.8rem">${r.iniJornada||'—'}</td>
+      <td style="font-size:.8rem">${r.iniIntervalo||'—'}</td>
+      <td style="font-size:.8rem">${r.fimIntervalo||'—'}</td>
+      <td style="font-size:.8rem">${r.fimJornada||'—'}</td>
+      <td style="font-size:.75rem;color:var(--its-muted)">${r.tipo}</td>
+      <td>${sitPontoBadge(r.sit)}</td>
+      <td style="font-size:.75rem;color:${r.inc?'var(--its-danger)':'var(--its-muted)'}">${r.inc||'—'}</td>
+    </tr>`).join('');
+  document.getElementById('pontoCount').textContent =
+    total > MAX ? `Exibindo ${MAX} de ${total} registros. Refine os filtros para ver mais.` : `${total} registro(s) encontrado(s).`;
+}
+
 // ── QUADRO DE AVISOS ──────────────────────────────────────────────────
 let nextAvisoId = 4;
 const AVISOS = [
@@ -1147,9 +1382,11 @@ function setNav(el,tab){
   el.classList.add('active');
   const isEmerg=tab==='emergencias';
   const isAvisos=tab==='avisos';
-  document.getElementById('mainTabs').style.display=(!isEmerg&&!isAvisos)?'flex':'none';
+  const isPonto=tab==='ponto';
+  document.getElementById('mainTabs').style.display=(!isEmerg&&!isAvisos&&!isPonto)?'flex':'none';
   document.getElementById('emergTabs').style.display=isEmerg?'flex':'none';
   document.getElementById('avisosTabs').style.display=isAvisos?'flex':'none';
+  document.getElementById('pontoTabs').style.display=isPonto?'flex':'none';
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+tab).classList.add('active');
   const btn=document.getElementById('topbarBtn');
@@ -1161,6 +1398,10 @@ function setNav(el,tab){
     btn.innerHTML='<i class="ti ti-speakerphone"></i> Novo Aviso';
     btn.onclick=()=>switchAvisosTab('novo',document.querySelectorAll('#avisosTabs .tab')[1]);
     filterAvisos();
+  } else if(isPonto){
+    btn.innerHTML='<i class="ti ti-upload"></i> Importar XLS';
+    btn.onclick=()=>switchPontoTab('importar',document.querySelectorAll('#pontoTabs .tab')[1]);
+    filterPonto();
   } else {
     btn.innerHTML='<i class="ti ti-plus"></i> Nova Tarefa';
     btn.onclick=openNewTask;
