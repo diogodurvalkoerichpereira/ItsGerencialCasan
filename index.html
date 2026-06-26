@@ -204,7 +204,7 @@ textarea{resize:vertical;min-height:72px}
   <div class="nav-item" onclick="setNav(this,'usuarios')"><i class="ti ti-users"></i> Usuários</div>
   <div class="nav-item" onclick="setNav(this,'config')"><i class="ti ti-settings"></i> Configurações</div>
   <div class="sidebar-bottom">
-    <div class="nav-item" id="meuPerfil"><i class="ti ti-user"></i> Meu Perfil</div>
+    <div class="nav-item" id="meuPerfil" onclick="openProfile()"><i class="ti ti-user"></i> Meu Perfil</div>
     <div class="nav-item" onclick="logout()"><i class="ti ti-logout"></i> Sair</div>
   </div>
 </aside>
@@ -1692,13 +1692,16 @@ function sendNotification(task){
 // ── USUÁRIOS ──────────────────────────────────────────────────────────
 const CARGOS=['Gerente','Coordenador','Supervisor','Monitor','Operador','Cliente'];
 const CARGO_BADGE={'Gerente':'badge-blue','Coordenador':'badge-orange','Supervisor':'badge-yellow','Monitor':'badge-green','Operador':'badge-gray','Cliente':'badge-purple'};
+const HASH_PADRAO='8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'; // sha256('123456')
 let USERS = JSON.parse(localStorage.getItem('its_users')||'null') || [
-  {id:1,nome:'Diogo Pereira',email:'diogo@itscs.com.br',cargo:'Gerente',status:'Ativo'},
-  {id:2,nome:'Ana Lima',email:'ana.lima@itscs.com.br',cargo:'Coordenador',status:'Ativo'},
-  {id:3,nome:'Carlos Souza',email:'carlos.souza@itscs.com.br',cargo:'Supervisor',status:'Ativo'},
-  {id:4,nome:'Bruno Martins',email:'bruno.martins@itscs.com.br',cargo:'Monitor',status:'Ativo'},
-  {id:5,nome:'Mariana R.',email:'mariana.r@itscs.com.br',cargo:'Operador',status:'Inativo'},
+  {id:1,nome:'Diogo Pereira',email:'diogo@itscs.com.br',cargo:'Gerente',status:'Ativo',hash:HASH_PADRAO},
+  {id:2,nome:'Ana Lima',email:'ana.lima@itscs.com.br',cargo:'Coordenador',status:'Ativo',hash:HASH_PADRAO},
+  {id:3,nome:'Carlos Souza',email:'carlos.souza@itscs.com.br',cargo:'Supervisor',status:'Ativo',hash:HASH_PADRAO},
+  {id:4,nome:'Bruno Martins',email:'bruno.martins@itscs.com.br',cargo:'Monitor',status:'Ativo',hash:HASH_PADRAO},
+  {id:5,nome:'Mariana R.',email:'mariana.r@itscs.com.br',cargo:'Operador',status:'Inativo',hash:HASH_PADRAO},
 ];
+// Garante senha padrão para usuários carregados de versões antigas
+USERS.forEach(u=>{if(!u.hash)u.hash=HASH_PADRAO;});
 let nextUserId = Math.max(0,...USERS.map(u=>u.id))+1;
 
 function saveUsers(){localStorage.setItem('its_users',JSON.stringify(USERS));}
@@ -1748,9 +1751,15 @@ function buildUserForm(u={}){
       <div class="form-group"><label>Cargo *</label><select id="uCargo">${sel(CARGOS,u.cargo||'Operador')}</select></div>
       <div class="form-group"><label>Situação</label><select id="uStatus">${sel(['Ativo','Inativo'],u.status||'Ativo')}</select></div>
     </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveUser(${u.id||0})"><i class="ti ti-device-floppy"></i> Salvar</button>
+    ${u.id
+      ? `<div class="its-alert alert-info" style="margin-bottom:4px"><i class="ti ti-key"></i><div>A senha é alterada pelo próprio usuário em <strong>Meu Perfil</strong>. Use o botão abaixo apenas para redefinir ao padrão.</div></div>`
+      : `<div class="its-alert alert-info" style="margin-bottom:4px"><i class="ti ti-key"></i><div>O novo usuário receberá a senha padrão <strong>123456</strong>, que poderá ser alterada em Meu Perfil.</div></div>`}
+    <div style="display:flex;gap:8px;justify-content:${u.id?'space-between':'flex-end'};margin-top:4px">
+      ${u.id?`<button class="btn btn-ghost btn-sm" onclick="resetUserPass(${u.id})"><i class="ti ti-lock-open"></i> Redefinir senha</button>`:''}
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveUser(${u.id||0})"><i class="ti ti-device-floppy"></i> Salvar</button>
+      </div>
     </div>`;
 }
 
@@ -1775,10 +1784,15 @@ function saveUser(id){
   if(id){
     const i=USERS.findIndex(x=>x.id===id);if(i>-1)Object.assign(USERS[i],{nome,email,cargo,status});
   }else{
-    USERS.push({id:nextUserId++,nome,email,cargo,status});
+    USERS.push({id:nextUserId++,nome,email,cargo,status,hash:HASH_PADRAO});
   }
   saveUsers();closeModal();filterUsers();
-  showToast(id?'Usuário atualizado com sucesso!':'Usuário criado com sucesso!');
+  showToast(id?'Usuário atualizado com sucesso!':'Usuário criado (senha padrão 123456).');
+}
+function resetUserPass(id){
+  const u=USERS.find(x=>x.id===id);if(!u)return;
+  if(!confirm(`Redefinir a senha de "${u.nome}" para o padrão (123456)?`))return;
+  u.hash=HASH_PADRAO;saveUsers();showToast('Senha redefinida para 123456.');
 }
 function toggleUser(id){
   const u=USERS.find(x=>x.id===id);if(!u)return;
@@ -1848,15 +1862,30 @@ function sha256(ascii){
   for(i=0;i<8;i++)for(j=3;j+1;j--){var b=(hash[i]>>(j*8))&255;result+=((b<16)?0:'')+b.toString(16);}
   return result;
 }
+// Localiza conta por e-mail (admin com override de senha + usuários ativos)
+function findAccount(email){
+  const admin=AUTH_ACCOUNTS.find(a=>a.email===email);
+  if(admin){
+    const override=localStorage.getItem('its_admin_hash');
+    return {email:admin.email,nome:admin.nome,cargo:admin.cargo,hash:override||admin.hash,isAdmin:true};
+  }
+  const u=USERS.find(x=>x.email.toLowerCase()===email);
+  if(u)return {id:u.id,email:u.email,nome:u.nome,cargo:u.cargo,hash:u.hash,status:u.status,isAdmin:false};
+  return null;
+}
 async function doLogin(ev){
   ev.preventDefault();
   const email=document.getElementById('loginEmail').value.trim().toLowerCase();
   const pass=document.getElementById('loginPass').value;
   const err=document.getElementById('loginError');
-  const acc=AUTH_ACCOUNTS.find(a=>a.email===email);
+  const acc=findAccount(email);
   const hash=sha256(pass);
+  if(acc&&!acc.isAdmin&&acc.status==='Inativo'){
+    err.textContent='Usuário inativo. Procure o administrador.';
+    err.style.display='flex';document.getElementById('loginPass').value='';return false;
+  }
   if(acc&&acc.hash===hash){
-    sessionStorage.setItem('its_session',JSON.stringify({email:acc.email,nome:acc.nome,cargo:acc.cargo}));
+    sessionStorage.setItem('its_session',JSON.stringify({id:acc.id||null,email:acc.email,nome:acc.nome,cargo:acc.cargo,isAdmin:acc.isAdmin}));
     err.style.display='none';
     applySession();
   }else{
@@ -1883,6 +1912,53 @@ function logout(){
   document.getElementById('loginPass').value='';
   document.getElementById('loginEmail').value='';
   document.getElementById('loginScreen').style.display='flex';
+}
+
+// ── MEU PERFIL / TROCA DE SENHA ───────────────────────────────────────
+function openProfile(){
+  const s=JSON.parse(sessionStorage.getItem('its_session')||'null');if(!s)return;
+  document.getElementById('modalTitle').textContent='Meu Perfil';
+  document.getElementById('modalContent').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div class="avatar" style="width:48px;height:48px;font-size:18px">${s.nome.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase()}</div>
+      <div>
+        <div style="font-weight:700;color:var(--its-sidebar)">${s.nome}</div>
+        <div style="font-size:.8rem;color:var(--its-muted)">${s.email}</div>
+        <div style="margin-top:3px">${cargoBadge(s.cargo)}</div>
+      </div>
+    </div>
+    <hr class="divider">
+    <div class="section-title" style="font-size:.8rem;margin-bottom:14px">Alterar Senha</div>
+    <div class="form-group"><label>Senha atual *</label><input type="password" id="pAtual" placeholder="••••••••"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Nova senha *</label><input type="password" id="pNova" placeholder="mín. 4 caracteres"></div>
+      <div class="form-group"><label>Confirmar nova senha *</label><input type="password" id="pConf" placeholder="repita a nova senha"></div>
+    </div>
+    <div id="pErro" class="its-alert alert-error" style="display:none;margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="changePassword()"><i class="ti ti-lock"></i> Salvar nova senha</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function changePassword(){
+  const s=JSON.parse(sessionStorage.getItem('its_session')||'null');if(!s)return;
+  const atual=document.getElementById('pAtual').value;
+  const nova=document.getElementById('pNova').value;
+  const conf=document.getElementById('pConf').value;
+  const erro=document.getElementById('pErro');
+  const show=m=>{erro.textContent=m;erro.style.display='flex';};
+  const acc=findAccount(s.email);
+  if(!acc||acc.hash!==sha256(atual)){show('Senha atual incorreta.');return;}
+  if(nova.length<4){show('A nova senha deve ter ao menos 4 caracteres.');return;}
+  if(nova!==conf){show('A confirmação não confere com a nova senha.');return;}
+  const novoHash=sha256(nova);
+  if(s.isAdmin){
+    localStorage.setItem('its_admin_hash',novoHash);
+  }else{
+    const u=USERS.find(x=>x.id===s.id);if(u){u.hash=novoHash;saveUsers();}
+  }
+  erro.style.display='none';closeModal();showToast('Senha alterada com sucesso!');
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────
