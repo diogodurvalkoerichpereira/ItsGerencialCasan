@@ -884,7 +884,11 @@ textarea{resize:vertical;min-height:72px}
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>Horário Inserido <span style="font-weight:400;color:var(--its-muted)">(deixe em branco para automático)</span></label>
+              <label>Data Inserido <span style="font-weight:400;color:var(--its-muted)">(automático se vazio)</span></label>
+              <input type="date" id="aInseridoData">
+            </div>
+            <div class="form-group">
+              <label>Horário Inserido <span style="font-weight:400;color:var(--its-muted)">(automático se vazio)</span></label>
               <input type="time" id="aInserido">
             </div>
           </div>
@@ -1693,9 +1697,14 @@ function registrarAviso(){
   const supervisor='';
   const canal=document.getElementById('aCanal').value;
   if(!canal){alert('Selecione o canal de envio.');return}
-  const now=new Date();
-  const _inseridoManual=document.getElementById('aInserido').value;
-  const inserido=_inseridoManual||String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const now=new Date();const p=n=>String(n).padStart(2,'0');
+  const _iHora=document.getElementById('aInserido').value;
+  const _iData=document.getElementById('aInseridoData').value;
+  const _horaAuto=`${p(now.getHours())}:${p(now.getMinutes())}`;
+  const _dataAuto=`${p(now.getDate())}/${p(now.getMonth()+1)}`;
+  const inseridoHora=_iHora||_horaAuto;
+  const inseridoDataFmt=_iData?`${_iData.slice(8,10)}/${_iData.slice(5,7)}`:_dataAuto;
+  const inserido=inseridoDataFmt===`${dd}/${dm}`?inseridoHora:`${inseridoDataFmt} ${inseridoHora}`;
   const [dy,dm,dd]=data.split('-');
   AVISOS.unshift({
     id:nextAvisoId++,
@@ -1704,7 +1713,7 @@ function registrarAviso(){
     canal,
     situacao:document.getElementById('aSituacao').value
   });
-  ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aInserido'].forEach(id=>document.getElementById(id).value='');
+  ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aInserido','aInseridoData'].forEach(id=>document.getElementById(id).value='');
   ['aServico','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
   const firstTab=document.querySelector('#avisosTabs .tab');
   switchAvisosTab('lista',firstTab);
