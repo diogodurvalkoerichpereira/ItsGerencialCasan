@@ -1267,6 +1267,11 @@ function switchEmergTab(name,el){
   document.getElementById('epanel-lista').style.display=name==='lista'?'block':'none';
   document.getElementById('epanel-nova').style.display=name==='nova'?'block':'none';
   if(name==='lista')filterEmerg();
+  if(name==='nova'){
+    const d=new Date();const p=n=>String(n).padStart(2,'0');
+    document.getElementById('eData').value=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+    document.getElementById('eRecebido').value=`${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
 }
 
 // ── PONTO ────────────────────────────────────────────────────────────
