@@ -5,5 +5,12 @@ services:
     restart: unless-stopped
     ports:
       - "3100:80"
-    labels:
-      - "caddy.reverse_proxy={{upstreams 80}}"
+
+  its-email-service:
+    build: ./email-service
+    container_name: its-email-service
+    restart: unless-stopped
+    ports:
+      - "3101:3001"
+    env_file:
+      - ./email-service/.env
