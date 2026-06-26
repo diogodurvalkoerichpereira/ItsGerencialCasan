@@ -203,7 +203,7 @@ textarea{resize:vertical;min-height:72px}
           <label>Prioridade</label>
           <select id="filterPrio" onchange="applyFilters()">
             <option value="">Todas</option>
-            <option>Alta</option><option>Média</option><option>Baixa</option>
+            <option>Simples</option><option>Intermediária</option><option>Complexa</option>
           </select>
         </div>
         <div class="form-group">
@@ -321,7 +321,7 @@ textarea{resize:vertical;min-height:72px}
         <div class="stat-card">
           <div class="stat-icon" style="background:#fef2f2;color:var(--its-danger)"><i class="ti ti-alert-triangle"></i></div>
           <div class="stat-value" id="d-alta">0</div>
-          <div class="stat-label">Prioridade Alta</div>
+          <div class="stat-label">Prioridade Complexa</div>
           <div class="stat-delta-neg" id="d-alta-pct"></div>
         </div>
       </div>
@@ -347,16 +347,16 @@ textarea{resize:vertical;min-height:72px}
 // ── DATA ──────────────────────────────────────────────────────────────
 let nextId = 11;
 const TASKS = [
-  {id:1,titulo:'Atualizar base de conhecimento CRM',area:'TI',resp:'Carlos Souza',prazo:'2026-06-28',prio:'Alta',status:'Em andamento',desc:'Revisar e atualizar os artigos de suporte no sistema CRM para refletir novos produtos.'},
-  {id:2,titulo:'Revisar contratos de fornecedores',area:'Financeiro',resp:'Diogo',prazo:'2026-06-30',prio:'Alta',status:'Aguardando',desc:'Análise dos contratos vigentes com fornecedores de telecom e TI.'},
-  {id:3,titulo:'Treinamento equipe operações',area:'Operações',resp:'Ana Lima',prazo:'2026-07-05',prio:'Média',status:'Em andamento',desc:'Ministrar treinamento sobre novos procedimentos de atendimento.'},
-  {id:4,titulo:'Emissão de notas fiscais junho',area:'Financeiro',resp:'Mariana R.',prazo:'2026-06-27',prio:'Alta',status:'Concluído',desc:'Emissão das NFs referentes às competências de junho 2026.'},
-  {id:5,titulo:'Configurar VPN para acesso remoto',area:'TI',resp:'Carlos Souza',prazo:'2026-07-10',prio:'Média',status:'Aguardando',desc:'Implementar solução de VPN para colaboradores home office.'},
-  {id:6,titulo:'Relatório de indicadores Q2',area:'Operações',resp:'Diogo',prazo:'2026-07-01',prio:'Alta',status:'Em andamento',desc:'Consolidar indicadores de atendimento do segundo trimestre.'},
-  {id:7,titulo:'Processo seletivo analistas',area:'RH',resp:'Ana Lima',prazo:'2026-07-15',prio:'Baixa',status:'Em andamento',desc:'Conduzir processo seletivo para 3 vagas de analistas de suporte.'},
-  {id:8,titulo:'Auditoria de acessos sistemas',area:'TI',resp:'Carlos Souza',prazo:'2026-06-26',prio:'Alta',status:'Concluído',desc:'Revisar permissões e acessos de todos os colaboradores.'},
-  {id:9,titulo:'Proposta comercial cliente X',area:'Comercial',resp:'Mariana R.',prazo:'2026-07-03',prio:'Média',status:'Em andamento',desc:'Elaborar proposta de contact center para cliente do setor bancário.'},
-  {id:10,titulo:'Backup mensal dados operacionais',area:'TI',resp:'Carlos Souza',prazo:'2026-06-30',prio:'Baixa',status:'Concluído',desc:'Realizar backup e verificação de integridade dos dados.'},
+  {id:1,titulo:'Atualizar base de conhecimento CRM',area:'TI',resp:'Carlos Souza',prazo:'2026-06-28',prio:'Complexa',status:'Em andamento',desc:'Revisar e atualizar os artigos de suporte no sistema CRM para refletir novos produtos.'},
+  {id:2,titulo:'Revisar contratos de fornecedores',area:'Financeiro',resp:'Diogo',prazo:'2026-06-30',prio:'Complexa',status:'Aguardando',desc:'Análise dos contratos vigentes com fornecedores de telecom e TI.'},
+  {id:3,titulo:'Treinamento equipe operações',area:'Operações',resp:'Ana Lima',prazo:'2026-07-05',prio:'Intermediária',status:'Em andamento',desc:'Ministrar treinamento sobre novos procedimentos de atendimento.'},
+  {id:4,titulo:'Emissão de notas fiscais junho',area:'Financeiro',resp:'Mariana R.',prazo:'2026-06-27',prio:'Complexa',status:'Concluído',desc:'Emissão das NFs referentes às competências de junho 2026.'},
+  {id:5,titulo:'Configurar VPN para acesso remoto',area:'TI',resp:'Carlos Souza',prazo:'2026-07-10',prio:'Intermediária',status:'Aguardando',desc:'Implementar solução de VPN para colaboradores home office.'},
+  {id:6,titulo:'Relatório de indicadores Q2',area:'Operações',resp:'Diogo',prazo:'2026-07-01',prio:'Complexa',status:'Em andamento',desc:'Consolidar indicadores de atendimento do segundo trimestre.'},
+  {id:7,titulo:'Processo seletivo analistas',area:'RH',resp:'Ana Lima',prazo:'2026-07-15',prio:'Simples',status:'Em andamento',desc:'Conduzir processo seletivo para 3 vagas de analistas de suporte.'},
+  {id:8,titulo:'Auditoria de acessos sistemas',area:'TI',resp:'Carlos Souza',prazo:'2026-06-26',prio:'Complexa',status:'Concluído',desc:'Revisar permissões e acessos de todos os colaboradores.'},
+  {id:9,titulo:'Proposta comercial cliente X',area:'Comercial',resp:'Mariana R.',prazo:'2026-07-03',prio:'Intermediária',status:'Em andamento',desc:'Elaborar proposta de contact center para cliente do setor bancário.'},
+  {id:10,titulo:'Backup mensal dados operacionais',area:'TI',resp:'Carlos Souza',prazo:'2026-06-30',prio:'Simples',status:'Concluído',desc:'Realizar backup e verificação de integridade dos dados.'},
 ];
 
 // ── HELPERS ───────────────────────────────────────────────────────────
@@ -368,10 +368,10 @@ function statusBadge(s){
   return `<span class="badge ${m[s]||'badge-gray'}"><span class="badge-dot"></span>${s}</span>`;
 }
 function prioBadge(p){
-  const m={'Alta':'badge-red','Média':'badge-orange','Baixa':'badge-green'};
+  const m={'Simples':'badge-green','Intermediária':'badge-orange','Complexa':'badge-red'};
   return `<span class="badge ${m[p]||'badge-gray'}">${p}</span>`;
 }
-function prioClass(p){return p==='Alta'?'p-alta':p==='Média'?'p-media':'p-baixa'}
+function prioClass(p){return p==='Complexa'?'p-alta':p==='Intermediária'?'p-media':'p-baixa'}
 
 // ── RENDER TASKS ──────────────────────────────────────────────────────
 function renderTasks(list){
@@ -423,7 +423,7 @@ function editTask(id){
 function buildForm(t={}){
   const areas=['TI','Operações','Financeiro','RH','Comercial'];
   const resps=['Diogo','Ana Lima','Carlos Souza','Mariana R.'];
-  const prios=['Alta','Média','Baixa'];
+  const prios=['Simples','Intermediária','Complexa'];
   const statuses=['Em andamento','Aguardando','Concluído','Cancelado'];
   const sel=(arr,cur)=>arr.map(v=>`<option${cur===v?' selected':''}>${v}</option>`).join('');
   return `
@@ -485,13 +485,13 @@ function generateReport(){
   const total=list.length;
   const conc=list.filter(t=>t.status==='Concluído').length;
   const and=list.filter(t=>t.status==='Em andamento').length;
-  const alta=list.filter(t=>t.prio==='Alta').length;
+  const alta=list.filter(t=>t.prio==='Complexa').length;
   document.getElementById('rptSubtitle').textContent=`Período: ${fmtDate(de)} a ${fmtDate(ate)} · Gerado em ${fmtDate(today())}`;
   document.getElementById('rptStats').innerHTML=[
     {v:total,l:'Total',bg:'#eef4fb',c:'var(--its-sidebar)'},
     {v:conc,l:'Concluídas',bg:'#f0fdf4',c:'var(--its-success)'},
     {v:and,l:'Em Andamento',bg:'#fff3ee',c:'var(--its-orange)'},
-    {v:alta,l:'Prioridade Alta',bg:'#fef2f2',c:'var(--its-danger)'},
+    {v:alta,l:'Prioridade Complexa',bg:'#fef2f2',c:'var(--its-danger)'},
   ].map(s=>`<div class="stat-card" style="background:${s.bg}"><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('');
   document.getElementById('rptBody').innerHTML=list.map(t=>
     `<tr><td>${t.titulo}</td><td>${t.area}</td><td>${t.resp}</td><td>${fmtDate(t.prazo)}</td><td>${prioBadge(t.prio)}</td><td>${statusBadge(t.status)}</td></tr>`
@@ -514,7 +514,7 @@ function updateDashboard(){
   const total=TASKS.length;
   const conc=TASKS.filter(t=>t.status==='Concluído').length;
   const and=TASKS.filter(t=>t.status==='Em andamento').length;
-  const alta=TASKS.filter(t=>t.prio==='Alta').length;
+  const alta=TASKS.filter(t=>t.prio==='Complexa').length;
   document.getElementById('d-total').textContent=total;
   document.getElementById('d-conc').textContent=conc;
   document.getElementById('d-and').textContent=and;
