@@ -639,6 +639,33 @@ textarea{resize:vertical;min-height:72px}
             </table>
           </div>
           <div style="padding:8px 4px;font-size:.75rem;color:var(--its-muted)" id="resumoTotal"></div>
+          <!-- INDICADOR 06 -->
+          <div id="ind06-wrap" style="margin-top:20px;border:1px solid var(--its-border);border-radius:var(--radius-md);overflow:hidden">
+            <div style="background:var(--its-sidebar);padding:10px 16px;display:flex;align-items:center;gap:10px">
+              <span style="background:var(--its-orange);color:#fff;font-size:.7rem;font-weight:800;padding:2px 9px;border-radius:4px;letter-spacing:.04em">IND 06</span>
+              <span style="color:#fff;font-size:.85rem;font-weight:700;letter-spacing:.03em">PRESENÇA DO SUPERVISOR</span>
+              <span style="margin-left:auto;color:rgba(255,255,255,.55);font-size:.75rem">Meta: 100%</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:#fff">
+              <div style="padding:14px 18px;border-right:1px solid var(--its-border)">
+                <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Horas c/ Supervisão</div>
+                <div id="ind06-sup" style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar);font-variant-numeric:tabular-nums">—</div>
+              </div>
+              <div style="padding:14px 18px;border-right:1px solid var(--its-border)">
+                <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Total Horas do Mês</div>
+                <div id="ind06-total" style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar);font-variant-numeric:tabular-nums">—</div>
+              </div>
+              <div style="padding:14px 18px">
+                <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Indicador 06</div>
+                <div id="ind06-result" style="font-size:1.4rem;font-weight:800;font-variant-numeric:tabular-nums">—</div>
+              </div>
+            </div>
+            <div style="background:#f8fafc;padding:8px 16px;font-size:.74rem;color:var(--its-muted);border-top:1px solid var(--its-border)">
+              <strong style="color:var(--its-text)">Cálculo:</strong> Tempo total com supervisão ÷ Total de horas do mês × 100 &nbsp;·&nbsp;
+              <strong style="color:var(--its-text)">Instrumento:</strong> Folhas ponto importadas &nbsp;·&nbsp;
+              <strong style="color:var(--its-text)">Exemplo:</strong> 710h ÷ 720h = 98,61%
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1444,6 +1471,17 @@ function calcularResumoMensal(){
     </tr>`).join('');
   const totalDias=rows.reduce((s,r)=>s+r.dias,0);
   document.getElementById('resumoTotal').textContent=`${rows.length} funcionário(s) · ${totalDias} dia(s) com horas registradas`;
+
+  // ── INDICADOR 06 – Presença do Supervisor ─────────────────────────────
+  const totalMin=rows.reduce((s,r)=>s+r.minutos,0);
+  // Horas com supervisão = funcionários que possuem Superior preenchido
+  const supMin=rows.filter(r=>r.sup&&r.sup.trim()!==''&&r.sup!=='—').reduce((s,r)=>s+r.minutos,0);
+  const pct=totalMin>0?((supMin/totalMin)*100).toFixed(2):null;
+  const cor=pct===null?'var(--its-muted)':parseFloat(pct)>=100?'var(--its-success)':parseFloat(pct)>=90?'var(--its-warning)':'var(--its-danger)';
+  document.getElementById('ind06-sup').textContent=fmtHM(supMin);
+  document.getElementById('ind06-total').textContent=fmtHM(totalMin);
+  document.getElementById('ind06-result').textContent=pct!==null?`${pct.replace('.',',')}%`:'—';
+  document.getElementById('ind06-result').style.color=cor;
 }
 
 function baixarModeloPonto(){
