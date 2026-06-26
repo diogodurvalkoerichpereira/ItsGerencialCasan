@@ -158,6 +158,7 @@ textarea{resize:vertical;min-height:72px}
   <div class="nav-item active" onclick="setNav(this,'tarefas')"><i class="ti ti-checklist"></i> Tarefas</div>
   <div class="nav-item" onclick="setNav(this,'relatorio')"><i class="ti ti-file-analytics"></i> Relatórios</div>
   <div class="nav-item" onclick="setNav(this,'dashboard')"><i class="ti ti-chart-pie"></i> Dashboard</div>
+  <div class="nav-item" onclick="setNav(this,'emergencias')"><i class="ti ti-alert-octagon"></i> Emergências</div>
   <div class="nav-item"><i class="ti ti-users"></i> Equipe</div>
   <div class="nav-item"><i class="ti ti-calendar"></i> Agenda</div>
   <div class="nav-section">Sistema</div>
@@ -172,16 +173,20 @@ textarea{resize:vertical;min-height:72px}
   <header class="topbar">
     <div class="topbar-title" id="pageTitle">Gestão de Tarefas</div>
     <div class="topbar-right">
-      <button class="btn btn-primary btn-sm" onclick="openNewTask()"><i class="ti ti-plus"></i> Nova Tarefa</button>
+      <button class="btn btn-primary btn-sm" id="topbarBtn" onclick="openNewTask()"><i class="ti ti-plus"></i> Nova Tarefa</button>
       <div class="avatar" title="Diogo Pereira">DP</div>
     </div>
   </header>
 
   <div class="content">
-    <div class="tabs">
+    <div class="tabs" id="mainTabs">
       <button class="tab active" onclick="switchTab('tarefas',this)"><i class="ti ti-list-check"></i> Tarefas</button>
       <button class="tab" onclick="switchTab('relatorio',this)"><i class="ti ti-file-analytics"></i> Relatório</button>
       <button class="tab" onclick="switchTab('dashboard',this)"><i class="ti ti-chart-pie"></i> Dashboard</button>
+    </div>
+    <div class="tabs" id="emergTabs" style="display:none">
+      <button class="tab active" onclick="switchEmergTab('lista',this)"><i class="ti ti-list"></i> Ocorrências</button>
+      <button class="tab" onclick="switchEmergTab('nova',this)"><i class="ti ti-plus"></i> Nova Emergência</button>
     </div>
 
     <!-- ===== TAREFAS ===== -->
@@ -340,6 +345,154 @@ textarea{resize:vertical;min-height:72px}
         <div id="upcoming"></div>
       </div>
     </div>
+    <!-- ===== EMERGÊNCIAS ===== -->
+    <div class="panel" id="panel-emergencias">
+
+      <!-- SUB-PANEL: LISTA -->
+      <div id="epanel-lista">
+        <div class="stat-grid" style="grid-template-columns:repeat(4,1fr)">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#fef2f2;color:var(--its-danger)"><i class="ti ti-alert-octagon"></i></div>
+            <div class="stat-value" id="e-total" style="color:var(--its-danger)">0</div>
+            <div class="stat-label">Total de Ocorrências</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#fff3ee;color:var(--its-orange)"><i class="ti ti-loader"></i></div>
+            <div class="stat-value" id="e-aberto">0</div>
+            <div class="stat-label">Em Atendimento</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#f0fdf4;color:var(--its-success)"><i class="ti ti-circle-check"></i></div>
+            <div class="stat-value" id="e-resolvido">0</div>
+            <div class="stat-label">Resolvidas</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:#fef2f2;color:var(--its-danger)"><i class="ti ti-flame"></i></div>
+            <div class="stat-value" id="e-critica">0</div>
+            <div class="stat-label">Severidade Crítica</div>
+          </div>
+        </div>
+
+        <div class="filter-row">
+          <div class="form-group">
+            <label>Buscar ocorrência</label>
+            <input type="text" id="eSearch" placeholder="Título, área, responsável..." oninput="filterEmerg()">
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="eFilterStatus" onchange="filterEmerg()">
+              <option value="">Todos</option>
+              <option>Em Atendimento</option><option>Resolvido</option>
+              <option>Aguardando</option><option>Cancelado</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Severidade</label>
+            <select id="eFilterSev" onchange="filterEmerg()">
+              <option value="">Todas</option>
+              <option>Crítica</option><option>Alta</option>
+              <option>Média</option><option>Baixa</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Área</label>
+            <select id="eFilterArea" onchange="filterEmerg()">
+              <option value="">Todas</option>
+              <option>TI</option><option>Operações</option><option>Financeiro</option>
+              <option>RH</option><option>Comercial</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden">
+          <table class="task-table">
+            <thead>
+              <tr>
+                <th>#</th><th>Título</th><th>Área</th><th>Responsável</th>
+                <th>Abertura</th><th>Severidade</th><th>Status</th><th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="emergBody"></tbody>
+          </table>
+        </div>
+        <div id="emergEmpty" class="empty-state" style="display:none">
+          <i class="ti ti-shield-check"></i>Nenhuma ocorrência registrada
+        </div>
+      </div>
+
+      <!-- SUB-PANEL: NOVA -->
+      <div id="epanel-nova" style="display:none">
+        <div class="card">
+          <div class="section-title">Registrar Nova Emergência</div>
+          <div class="form-group">
+            <label>Título da Ocorrência *</label>
+            <input type="text" id="eTitulo" placeholder="Descreva brevemente a emergência...">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Área Afetada *</label>
+              <select id="eArea">
+                <option value="">Selecione...</option>
+                <option>TI</option><option>Operações</option><option>Financeiro</option>
+                <option>RH</option><option>Comercial</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Responsável pelo Atendimento *</label>
+              <select id="eResp">
+                <option value="">Selecione...</option>
+                <option>Diogo</option><option>Ana Lima</option>
+                <option>Carlos Souza</option><option>Mariana R.</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Severidade *</label>
+              <select id="eSev">
+                <option value="">Selecione...</option>
+                <option>Crítica</option><option>Alta</option>
+                <option>Média</option><option>Baixa</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Tipo de Emergência</label>
+              <select id="eTipo">
+                <option>Falha de Sistema</option>
+                <option>Indisponibilidade de Serviço</option>
+                <option>Incidente de Segurança</option>
+                <option>Falha Operacional</option>
+                <option>Problema de Infraestrutura</option>
+                <option>Outro</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Data / Hora da Ocorrência</label>
+              <input type="datetime-local" id="eDataHora">
+            </div>
+            <div class="form-group">
+              <label>Sistemas / Recursos Afetados</label>
+              <input type="text" id="eSistemas" placeholder="Ex: CRM, VPN, Telefonia...">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Descrição Detalhada *</label>
+            <textarea id="eDesc" style="min-height:90px" placeholder="Descreva o impacto, sintomas observados e contexto da ocorrência..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Ações Imediatas Tomadas</label>
+            <textarea id="eAcoes" style="min-height:72px" placeholder="Descreva o que já foi feito para contenção..."></textarea>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn-ghost" onclick="switchEmergTab('lista', document.querySelector('#emergTabs .tab'))"><i class="ti ti-x"></i> Cancelar</button>
+            <button class="btn btn-danger" onclick="registrarEmerg()"><i class="ti ti-alert-octagon"></i> Registrar Emergência</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -548,9 +701,141 @@ function updateDashboard(){
     :`<div class="empty-state"><i class="ti ti-circle-check" style="color:var(--its-success)"></i>Nenhuma tarefa vencendo nos próximos 7 dias</div>`;
 }
 
+// ── EMERGÊNCIAS ───────────────────────────────────────────────────────
+let nextEmergId = 4;
+const EMERGS = [
+  {id:1,titulo:'Queda do sistema de telefonia',area:'TI',resp:'Carlos Souza',sev:'Crítica',tipo:'Indisponibilidade de Serviço',dataHora:'2026-06-26T08:15',sistemas:'Telefonia IP, CRM',desc:'Sistema de telefonia caiu afetando 100% das posições de atendimento.',acoes:'Abertura de chamado com fornecedor. Equipe técnica acionada.',status:'Em Atendimento'},
+  {id:2,titulo:'Acesso indevido a dados financeiros',area:'Financeiro',resp:'Diogo',sev:'Alta',tipo:'Incidente de Segurança',dataHora:'2026-06-25T14:30',sistemas:'ERP, Financeiro',desc:'Detectado acesso não autorizado a relatórios financeiros confidenciais.',acoes:'Sessão encerrada. Senha resetada. Log de auditoria coletado.',status:'Aguardando'},
+  {id:3,titulo:'Falha no backup noturno',area:'TI',resp:'Carlos Souza',sev:'Média',tipo:'Falha de Sistema',dataHora:'2026-06-24T22:00',sistemas:'Storage, Backup',desc:'Rotina de backup falhou sem completar. Dados do dia não foram salvos.',acoes:'Backup manual iniciado. Investigação da causa raiz em andamento.',status:'Resolvido'},
+];
+
+function sevBadge(s){
+  const m={'Crítica':'badge-red','Alta':'badge-orange','Média':'badge-blue','Baixa':'badge-green'};
+  return `<span class="badge ${m[s]||'badge-gray'}">${s}</span>`;
+}
+function emergStatusBadge(s){
+  const m={'Em Atendimento':'badge-orange','Resolvido':'badge-green','Aguardando':'badge-blue','Cancelado':'badge-red'};
+  return `<span class="badge ${m[s]||'badge-gray'}"><span class="badge-dot"></span>${s}</span>`;
+}
+function fmtDT(dt){if(!dt)return'—';const[d,t]=dt.split('T');const[y,m,dd]=d.split('-');return`${dd}/${m}/${y} ${t||''}`;}
+
+function renderEmerg(list){
+  const tb=document.getElementById('emergBody');
+  const em=document.getElementById('emergEmpty');
+  if(!list||!list.length){tb.innerHTML='';em.style.display='block';return}
+  em.style.display='none';
+  tb.innerHTML=list.map(e=>`
+    <tr>
+      <td style="color:var(--its-muted);font-size:.78rem">#${String(e.id).padStart(3,'0')}</td>
+      <td><strong style="font-size:.83rem">${e.titulo}</strong><div style="font-size:.73rem;color:var(--its-muted);margin-top:2px">${e.tipo}</div></td>
+      <td style="font-size:.8rem;color:var(--its-muted)">${e.area}</td>
+      <td style="font-size:.82rem">${e.resp}</td>
+      <td style="font-size:.78rem">${fmtDT(e.dataHora)}</td>
+      <td>${sevBadge(e.sev)}</td>
+      <td>${emergStatusBadge(e.status)}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-sm" onclick="verEmerg(${e.id})" title="Detalhes"><i class="ti ti-eye"></i></button>
+          <button class="btn btn-ghost btn-sm" onclick="cycleEmergStatus(${e.id})" title="Próximo status"><i class="ti ti-refresh"></i></button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteEmerg(${e.id})" title="Excluir"><i class="ti ti-trash"></i></button>
+        </div>
+      </td>
+    </tr>`).join('');
+  updateEmergStats();
+}
+
+function filterEmerg(){
+  const q=document.getElementById('eSearch').value.toLowerCase();
+  const st=document.getElementById('eFilterStatus').value;
+  const sv=document.getElementById('eFilterSev').value;
+  const ar=document.getElementById('eFilterArea').value;
+  renderEmerg(EMERGS.filter(e=>
+    (!q||e.titulo.toLowerCase().includes(q)||e.area.toLowerCase().includes(q)||e.resp.toLowerCase().includes(q))&&
+    (!st||e.status===st)&&(!sv||e.sev===sv)&&(!ar||e.area===ar)
+  ));
+}
+
+function updateEmergStats(){
+  document.getElementById('e-total').textContent=EMERGS.length;
+  document.getElementById('e-aberto').textContent=EMERGS.filter(e=>e.status==='Em Atendimento').length;
+  document.getElementById('e-resolvido').textContent=EMERGS.filter(e=>e.status==='Resolvido').length;
+  document.getElementById('e-critica').textContent=EMERGS.filter(e=>e.sev==='Crítica').length;
+}
+
+function registrarEmerg(){
+  const titulo=document.getElementById('eTitulo').value.trim();
+  if(!titulo){alert('Informe o título da ocorrência.');return}
+  const area=document.getElementById('eArea').value;
+  if(!area){alert('Selecione a área afetada.');return}
+  const resp=document.getElementById('eResp').value;
+  if(!resp){alert('Selecione o responsável.');return}
+  const sev=document.getElementById('eSev').value;
+  if(!sev){alert('Selecione a severidade.');return}
+  const desc=document.getElementById('eDesc').value.trim();
+  if(!desc){alert('Informe a descrição detalhada.');return}
+  EMERGS.unshift({
+    id:nextEmergId++,titulo,area,resp,sev,
+    tipo:document.getElementById('eTipo').value,
+    dataHora:document.getElementById('eDataHora').value||new Date().toISOString().slice(0,16),
+    sistemas:document.getElementById('eSistemas').value,
+    desc,acoes:document.getElementById('eAcoes').value,
+    status:'Em Atendimento'
+  });
+  ['eTitulo','eDesc','eAcoes','eSistemas','eDataHora'].forEach(id=>document.getElementById(id).value='');
+  ['eArea','eResp','eSev'].forEach(id=>document.getElementById(id).selectedIndex=0);
+  const firstTab=document.querySelector('#emergTabs .tab');
+  switchEmergTab('lista',firstTab);
+  filterEmerg();
+  showToast('Emergência registrada com sucesso!');
+}
+
+function verEmerg(id){
+  const e=EMERGS.find(x=>x.id===id);if(!e)return;
+  document.getElementById('modalTitle').textContent='Detalhes da Ocorrência #'+String(e.id).padStart(3,'0');
+  document.getElementById('modalContent').innerHTML=`
+    <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center">${sevBadge(e.sev)}${emergStatusBadge(e.status)}<span style="font-size:.75rem;color:var(--its-muted)">${e.tipo}</span></div>
+    <div class="form-group"><label>Título</label><div style="font-size:.9rem;font-weight:600">${e.titulo}</div></div>
+    <div class="form-row">
+      <div class="form-group"><label>Área</label><div style="font-size:.88rem">${e.area}</div></div>
+      <div class="form-group"><label>Responsável</label><div style="font-size:.88rem">${e.resp}</div></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Data / Hora</label><div style="font-size:.88rem">${fmtDT(e.dataHora)}</div></div>
+      <div class="form-group"><label>Sistemas Afetados</label><div style="font-size:.88rem">${e.sistemas||'—'}</div></div>
+    </div>
+    <div class="form-group"><label>Descrição</label><div style="font-size:.85rem;line-height:1.6;background:#f8fafc;padding:10px;border-radius:6px">${e.desc}</div></div>
+    <div class="form-group"><label>Ações Tomadas</label><div style="font-size:.85rem;line-height:1.6;background:#f8fafc;padding:10px;border-radius:6px">${e.acoes||'—'}</div></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+      <button class="btn btn-ghost" onclick="closeModal()">Fechar</button>
+      <button class="btn btn-primary" onclick="cycleEmergStatus(${e.id});closeModal()"><i class="ti ti-refresh"></i> Avançar Status</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function cycleEmergStatus(id){
+  const e=EMERGS.find(x=>x.id===id);if(!e)return;
+  const opts=['Em Atendimento','Aguardando','Resolvido','Cancelado'];
+  e.status=opts[(opts.indexOf(e.status)+1)%opts.length];
+  filterEmerg();showToast('Status: '+e.status);
+}
+
+function deleteEmerg(id){
+  if(!confirm('Excluir esta ocorrência?'))return;
+  const i=EMERGS.findIndex(x=>x.id===id);if(i>-1)EMERGS.splice(i,1);
+  filterEmerg();showToast('Ocorrência excluída.');
+}
+
+function switchEmergTab(name,el){
+  document.querySelectorAll('#emergTabs .tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('epanel-lista').style.display=name==='lista'?'block':'none';
+  document.getElementById('epanel-nova').style.display=name==='nova'?'block':'none';
+  if(name==='lista')filterEmerg();
+}
+
 // ── NAV / TABS ────────────────────────────────────────────────────────
 function switchTab(name,el){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#mainTabs .tab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('panel-'+name).classList.add('active');
@@ -559,13 +844,27 @@ function switchTab(name,el){
 function setNav(el,tab){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   el.classList.add('active');
-  const tabEl=document.querySelectorAll('.tab');
-  const names=['tarefas','relatorio','dashboard'];
-  const idx=names.indexOf(tab);
-  if(idx>-1){tabEl.forEach(t=>t.classList.remove('active'));tabEl[idx].classList.add('active');
-    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-    document.getElementById('panel-'+tab).classList.add('active');
-    if(tab==='dashboard')updateDashboard();}
+  const isEmerg=tab==='emergencias';
+  document.getElementById('mainTabs').style.display=isEmerg?'none':'flex';
+  document.getElementById('emergTabs').style.display=isEmerg?'flex':'none';
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  const btn=document.getElementById('topbarBtn');
+  if(isEmerg){
+    btn.innerHTML='<i class="ti ti-alert-octagon"></i> Nova Emergência';
+    btn.onclick=()=>switchEmergTab('nova',document.querySelectorAll('#emergTabs .tab')[1]);
+    filterEmerg();
+  } else {
+    btn.innerHTML='<i class="ti ti-plus"></i> Nova Tarefa';
+    btn.onclick=openNewTask;
+    const names=['tarefas','relatorio','dashboard'];
+    const idx=names.indexOf(tab);
+    if(idx>-1){
+      document.querySelectorAll('#mainTabs .tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('#mainTabs .tab')[idx].classList.add('active');
+    }
+    if(tab==='dashboard')updateDashboard();
+  }
 }
 
 // ── TOAST ─────────────────────────────────────────────────────────────
