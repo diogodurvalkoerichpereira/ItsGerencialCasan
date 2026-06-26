@@ -338,13 +338,8 @@ textarea{resize:vertical;min-height:72px}
           </div>
         </div>
         <div id="rptInd09Filters" style="display:none">
-          <div class="form-row">
-            <div class="form-group"><label>Período — De</label><input type="date" id="rptInd09De"></div>
-            <div class="form-group"><label>Período — Até</label><input type="date" id="rptInd09Ate"></div>
-          </div>
-          <div class="form-row">
-            <div class="form-group"><label>Total de atendimentos de emergência</label><input type="number" id="rptInd09Total" min="0" placeholder="Ex: 40"></div>
-            <div class="form-group"><label>Comunicadas dentro do prazo (5 min)</label><input type="number" id="rptInd09Prazo" min="0" placeholder="Ex: 38"></div>
+          <div style="font-size:.8rem;color:var(--its-muted);background:#f8fafc;border:1px solid var(--its-border);border-radius:var(--radius-sm);padding:8px 12px">
+            <i class="ti ti-info-circle"></i> Os dados são calculados automaticamente a partir dos registros da guia <strong>Emergências</strong>.
           </div>
         </div>
         <button class="btn btn-primary" onclick="generateReport()"><i class="ti ti-file-report"></i> Gerar Relatório</button>
@@ -1235,28 +1230,29 @@ function gerarRelatorioPonto(){
   showToast('Relatório gerado!');
 }
 function gerarRelatorioInd09(){
-  const total=parseInt(document.getElementById('rptInd09Total').value)||0;
-  const prazo=parseInt(document.getElementById('rptInd09Prazo').value)||0;
-  const de=document.getElementById('rptInd09De').value;
-  const ate=document.getElementById('rptInd09Ate').value;
-  if(!total){showToast('Informe o total de atendimentos de emergência.','warn');return;}
-  if(prazo>total){showToast('Comunicadas dentro do prazo não pode ser maior que o total.','warn');return;}
-  const pct=((prazo/total)*100).toFixed(2);
+  if(!EMERGS.length){showToast('Nenhuma emergência cadastrada.','warn');return;}
+  const total=EMERGS.length;
+  const noPrazo=EMERGS.filter(e=>{
+    if(!e.prazo)return false;
+    const[h,m]=(e.prazo||'99:99').split(':').map(Number);
+    return(h*60+m)<=5;
+  }).length;
+  const fora=total-noPrazo;
+  const pct=((noPrazo/total)*100).toFixed(2);
   const cor=parseFloat(pct)>=100?'var(--its-success)':parseFloat(pct)>=90?'var(--its-warning)':'var(--its-danger)';
-  const periodo=de&&ate?`${fmtDate(de)} a ${fmtDate(ate)}`:(de?`A partir de ${fmtDate(de)}`:(ate?`Até ${fmtDate(ate)}`:'Período não informado'));
   document.getElementById('reportResult').innerHTML=`
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div>
           <div style="font-size:1rem;font-weight:700;color:var(--its-sidebar)">Relatório de Emergências – Indicador 09</div>
-          <div style="font-size:.76rem;color:var(--its-muted)">${periodo} · Gerado em ${fmtDate(today())}</div>
+          <div style="font-size:.76rem;color:var(--its-muted)">Todos os registros cadastrados · Gerado em ${fmtDate(today())}</div>
         </div>
         <div class="logo-icon" style="width:40px;height:40px;font-size:13px">iTS</div>
       </div>
       <div class="stat-grid" style="margin-bottom:20px">
         <div class="stat-card" style="background:#eef4fb"><div class="stat-value" style="color:var(--its-sidebar)">${total}</div><div class="stat-label">Total de Emergências</div></div>
-        <div class="stat-card" style="background:#f0fdf4"><div class="stat-value" style="color:var(--its-success)">${prazo}</div><div class="stat-label">Comunicadas no Prazo (5 min)</div></div>
-        <div class="stat-card" style="background:#fef2f2"><div class="stat-value" style="color:var(--its-danger)">${total-prazo}</div><div class="stat-label">Fora do Prazo</div></div>
+        <div class="stat-card" style="background:#f0fdf4"><div class="stat-value" style="color:var(--its-success)">${noPrazo}</div><div class="stat-label">Comunicadas no Prazo (5 min)</div></div>
+        <div class="stat-card" style="background:#fef2f2"><div class="stat-value" style="color:var(--its-danger)">${fora}</div><div class="stat-label">Fora do Prazo</div></div>
       </div>
       <div style="border:1px solid var(--its-border);border-radius:var(--radius-md);overflow:hidden">
         <div style="background:var(--its-sidebar);padding:10px 16px;display:flex;align-items:center;gap:10px">
@@ -1267,7 +1263,7 @@ function gerarRelatorioInd09(){
         <div style="display:grid;grid-template-columns:repeat(3,1fr);background:#fff">
           <div style="padding:14px 18px;border-right:1px solid var(--its-border)">
             <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Comunicadas no Prazo</div>
-            <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar);font-variant-numeric:tabular-nums">${prazo}</div>
+            <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar);font-variant-numeric:tabular-nums">${noPrazo}</div>
           </div>
           <div style="padding:14px 18px;border-right:1px solid var(--its-border)">
             <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Total de Emergências</div>
