@@ -549,7 +549,7 @@ textarea{resize:vertical;min-height:72px}
           <table class="task-table">
             <thead>
               <tr>
-                <th>Data</th><th>Cidade</th><th>Recebido</th><th>Inserido</th>
+                <th>Data</th><th>Cidade</th><th>Bairro</th><th>Serviço</th><th>Recebido</th><th>Inserido</th>
                 <th>Supervisor</th><th>Prev. Normalização</th><th>Canal</th>
                 <th>Encerrado/Prorrogado</th><th>Ações</th>
               </tr>
@@ -580,6 +580,19 @@ textarea{resize:vertical;min-height:72px}
             <div class="form-group">
               <label>Cidade *</label>
               <input type="text" id="aCidade" placeholder="Ex: Florianópolis, Laguna...">
+            </div>
+            <div class="form-group">
+              <label>Bairro Afetado *</label>
+              <input type="text" id="aBairro" placeholder="Ex: Centro, Trindade...">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Serviço Indisponível *</label>
+              <select id="aServico">
+                <option value="">Selecione...</option>
+                <option>Água</option><option>Esgoto</option><option>Água e Esgoto</option>
+              </select>
             </div>
             <div class="form-group">
               <label>Supervisor *</label>
@@ -984,12 +997,12 @@ function switchEmergTab(name,el){
 // ── QUADRO DE AVISOS ──────────────────────────────────────────────────
 let nextAvisoId = 4;
 const AVISOS = [
-  {id:1,data:'25/06',cidade:'Florianópolis',recebido:'16:01',inserido:'16:07',supervisor:'Bruno',prevNorm:'21:00',canal:'WhatsApp',situacao:''},
-  {id:2,data:'25/06',cidade:'Florianópolis',recebido:'17:08',inserido:'17:16',supervisor:'Bruno',prevNorm:'02:00',canal:'WhatsApp',situacao:'Encerrado'},
-  {id:3,data:'25/06',cidade:'Laguna',recebido:'17:08',inserido:'17:20',supervisor:'Bruno',prevNorm:'00:00',canal:'E-mail',situacao:''},
-  {id:4,data:'25/06',cidade:'Ascurra',recebido:'19:29',inserido:'19:33',supervisor:'Wilson',prevNorm:'15:00',canal:'WhatsApp',situacao:''},
-  {id:5,data:'25/06',cidade:'Angelina',recebido:'19:35',inserido:'20:08',supervisor:'Wilson',prevNorm:'00:00',canal:'E-mail',situacao:''},
-  {id:6,data:'26/06',cidade:'Biguaçu',recebido:'07:49',inserido:'07:49',supervisor:'Janaina',prevNorm:'18:00',canal:'E-mail',situacao:''},
+  {id:1,data:'25/06',cidade:'Florianópolis',bairro:'Centro',servico:'Água',recebido:'16:01',inserido:'16:07',supervisor:'Bruno',prevNorm:'21:00',canal:'WhatsApp',situacao:''},
+  {id:2,data:'25/06',cidade:'Florianópolis',bairro:'Trindade',servico:'Esgoto',recebido:'17:08',inserido:'17:16',supervisor:'Bruno',prevNorm:'02:00',canal:'WhatsApp',situacao:'Encerrado'},
+  {id:3,data:'25/06',cidade:'Laguna',bairro:'Mar Grosso',servico:'Água',recebido:'17:08',inserido:'17:20',supervisor:'Bruno',prevNorm:'00:00',canal:'E-mail',situacao:''},
+  {id:4,data:'25/06',cidade:'Ascurra',bairro:'Centro',servico:'Água e Esgoto',recebido:'19:29',inserido:'19:33',supervisor:'Wilson',prevNorm:'15:00',canal:'WhatsApp',situacao:''},
+  {id:5,data:'25/06',cidade:'Angelina',bairro:'Sede',servico:'Água',recebido:'19:35',inserido:'20:08',supervisor:'Wilson',prevNorm:'00:00',canal:'E-mail',situacao:''},
+  {id:6,data:'26/06',cidade:'Biguaçu',bairro:'Ponta de Baixo',servico:'Água',recebido:'07:49',inserido:'07:49',supervisor:'Janaina',prevNorm:'18:00',canal:'E-mail',situacao:''},
 ];
 
 function situacaoBadge(s){
@@ -1007,6 +1020,8 @@ function renderAvisos(list){
     <tr>
       <td style="font-size:.78rem;color:var(--its-muted)">${a.data}</td>
       <td style="font-size:.83rem;font-weight:600">${a.cidade}</td>
+      <td style="font-size:.8rem;color:var(--its-muted)">${a.bairro||'—'}</td>
+      <td><span class="badge ${a.servico==='Esgoto'?'badge-orange':a.servico==='Água e Esgoto'?'badge-blue':'badge-blue'}">${a.servico||'—'}</span></td>
       <td style="font-size:.8rem">${a.recebido}</td>
       <td style="font-size:.8rem">${a.inserido}</td>
       <td style="font-size:.82rem">${a.supervisor}</td>
@@ -1049,6 +1064,10 @@ function registrarAviso(){
   if(!recebido){alert('Informe o horário recebido.');return}
   const cidade=document.getElementById('aCidade').value.trim();
   if(!cidade){alert('Informe a cidade.');return}
+  const bairro=document.getElementById('aBairro').value.trim();
+  if(!bairro){alert('Informe o bairro afetado.');return}
+  const servico=document.getElementById('aServico').value;
+  if(!servico){alert('Selecione o serviço indisponível.');return}
   const supervisor=document.getElementById('aSupervisor').value;
   if(!supervisor){alert('Selecione o supervisor.');return}
   const canal=document.getElementById('aCanal').value;
@@ -1058,13 +1077,13 @@ function registrarAviso(){
   const [dy,dm,dd]=data.split('-');
   AVISOS.unshift({
     id:nextAvisoId++,
-    data:`${dd}/${dm}`,cidade,recebido,inserido,supervisor,
+    data:`${dd}/${dm}`,cidade,bairro,servico,recebido,inserido,supervisor,
     prevNorm:document.getElementById('aPrevNorm').value||'—',
     canal,
     situacao:document.getElementById('aSituacao').value
   });
-  ['aData','aRecebido','aCidade','aPrevNorm'].forEach(id=>document.getElementById(id).value='');
-  ['aSupervisor','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
+  ['aData','aRecebido','aCidade','aBairro','aPrevNorm'].forEach(id=>document.getElementById(id).value='');
+  ['aServico','aSupervisor','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
   const firstTab=document.querySelector('#avisosTabs .tab');
   switchAvisosTab('lista',firstTab);
   filterAvisos();
