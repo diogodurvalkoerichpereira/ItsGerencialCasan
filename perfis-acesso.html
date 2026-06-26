@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perfis de Acesso — iTS Gerencial CASAN</title>
+<style>
+  :root{
+    --its-sidebar:#183c5a; --its-orange:#E85928; --its-bg:#eef1f5; --its-white:#fff;
+    --its-text:#1e293b; --its-muted:#64748b; --its-border:#e2e8f0;
+    --its-danger:#dc2626; --its-success:#16a34a;
+    --r-sm:6px; --r-md:10px; --r-lg:14px;
+    --sh:0 1px 3px rgba(16,40,67,.08); --sh-md:0 6px 22px rgba(16,40,67,.10);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--its-bg)}
+  .wrap{font-family:'Segoe UI',system-ui,sans-serif;color:var(--its-text);background:var(--its-bg);
+    padding:28px clamp(16px,4vw,40px);max-width:1180px;margin:0 auto;line-height:1.5}
+  .head{display:flex;align-items:center;gap:14px;margin-bottom:6px}
+  .logo{background:var(--its-orange);width:42px;height:42px;border-radius:9px;display:flex;
+    align-items:center;justify-content:center;font-weight:900;font-size:14px;color:#fff;flex-shrink:0;letter-spacing:.02em}
+  h1{font-size:1.4rem;margin:0;color:var(--its-sidebar);font-weight:800;letter-spacing:-.01em}
+  .sub{font-size:.82rem;color:var(--its-muted);margin-top:1px}
+  .meta{font-size:.74rem;color:var(--its-muted);margin:14px 0 22px;padding-left:11px;border-left:3px solid var(--its-orange)}
+
+  /* KPIs */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:26px}
+  .kpi{background:#fff;border:1px solid var(--its-border);border-radius:var(--r-md);padding:14px 16px;box-shadow:var(--sh)}
+  .kpi-v{font-size:1.5rem;font-weight:800;color:var(--its-sidebar);font-variant-numeric:tabular-nums}
+  .kpi-l{font-size:.72rem;color:var(--its-muted);margin-top:2px}
+
+  .section-title{font-size:.82rem;font-weight:700;color:var(--its-sidebar);border-left:3px solid var(--its-orange);
+    padding-left:10px;margin:0 0 14px;text-transform:uppercase;letter-spacing:.06em}
+
+  /* Matrix */
+  .matrix-wrap{overflow-x:auto;border-radius:var(--r-md);box-shadow:var(--sh-md);margin-bottom:30px;background:#fff}
+  table{width:100%;border-collapse:collapse;font-size:.8rem;min-width:760px}
+  th,td{padding:10px 12px;text-align:center;border-bottom:1px solid var(--its-border)}
+  thead th{background:var(--its-sidebar);color:#fff;font-size:.7rem;font-weight:600;text-transform:uppercase;
+    letter-spacing:.03em;border-bottom:none;position:sticky;top:0}
+  th.profile,td.profile{text-align:left;white-space:nowrap}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover td{background:#f8fafc}
+  .pname{font-weight:700;color:var(--its-sidebar);display:flex;align-items:center;gap:8px}
+  .swatch{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+  .yes{color:var(--its-success);font-weight:700}
+  .no{color:#cbd5e1}
+  .partial{color:var(--its-orange);font-weight:700;font-size:.7rem}
+  .full-row td{background:#fbfdff}
+
+  /* Profile cards */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:14px}
+  .card{background:#fff;border:1px solid var(--its-border);border-radius:var(--r-md);
+    box-shadow:var(--sh);overflow:hidden;display:flex;flex-direction:column}
+  .card-top{padding:13px 16px;border-top:4px solid var(--c);display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .card-role{font-weight:800;color:var(--its-sidebar);font-size:.98rem}
+  .card-scope{font-size:.7rem;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap}
+  .scope-total{background:#f0fdf4;color:var(--its-success);border:1px solid #bbf7d0}
+  .scope-restr{background:#fff3ee;color:var(--its-orange);border:1px solid #fdd0be}
+  .card-body{padding:4px 16px 14px}
+  .acc-list{list-style:none;margin:0;padding:0;font-size:.78rem}
+  .acc-list li{display:flex;align-items:center;gap:7px;padding:3px 0;color:var(--its-text)}
+  .acc-list li.off{color:#b4bdc8}
+  .ic{width:15px;text-align:center;flex-shrink:0}
+  .users{border-top:1px dashed var(--its-border);margin-top:10px;padding-top:10px}
+  .users-lbl{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);font-weight:700;margin-bottom:6px}
+  .user-chip{display:inline-flex;align-items:center;gap:6px;font-size:.74rem;background:#f4f6f9;
+    border:1px solid var(--its-border);border-radius:20px;padding:2px 9px 2px 3px;margin:0 4px 4px 0}
+  .ava{width:18px;height:18px;border-radius:50%;background:var(--its-sidebar);color:#fff;font-size:.58rem;
+    font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .inact{color:var(--its-danger);font-size:.62rem;font-weight:700;margin-left:2px}
+  .none-u{font-size:.74rem;color:var(--its-muted);font-style:italic}
+
+  .note{margin-top:26px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:var(--r-sm);
+    padding:12px 15px;font-size:.78rem;color:#075985;line-height:1.55}
+  .note b{color:#0c4a6e}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.74rem;color:var(--its-muted);margin:14px 0 4px}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .foot{margin-top:24px;font-size:.7rem;color:var(--its-muted);text-align:center}
+  @media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  @media print{body,.wrap{background:#fff}.matrix-wrap,.kpi,.card{box-shadow:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="logo">iTS</div>
+    <div>
+      <h1>Perfis de Acesso ao Sistema</h1>
+      <div class="sub">iTS Gerencial · Customer Service · CASAN</div>
+    </div>
+  </div>
+  <div class="meta">O que cada perfil (cargo) acessa atualmente no sistema. Mapa derivado das regras de permissão vigentes no portal.</div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-v">6</div><div class="kpi-l">Perfis de cargo</div></div>
+    <div class="kpi"><div class="kpi-v">8</div><div class="kpi-l">Módulos do sistema</div></div>
+    <div class="kpi"><div class="kpi-v">4</div><div class="kpi-l">Perfis com acesso total</div></div>
+    <div class="kpi"><div class="kpi-v">2</div><div class="kpi-l">Perfis com acesso restrito</div></div>
+  </div>
+
+  <div class="section-title">Matriz de Acesso · Perfil × Módulo</div>
+  <div class="matrix-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="profile">Perfil</th>
+          <th>Tarefas</th><th>Emergências</th><th>Avisos</th><th>Ponto</th>
+          <th>Dashboard</th><th>Relatórios</th><th>Usuários</th><th>Config.</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="full-row"><td class="profile"><span class="pname"><span class="swatch" style="background:#183c5a"></span>Gerente</span></td>
+          <td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr class="full-row"><td class="profile"><span class="pname"><span class="swatch" style="background:#E85928"></span>Coordenador</span></td>
+          <td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr class="full-row"><td class="profile"><span class="pname"><span class="swatch" style="background:#d97706"></span>Supervisor</span></td>
+          <td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr class="full-row"><td class="profile"><span class="pname"><span class="swatch" style="background:#16a34a"></span>Monitor</span></td>
+          <td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+        <tr><td class="profile"><span class="pname"><span class="swatch" style="background:#64748b"></span>Operador</span></td>
+          <td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+        <tr><td class="profile"><span class="pname"><span class="swatch" style="background:#7c3aed"></span>Cliente</span></td>
+          <td class="yes">✓</td><td class="no">—</td><td class="no">—</td><td class="partial">PARCIAL</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="no">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="legend">
+    <span><span class="yes">✓</span> Acesso total ao módulo</span>
+    <span><span class="partial">PARCIAL</span> Acesso limitado</span>
+    <span><span class="no">—</span> Sem acesso</span>
+    <span>· "Meu Perfil" disponível para todos os perfis</span>
+  </div>
+
+  <div class="section-title" style="margin-top:30px">Detalhamento por Perfil &amp; Usuários Vinculados</div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-top" style="--c:#183c5a"><span class="card-role">Gerente</span><span class="card-scope scope-total">Acesso total</span></div>
+      <div class="card-body">
+        <ul class="acc-list">
+          <li><span class="ic yes">✓</span>Todos os módulos operacionais e de análise</li>
+          <li><span class="ic yes">✓</span>Administração: Usuários e Configurações</li>
+          <li><span class="ic yes">✓</span>Criar, editar e excluir tarefas</li>
+        </ul>
+        <div class="users">
+          <div class="users-lbl">Usuários neste perfil</div>
+          <span class="user-chip"><span class="ava">DP</span>Diogo Pereira</span>
+          <span class="user-chip"><span class="ava">AD</span>Administrador</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top" style="--c:#E85928"><span class="card-role">Coordenador</span><span class="card-scope scope-total">Acesso total</span></div>
+      <div class="card-body">
+        <ul class="acc-list">
+          <li><span class="ic yes">✓</span>Todos os módulos operacionais e de análise</li>
+          <li><span class="ic yes">✓</span>Administração: Usuários e Configurações</li>
+          <li><span class="ic yes">✓</span>Gestão completa de tarefas</li>
+        </ul>
+        <div class="users">
+          <div class="users-lbl">Usuários neste perfil</div>
+          <span class="user-chip"><span class="ava">AL</span>Ana Lima</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top" style="--c:#d97706"><span class="card-role">Supervisor</span><span class="card-scope scope-total">Acesso total</span></div>
+      <div class="card-body">
+        <ul class="acc-list">
+          <li><span class="ic yes">✓</span>Todos os módulos operacionais e de análise</li>
+          <li><span class="ic yes">✓</span>Administração: Usuários e Configurações</li>
+          <li><span class="ic yes">✓</span>Gestão completa de tarefas</li>
+        </ul>
+        <div class="users">
+          <div class="users-lbl">Usuários neste perfil</div>
+          <span class="user-chip"><span class="ava">CS</span>Carlos Souza</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top" style="--c:#16a34a"><span class="card-role">Monitor</span><span class="card-scope scope-total">Acesso total</span></div>
+      <div class="card-body">
+        <ul class="acc-list">
+          <li><span class="ic yes">✓</span>Todos os módulos operacionais e de análise</li>
+          <li><span class="ic yes">✓</span>Administração: Usuários e Configurações</li>
+          <li><span class="ic yes">✓</span>Gestão completa de tarefas</li>
+        </ul>
+        <div class="users">
+          <div class="users-lbl">Usuários neste perfil</div>
+          <span class="user-chip"><span class="ava">BM</span>Bruno Martins</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top" style="--c:#64748b"><span class="card-role">Operador</span><span class="card-scope scope-restr">Restrito</span></div>
+      <div class="card-body">
+        <ul class="acc-list">
+          <li><span class="ic yes">✓</span>Emergências</li>
+          <li><span class="ic yes">✓</span>Quadro de Avisos</li>
+          <li class="off"><span class="ic">—</span>Tarefas, Ponto, Dashboard</li>
+          <li class="off"><span class="ic">—</span>Relatórios e Administração</li>
+        </ul>
+        <div class="users">
+          <div class="users-lbl">Usuários neste perfil</div>
+          <span class="user-chip"><span class="ava">MR</span>Mariana R.<span class="inact">INATIVO</span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top" style="--c:#7c3aed"><span class="card-role">Cliente</span><span class="card-scope scope-restr">Restrito</span></div>
+      <div class="card-body">
+        <ul class="acc-list">
+          <li><span class="ic yes">✓</span>Tarefas <span style="color:var(--its-muted);font-size:.72rem">(somente visualização)</span></li>
+          <li><span class="ic partial" style="width:15px">◐</span>Ponto — apenas Resumo Mensal</li>
+          <li class="off"><span class="ic">—</span>Sem Registros nem Importar XLS</li>
+          <li class="off"><span class="ic">—</span>Emergências, Avisos, Dashboard, Admin</li>
+        </ul>
+        <div class="users">
+          <div class="users-lbl">Usuários neste perfil</div>
+          <span class="none-u">Nenhum usuário ativo vinculado</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="note">
+    <b>Como ler este quadro.</b> O acesso é governado pelo <b>cargo</b> do usuário. Os perfis
+    <b>Gerente, Coordenador, Supervisor e Monitor</b> têm acesso total. <b>Operador</b> vê apenas Emergências e Avisos.
+    <b>Cliente</b> acessa Tarefas (sem ações de edição) e o Resumo Mensal do Ponto. Usuários <b>Inativos</b> não conseguem efetuar login,
+    independentemente do perfil.
+  </div>
+
+  <div class="foot">iTS Customer Service · Documento de apoio interno · Gerado a partir das regras de permissão do iTS Gerencial</div>
+</div>
+</body>
+</html>
