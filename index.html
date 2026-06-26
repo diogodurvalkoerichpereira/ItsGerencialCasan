@@ -426,7 +426,7 @@ textarea{resize:vertical;min-height:72px}
         <div class="filter-row">
           <div class="form-group">
             <label>Buscar ocorrência</label>
-            <input type="text" id="eSearch" placeholder="Cidade, supervisor, protocolo..." oninput="filterEmerg()">
+            <input type="text" id="eSearch" placeholder="Cidade, protocolo..." oninput="filterEmerg()">
           </div>
           <div class="form-group">
             <label>Status</label>
@@ -443,14 +443,6 @@ textarea{resize:vertical;min-height:72px}
               <option>Água</option><option>Esgoto</option><option>Água e Esgoto</option>
             </select>
           </div>
-          <div class="form-group">
-            <label>Supervisor</label>
-            <select id="eFilterArea" onchange="filterEmerg()">
-              <option value="">Todos</option>
-              <option>Bruno</option><option>Wilson</option>
-              <option>Erick</option><option>Janaina</option>
-            </select>
-          </div>
         </div>
 
         <div class="card" style="padding:0;overflow:hidden">
@@ -458,7 +450,7 @@ textarea{resize:vertical;min-height:72px}
             <thead>
               <tr>
                 <th>Data</th><th>Cidade</th><th>Recebido</th><th>Enviado</th>
-                <th>Supervisor</th><th>Protocolo</th><th>Serviço</th><th>Canal</th>
+                <th>Protocolo</th><th>Serviço</th><th>Canal</th>
                 <th>Prazo</th><th>Status</th><th>Ações</th>
               </tr>
             </thead>
@@ -1196,7 +1188,6 @@ function renderEmerg(list){
       <td style="font-size:.83rem;font-weight:600">${e.cidade||'—'}</td>
       <td style="font-size:.8rem">${e.recebido||'—'}</td>
       <td style="font-size:.8rem">${e.enviado||'—'}</td>
-      <td style="font-size:.82rem">${e.supervisor||'—'}</td>
       <td style="font-size:.75rem;color:var(--its-muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.protocolo||'—'}</td>
       <td><span class="badge ${e.servico==='Esgoto'?'badge-orange':'badge-blue'}">${e.servico||'—'}</span></td>
       <td style="font-size:.8rem">${e.canal||'—'}</td>
@@ -1219,8 +1210,8 @@ function filterEmerg(){
   const sv=document.getElementById('eFilterSev').value;
   const ar=document.getElementById('eFilterArea').value;
   renderEmerg(EMERGS.filter(e=>
-    (!q||e.cidade.toLowerCase().includes(q)||e.supervisor.toLowerCase().includes(q)||e.protocolo.toLowerCase().includes(q))&&
-    (!st||e.status===st)&&(!sv||e.servico===sv)&&(!ar||e.cidade===ar)
+    (!q||e.cidade.toLowerCase().includes(q)||e.protocolo.toLowerCase().includes(q))&&
+    (!st||e.status===st)&&(!sv||e.servico===sv)
   ));
 }
 
@@ -1286,7 +1277,6 @@ function verEmerg(id){
       <div class="form-group"><label>Dentro do Prazo</label><div style="font-size:.88rem;font-weight:700;color:var(--its-success)">${e.prazo}</div></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>Supervisor</label><div style="font-size:.88rem">${e.supervisor}</div></div>
       <div class="form-group"><label>Serviço</label><div style="font-size:.88rem">${e.servico}</div></div>
     </div>
     <div class="form-group"><label>Protocolo</label><div style="font-size:.85rem;background:#f8fafc;padding:8px 10px;border-radius:6px">${e.protocolo||'—'}</div></div>
