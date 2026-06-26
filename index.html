@@ -915,7 +915,9 @@ function buildForm(t={}){
     </div>
     <div class="form-row">
       <div class="form-group"><label>Prioridade</label><select id="fPrio" onchange="updatePrazoPreview(${t.criado?`'${t.criado}'`:'null'})">${sel(prios,t.prio||'Simples')}</select></div>
-      <div class="form-group"><label>Status</label><select id="fStatus">${sel(statuses,t.status||'Aguardando')}</select></div>
+      <div class="form-group"><label>Status</label>${t.id
+        ? `<select id="fStatus">${sel(statuses,t.status)}</select>`
+        : `<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--its-border);border-radius:var(--radius-sm);background:#f8fafc;font-size:.88rem;font-weight:600;color:var(--its-info)"><span class="badge-dot"></span>Aguardando</div>`}</div>
     </div>
     <div class="form-group">
       <label>Prazo (SLA) — calculado pela prioridade</label>
@@ -945,7 +947,7 @@ function saveTask(id){
     const d=new Date();const p=n=>String(n).padStart(2,'0');
     const criadoIso=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
     const obj={titulo,area:document.getElementById('fArea').value,resp:document.getElementById('fResp').value,
-      prio,status:document.getElementById('fStatus').value,desc:document.getElementById('fDesc').value,
+      prio,status:'Aguardando',desc:document.getElementById('fDesc').value,
       criado:criadoIso,prazo:calcPrazo(prio,criadoIso)};
     obj.id=nextId++;TASKS.push(obj);sendNotification(obj);
   }
