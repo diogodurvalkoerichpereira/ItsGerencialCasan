@@ -230,9 +230,9 @@ textarea{resize:vertical;min-height:72px}
       <button class="tab" onclick="switchEmergTab('nova',this)"><i class="ti ti-plus"></i> Nova Emergência</button>
     </div>
     <div class="tabs" id="pontoTabs" style="display:none">
-      <button class="tab active" onclick="switchPontoTab('lista',this)"><i class="ti ti-table"></i> Registros</button>
+      <button class="tab active" data-ponto="lista" onclick="switchPontoTab('lista',this)"><i class="ti ti-table"></i> Registros</button>
       <button class="tab" onclick="switchPontoTab('resumo',this)"><i class="ti ti-clock-hour-4"></i> Resumo Mensal</button>
-      <button class="tab" onclick="switchPontoTab('importar',this)"><i class="ti ti-upload"></i> Importar XLS</button>
+      <button class="tab" data-ponto="importar" onclick="switchPontoTab('importar',this)"><i class="ti ti-upload"></i> Importar XLS</button>
     </div>
     <div class="tabs" id="avisosTabs" style="display:none">
       <button class="tab active" onclick="switchAvisosTab('lista',this)"><i class="ti ti-list"></i> Registros</button>
@@ -1801,9 +1801,13 @@ function setNav(el,tab){
     filterAvisos();
   } else if(isPonto){
     btn.innerHTML='<i class="ti ti-upload"></i> Importar XLS';
+    btn.style.display=isCliente()?'none':'';
     btn.onclick=()=>switchPontoTab('importar',document.querySelectorAll('#pontoTabs .tab')[2]);
     populateMesSelectors();
-    filterPonto();
+    if(isCliente()){
+      const resumoTab=document.querySelector('#pontoTabs .tab:not([data-ponto])');
+      if(resumoTab) switchPontoTab('resumo',resumoTab);
+    } else { filterPonto(); }
   } else if(isConfig){
     btn.innerHTML='<i class="ti ti-device-floppy"></i> Salvar Config.';
     btn.onclick=saveConfig;
@@ -2183,6 +2187,16 @@ function applyNavPermissions(cargo){
     }
     sec.style.display=found?'':'none';
   });
+  // Oculta abas internas restritas para Cliente
+  const isCliente2=cargo==='Cliente';
+  document.querySelectorAll('[data-ponto]').forEach(btn=>{
+    btn.style.display=isCliente2?'none':'';
+  });
+  // Garante que a aba ativa do Ponto seja Resumo Mensal para Cliente
+  if(isCliente2){
+    const resumoTab=document.querySelector('#pontoTabs .tab:not([data-ponto])');
+    if(resumoTab){ document.querySelectorAll('#pontoTabs .tab').forEach(t=>t.classList.remove('active')); resumoTab.classList.add('active'); }
+  }
   // Redireciona para a primeira seção permitida
   if(allowed){
     const first=document.querySelector(`.nav-item[onclick*="${allowed[0]}"]`);
