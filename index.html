@@ -1058,16 +1058,21 @@ function saveTask(id){
     const i=TASKS.findIndex(x=>x.id===id);
     if(i>-1){
       const base=TASKS[i].criado||null;
+      const prevStatus=TASKS[i].status;
+      const newStatus=document.getElementById('fStatus').value;
       Object.assign(TASKS[i],{titulo,area:document.getElementById('fArea').value,resp:document.getElementById('fResp').value,
-        prio,status:document.getElementById('fStatus').value,desc:document.getElementById('fDesc').value,
+        prio,status:newStatus,desc:document.getElementById('fDesc').value,
         prazo:calcPrazo(prio,base)});
+      if(newStatus==='Concluído'&&prevStatus!=='Concluído'&&TASKS[i].criadoPorCliente) sendNotificacaoConclusao(TASKS[i]);
     }
   }else{
     const d=new Date();const p=n=>String(n).padStart(2,'0');
     const criadoIso=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    const s=getSession();
     const obj={titulo,area:document.getElementById('fArea').value,resp:document.getElementById('fResp').value,
       prio,status:'Aguardando',desc:document.getElementById('fDesc').value,
-      criado:criadoIso,prazo:calcPrazo(prio,criadoIso)};
+      criado:criadoIso,prazo:calcPrazo(prio,criadoIso),
+      criadoPorCliente:s&&s.cargo==='Cliente',criadoPor:s?s.nome:''};
     obj.id=nextId++;TASKS.push(obj);sendNotification(obj);
   }
   closeModal();applyFilters();updateDashboard();
@@ -1076,7 +1081,9 @@ function saveTask(id){
 function cycleStatus(id){
   const t=TASKS.find(x=>x.id===id);if(!t)return;
   const opts=['Em andamento','Aguardando','Concluído','Cancelado'];
+  const prev=t.status;
   t.status=opts[(opts.indexOf(t.status)+1)%opts.length];
+  if(t.status==='Concluído'&&prev!=='Concluído'&&t.criadoPorCliente) sendNotificacaoConclusao(t);
   applyFilters();updateDashboard();
   showToast('Status: '+t.status);
 }
@@ -1881,6 +1888,35 @@ function sendNotification(task){
   }).catch(()=>{
     showToast('Tarefa criada. Serviço de e-mail indisponível.');
   });
+}
+
+function sendNotificacaoConclusao(task){
+  if(!CFG.ativo||!CFG.smtpEmail||!CFG.smtpHost) return;
+  if(!CFG.recipients||!CFG.recipients.length) return;
+  const destinatarios=CFG.recipients.map(r=>r.email).join(',');
+  const emailServiceUrl=`http://${location.hostname}:3101/send`;
+  fetch(emailServiceUrl,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      to:destinatarios,
+      assunto:`✅ Tarefa concluída: ${task.titulo}`,
+      task:{
+        titulo:task.titulo,
+        area:task.area,
+        resp:task.resp,
+        prazo:fmtPrazo(task.prazo),
+        prio:task.prio,
+        status:'Concluído',
+        desc:task.desc,
+        criadoPor:task.criadoPor||'Cliente',
+        tipo:'conclusao',
+      },
+    }),
+  }).then(r=>{
+    if(r.ok) showToast('Notificação de conclusão enviada!');
+    else showToast('Concluído. Falha ao notificar por e-mail.');
+  }).catch(()=>showToast('Concluído. Serviço de e-mail indisponível.'));
 }
 
 // ── USUÁRIOS ──────────────────────────────────────────────────────────
