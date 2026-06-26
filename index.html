@@ -91,6 +91,7 @@ textarea{resize:vertical;min-height:72px}
 .badge-red{background:#fef2f2;color:var(--its-danger);border:1px solid #fecaca}
 .badge-yellow{background:#fefce8;color:#a16207;border:1px solid #fde68a}
 .badge-gray{background:#f8fafc;color:var(--its-muted);border:1px solid var(--its-border)}
+.badge-purple{background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe}
 
 /* TABLE */
 .task-table{width:100%;border-collapse:collapse;font-size:.82rem}
@@ -699,7 +700,7 @@ textarea{resize:vertical;min-height:72px}
           <select id="userFilterCargo" onchange="filterUsers()">
             <option value="">Todos</option>
             <option>Gerente</option><option>Coordenador</option><option>Supervisor</option>
-            <option>Monitor</option><option>Operador</option>
+            <option>Monitor</option><option>Operador</option><option>Cliente</option>
           </select>
         </div>
         <div class="form-group">
@@ -1689,8 +1690,8 @@ function sendNotification(task){
 }
 
 // ── USUÁRIOS ──────────────────────────────────────────────────────────
-const CARGOS=['Gerente','Coordenador','Supervisor','Monitor','Operador'];
-const CARGO_BADGE={'Gerente':'badge-blue','Coordenador':'badge-orange','Supervisor':'badge-yellow','Monitor':'badge-green','Operador':'badge-gray'};
+const CARGOS=['Gerente','Coordenador','Supervisor','Monitor','Operador','Cliente'];
+const CARGO_BADGE={'Gerente':'badge-blue','Coordenador':'badge-orange','Supervisor':'badge-yellow','Monitor':'badge-green','Operador':'badge-gray','Cliente':'badge-purple'};
 let USERS = JSON.parse(localStorage.getItem('its_users')||'null') || [
   {id:1,nome:'Diogo Pereira',email:'diogo@itscs.com.br',cargo:'Gerente',status:'Ativo'},
   {id:2,nome:'Ana Lima',email:'ana.lima@itscs.com.br',cargo:'Coordenador',status:'Ativo'},
@@ -1710,7 +1711,7 @@ function renderUsers(list){
   const em=document.getElementById('userEmpty');
   if(!list.length){tb.innerHTML='';em.style.display='block';return}
   em.style.display='none';
-  const ordem={Gerente:1,Coordenador:2,Supervisor:3,Monitor:4,Operador:5};
+  const ordem={Gerente:1,Coordenador:2,Supervisor:3,Monitor:4,Operador:5,Cliente:6};
   list=list.slice().sort((a,b)=>(ordem[a.cargo]||9)-(ordem[b.cargo]||9)||a.nome.localeCompare(b.nome));
   tb.innerHTML=list.map(u=>`
     <tr>
