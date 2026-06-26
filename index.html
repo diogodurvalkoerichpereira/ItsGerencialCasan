@@ -2685,7 +2685,7 @@ function isCliente(){const s=getSession();return s&&s.cargo==='Cliente';}
 // Mapa de permissões: cargo → seções visíveis (null = acesso total)
 const NAV_PERMISSIONS={
   Operador:['chamados','emergencias','avisos'],
-  Cliente:['chamados','relatorio','tarefas','ponto'],
+  Cliente:['chamados','relatorio','tarefas'],
 };
 function applyNavPermissions(cargo){
   const allowed=NAV_PERMISSIONS[cargo]||null;
