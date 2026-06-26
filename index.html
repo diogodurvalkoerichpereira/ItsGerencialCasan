@@ -1208,7 +1208,6 @@ function filterEmerg(){
   const q=document.getElementById('eSearch').value.toLowerCase();
   const st=document.getElementById('eFilterStatus').value;
   const sv=document.getElementById('eFilterSev').value;
-  const ar=document.getElementById('eFilterArea').value;
   renderEmerg(EMERGS.filter(e=>
     (!q||e.cidade.toLowerCase().includes(q)||e.protocolo.toLowerCase().includes(q))&&
     (!st||e.status===st)&&(!sv||e.servico===sv)
