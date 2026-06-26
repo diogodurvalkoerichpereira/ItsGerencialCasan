@@ -20,6 +20,14 @@
 html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var(--its-bg);color:var(--its-text)}
 body{display:flex;overflow:hidden}
 
+/* LOGIN */
+.login-screen{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#183c5a 0%,#0f2942 100%)}
+.login-card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:32px 30px;width:380px;max-width:92vw}
+.login-brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.login-title{font-size:1.1rem;font-weight:800;color:var(--its-sidebar)}
+.login-sub{font-size:.78rem;color:var(--its-muted)}
+.login-foot{margin-top:18px;text-align:center;font-size:.72rem;color:var(--its-muted)}
+
 /* SIDEBAR */
 .sidebar{width:200px;background:var(--its-sidebar);display:flex;flex-direction:column;flex-shrink:0;padding:14px 10px}
 .sidebar-logo{display:flex;align-items:center;gap:8px;padding:4px 2px 18px}
@@ -137,6 +145,32 @@ textarea{resize:vertical;min-height:72px}
 </head>
 <body>
 
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="logo-icon" style="width:46px;height:46px;font-size:15px">ITS</div>
+      <div>
+        <div class="login-title">Portal ITS Gerencial</div>
+        <div class="login-sub">Customer Service · CASAN</div>
+      </div>
+    </div>
+    <form id="loginForm" onsubmit="return doLogin(event)">
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" id="loginEmail" placeholder="seu.email@itscs.com.br" autocomplete="username" required>
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" required>
+      </div>
+      <div id="loginError" class="its-alert alert-error" style="display:none;margin-bottom:12px"></div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center"><i class="ti ti-login"></i> Entrar</button>
+    </form>
+    <div class="login-foot">Acesso restrito · ITS Customer Service</div>
+  </div>
+</div>
+
 <!-- MODAL -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
@@ -169,7 +203,8 @@ textarea{resize:vertical;min-height:72px}
   <div class="nav-item" onclick="setNav(this,'usuarios')"><i class="ti ti-users"></i> Usuários</div>
   <div class="nav-item" onclick="setNav(this,'config')"><i class="ti ti-settings"></i> Configurações</div>
   <div class="sidebar-bottom">
-    <div class="nav-item"><i class="ti ti-user"></i> Meu Perfil</div>
+    <div class="nav-item" id="meuPerfil"><i class="ti ti-user"></i> Meu Perfil</div>
+    <div class="nav-item" onclick="logout()"><i class="ti ti-logout"></i> Sair</div>
   </div>
 </aside>
 
@@ -1759,9 +1794,57 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),2800);
 }
 
+// ── AUTENTICAÇÃO ──────────────────────────────────────────────────────
+// Portão de acesso client-side. Senhas guardadas como hash SHA-256
+// (nunca em texto puro no repositório).
+const AUTH_ACCOUNTS=[
+  {email:'admin@itscs.com.br',nome:'Administrador',cargo:'Gerente',hash:'66e1083cea61a3860fa3d13f285f53d61a81aacee2691767e5c015f96a840624'},
+];
+async function sha256(txt){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(txt));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function doLogin(ev){
+  ev.preventDefault();
+  const email=document.getElementById('loginEmail').value.trim().toLowerCase();
+  const pass=document.getElementById('loginPass').value;
+  const err=document.getElementById('loginError');
+  const acc=AUTH_ACCOUNTS.find(a=>a.email===email);
+  const hash=await sha256(pass);
+  if(acc&&acc.hash===hash){
+    sessionStorage.setItem('its_session',JSON.stringify({email:acc.email,nome:acc.nome,cargo:acc.cargo}));
+    err.style.display='none';
+    applySession();
+  }else{
+    err.textContent='E-mail ou senha inválidos.';
+    err.style.display='flex';
+    document.getElementById('loginPass').value='';
+  }
+  return false;
+}
+function applySession(){
+  const s=JSON.parse(sessionStorage.getItem('its_session')||'null');
+  if(s){
+    document.getElementById('loginScreen').style.display='none';
+    const av=document.querySelector('.avatar');
+    if(av){av.textContent=s.nome.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();av.title=s.nome;}
+    const mp=document.getElementById('meuPerfil');
+    if(mp)mp.innerHTML=`<i class="ti ti-user"></i> ${s.nome}`;
+  }else{
+    document.getElementById('loginScreen').style.display='flex';
+  }
+}
+function logout(){
+  sessionStorage.removeItem('its_session');
+  document.getElementById('loginPass').value='';
+  document.getElementById('loginEmail').value='';
+  document.getElementById('loginScreen').style.display='flex';
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────
 renderTasks(TASKS);
 updateDashboard();
+applySession();
 </script>
 </body>
 </html>
