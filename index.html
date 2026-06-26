@@ -424,7 +424,7 @@ textarea{resize:vertical;min-height:72px}
       <div id="epanel-nova" style="display:none">
         <div class="card">
           <div class="section-title">Registrar Nova Emergência</div>
-          <div class="form-row-3">
+          <div class="form-row">
             <div class="form-group">
               <label>Data *</label>
               <input type="date" id="eData">
@@ -433,11 +433,8 @@ textarea{resize:vertical;min-height:72px}
               <label>Horário Recebido *</label>
               <input type="time" id="eRecebido">
             </div>
-            <div class="form-group">
-              <label>Horário Enviado *</label>
-              <input type="time" id="eEnviado" oninput="calcPrazo()">
-            </div>
           </div>
+          <input type="hidden" id="eEnviado">
           <div class="form-row">
             <div class="form-group">
               <label>Cidade *</label>
@@ -707,18 +704,7 @@ function emergStatusBadge(s){
   return `<span class="badge ${m[s]||'badge-gray'}"><span class="badge-dot"></span>${s}</span>`;
 }
 
-function calcPrazo(){
-  const r=document.getElementById('eRecebido').value;
-  const e=document.getElementById('eEnviado').value;
-  if(!r||!e){document.getElementById('ePrazo').value='';return}
-  const [rh,rm]=r.split(':').map(Number);
-  const [eh,em]=e.split(':').map(Number);
-  let diff=(eh*60+em)-(rh*60+rm);
-  if(diff<0)diff+=1440;
-  const h=String(Math.floor(diff/60)).padStart(2,'0');
-  const m=String(diff%60).padStart(2,'0');
-  document.getElementById('ePrazo').value=`${h}:${m}`;
-}
+function calcPrazo(){}
 
 function renderEmerg(list){
   const tb=document.getElementById('emergBody');
@@ -775,14 +761,19 @@ function registrarEmerg(){
   if(!data){alert('Informe a data.');return}
   const recebido=document.getElementById('eRecebido').value;
   if(!recebido){alert('Informe o horário recebido.');return}
-  const enviado=document.getElementById('eEnviado').value;
-  if(!enviado){alert('Informe o horário enviado.');return}
   const cidade=document.getElementById('eCidade').value.trim();
   if(!cidade){alert('Informe a cidade.');return}
   const supervisor=document.getElementById('eSupervisor').value.trim();
   if(!supervisor){alert('Informe o supervisor.');return}
   const servico=document.getElementById('eServico').value;
   if(!servico){alert('Selecione o serviço.');return}
+  const now=new Date();
+  const enviado=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const [rh,rm]=recebido.split(':').map(Number);
+  const [eh,em]=enviado.split(':').map(Number);
+  let diff=(eh*60+em)-(rh*60+rm);
+  if(diff<0)diff+=1440;
+  const prazo=String(Math.floor(diff/60)).padStart(2,'0')+':'+String(diff%60).padStart(2,'0');
   const [dy,dm,dd]=data.split('-');
   EMERGS.unshift({
     id:nextEmergId++,
@@ -791,10 +782,10 @@ function registrarEmerg(){
     protocolo:document.getElementById('eProtocolo').value,
     servico,
     canal:document.getElementById('eCanal').value,
-    prazo:document.getElementById('ePrazo').value||'00:00',
+    prazo,
     status:'Em Atendimento'
   });
-  ['eData','eRecebido','eEnviado','eCidade','eSupervisor','eProtocolo','ePrazo'].forEach(id=>document.getElementById(id).value='');
+  ['eData','eRecebido','eCidade','eSupervisor','eProtocolo'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('eServico').selectedIndex=0;
   const firstTab=document.querySelector('#emergTabs .tab');
   switchEmergTab('lista',firstTab);
