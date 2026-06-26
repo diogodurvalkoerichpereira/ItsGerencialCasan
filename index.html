@@ -1389,15 +1389,23 @@ function switchPontoTab(name, el){
 function parseMinutes(t){
   if(t==null||t===''||t==='—')return null;
   const s=t.toString().trim();
-  // HH:MM ou HH:MM:SS
-  let m=s.match(/^(\d{1,2}):(\d{2})/);
+  // H:MM:SS AM/PM ou H:MM AM/PM (ex: "11:57:18 PM", "8:21:40 AM")
+  let m=s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)$/i);
+  if(m){
+    let h=parseInt(m[1],10),min=parseInt(m[2],10);
+    const ap=m[3].toUpperCase();
+    if(ap==='AM'){if(h===12)h=0;}else{if(h!==12)h+=12;}
+    if(!isNaN(h)&&!isNaN(min))return h*60+min;
+  }
+  // HH:MM ou HH:MM:SS (24h, ex: "08:00", "08:00:00")
+  m=s.match(/^(\d{1,2}):(\d{2})/);
   if(m){ const h=parseInt(m[1],10),min=parseInt(m[2],10); if(!isNaN(h)&&!isNaN(min))return h*60+min; }
-  // HHhMM ou HHhMM (ex: "08h00")
+  // HHhMM (ex: "08h00")
   m=s.match(/^(\d{1,2})h(\d{2})/i);
   if(m){ const h=parseInt(m[1],10),min=parseInt(m[2],10); if(!isNaN(h)&&!isNaN(min))return h*60+min; }
-  // Número decimal do Excel (fração de dia, ex: 0.333333 = 08:00)
+  // Serial decimal do Excel (ex: 0.333333 = 08:00)
   const n=parseFloat(s);
-  if(!isNaN(n)&&n>=0&&n<1){ const total=Math.round(n*24*60); return total; }
+  if(!isNaN(n)&&n>=0&&n<1)return Math.round(n*24*60);
   return null;
 }
 
@@ -1432,8 +1440,12 @@ function calcularResumoMensal(){
     const iniInt=parseMinutes(r.iniIntervalo);
     const fimInt=parseMinutes(r.fimIntervalo);
     const fim=parseMinutes(r.fimJornada);
-    if(ini!=null&&iniInt!=null&&fimInt!=null&&fim!=null&&fim>ini&&fimInt>iniInt){
-      const worked=(fim-ini)-(fimInt-iniInt);
+    if(ini!=null&&iniInt!=null&&fimInt!=null&&fim!=null){
+      // Suporte a turno noturno: ajusta horários do dia seguinte
+      const fimAdj  = fim    < ini ? fim    + 1440 : fim;
+      const iniIntAdj = iniInt < ini ? iniInt + 1440 : iniInt;
+      const fimIntAdj = fimInt < ini ? fimInt + 1440 : fimInt;
+      const worked=(fimAdj-ini)-(fimIntAdj-iniIntAdj);
       if(worked>0){ map[key].dias++; map[key].minutos+=worked; }
       else map[key].diasSemRegistro++;
     } else {
