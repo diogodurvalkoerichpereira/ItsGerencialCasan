@@ -369,14 +369,14 @@ textarea{resize:vertical;min-height:72px}
           <div class="stat-card">
             <div class="stat-icon" style="background:#fef2f2;color:var(--its-danger)"><i class="ti ti-flame"></i></div>
             <div class="stat-value" id="e-critica">0</div>
-            <div class="stat-label">Severidade Crítica</div>
+            <div class="stat-label">Fora do Prazo (&gt;30min)</div>
           </div>
         </div>
 
         <div class="filter-row">
           <div class="form-group">
             <label>Buscar ocorrência</label>
-            <input type="text" id="eSearch" placeholder="Título, área, responsável..." oninput="filterEmerg()">
+            <input type="text" id="eSearch" placeholder="Cidade, supervisor, protocolo..." oninput="filterEmerg()">
           </div>
           <div class="form-group">
             <label>Status</label>
@@ -387,19 +387,18 @@ textarea{resize:vertical;min-height:72px}
             </select>
           </div>
           <div class="form-group">
-            <label>Severidade</label>
+            <label>Serviço</label>
             <select id="eFilterSev" onchange="filterEmerg()">
-              <option value="">Todas</option>
-              <option>Crítica</option><option>Alta</option>
-              <option>Média</option><option>Baixa</option>
+              <option value="">Todos</option>
+              <option>Água</option><option>Esgoto</option><option>Água e Esgoto</option>
             </select>
           </div>
           <div class="form-group">
-            <label>Área</label>
+            <label>Supervisor</label>
             <select id="eFilterArea" onchange="filterEmerg()">
-              <option value="">Todas</option>
-              <option>TI</option><option>Operações</option><option>Financeiro</option>
-              <option>RH</option><option>Comercial</option>
+              <option value="">Todos</option>
+              <option>Bruno</option><option>Wilson</option>
+              <option>Erick</option><option>Janaina</option>
             </select>
           </div>
         </div>
@@ -408,8 +407,9 @@ textarea{resize:vertical;min-height:72px}
           <table class="task-table">
             <thead>
               <tr>
-                <th>#</th><th>Título</th><th>Área</th><th>Responsável</th>
-                <th>Abertura</th><th>Severidade</th><th>Status</th><th>Ações</th>
+                <th>Data</th><th>Cidade</th><th>Recebido</th><th>Enviado</th>
+                <th>Supervisor</th><th>Protocolo</th><th>Serviço</th><th>Canal</th>
+                <th>Prazo</th><th>Status</th><th>Ações</th>
               </tr>
             </thead>
             <tbody id="emergBody"></tbody>
@@ -424,70 +424,63 @@ textarea{resize:vertical;min-height:72px}
       <div id="epanel-nova" style="display:none">
         <div class="card">
           <div class="section-title">Registrar Nova Emergência</div>
-          <div class="form-group">
-            <label>Título da Ocorrência *</label>
-            <input type="text" id="eTitulo" placeholder="Descreva brevemente a emergência...">
-          </div>
-          <div class="form-row">
+          <div class="form-row-3">
             <div class="form-group">
-              <label>Área Afetada *</label>
-              <select id="eArea">
-                <option value="">Selecione...</option>
-                <option>TI</option><option>Operações</option><option>Financeiro</option>
-                <option>RH</option><option>Comercial</option>
-              </select>
+              <label>Data *</label>
+              <input type="date" id="eData">
             </div>
             <div class="form-group">
-              <label>Responsável pelo Atendimento *</label>
-              <select id="eResp">
-                <option value="">Selecione...</option>
-                <option>Diogo</option><option>Ana Lima</option>
-                <option>Carlos Souza</option><option>Mariana R.</option>
-              </select>
+              <label>Horário Recebido *</label>
+              <input type="time" id="eRecebido">
+            </div>
+            <div class="form-group">
+              <label>Horário Enviado *</label>
+              <input type="time" id="eEnviado" oninput="calcPrazo()">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>Severidade *</label>
-              <select id="eSev">
-                <option value="">Selecione...</option>
-                <option>Crítica</option><option>Alta</option>
-                <option>Média</option><option>Baixa</option>
-              </select>
+              <label>Cidade *</label>
+              <input type="text" id="eCidade" placeholder="Ex: Florianópolis, São José...">
             </div>
             <div class="form-group">
-              <label>Tipo de Emergência</label>
-              <select id="eTipo">
-                <option>Falha de Sistema</option>
-                <option>Indisponibilidade de Serviço</option>
-                <option>Incidente de Segurança</option>
-                <option>Falha Operacional</option>
-                <option>Problema de Infraestrutura</option>
-                <option>Outro</option>
+              <label>Supervisor *</label>
+              <input type="text" id="eSupervisor" placeholder="Nome do supervisor...">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Protocolo</label>
+              <input type="text" id="eProtocolo" placeholder="Ex: 26/06/2026 08:58 301877">
+            </div>
+            <div class="form-group">
+              <label>Serviço *</label>
+              <select id="eServico">
+                <option value="">Selecione...</option>
+                <option>Água</option>
+                <option>Esgoto</option>
+                <option>Água e Esgoto</option>
               </select>
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>Data / Hora da Ocorrência</label>
-              <input type="datetime-local" id="eDataHora">
+              <label>Canal de Envio</label>
+              <select id="eCanal">
+                <option>WhatsApp</option>
+                <option>E-mail</option>
+                <option>Telefone</option>
+                <option>Sistema</option>
+              </select>
             </div>
             <div class="form-group">
-              <label>Sistemas / Recursos Afetados</label>
-              <input type="text" id="eSistemas" placeholder="Ex: CRM, VPN, Telefonia...">
+              <label>Dentro do Prazo</label>
+              <input type="text" id="ePrazo" readonly placeholder="Calculado automaticamente" style="background:#f8fafc;color:var(--its-sidebar);font-weight:700">
             </div>
           </div>
-          <div class="form-group">
-            <label>Descrição Detalhada *</label>
-            <textarea id="eDesc" style="min-height:90px" placeholder="Descreva o impacto, sintomas observados e contexto da ocorrência..."></textarea>
-          </div>
-          <div class="form-group">
-            <label>Ações Imediatas Tomadas</label>
-            <textarea id="eAcoes" style="min-height:72px" placeholder="Descreva o que já foi feito para contenção..."></textarea>
-          </div>
-          <div style="display:flex;gap:8px;justify-content:flex-end">
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
             <button class="btn btn-ghost" onclick="switchEmergTab('lista', document.querySelector('#emergTabs .tab'))"><i class="ti ti-x"></i> Cancelar</button>
-            <button class="btn btn-danger" onclick="registrarEmerg()"><i class="ti ti-alert-octagon"></i> Registrar Emergência</button>
+            <button class="btn btn-danger" onclick="registrarEmerg()"><i class="ti ti-device-floppy"></i> Salvar Emergência</button>
           </div>
         </div>
       </div>
@@ -704,20 +697,28 @@ function updateDashboard(){
 // ── EMERGÊNCIAS ───────────────────────────────────────────────────────
 let nextEmergId = 4;
 const EMERGS = [
-  {id:1,titulo:'Queda do sistema de telefonia',area:'TI',resp:'Carlos Souza',sev:'Crítica',tipo:'Indisponibilidade de Serviço',dataHora:'2026-06-26T08:15',sistemas:'Telefonia IP, CRM',desc:'Sistema de telefonia caiu afetando 100% das posições de atendimento.',acoes:'Abertura de chamado com fornecedor. Equipe técnica acionada.',status:'Em Atendimento'},
-  {id:2,titulo:'Acesso indevido a dados financeiros',area:'Financeiro',resp:'Diogo',sev:'Alta',tipo:'Incidente de Segurança',dataHora:'2026-06-25T14:30',sistemas:'ERP, Financeiro',desc:'Detectado acesso não autorizado a relatórios financeiros confidenciais.',acoes:'Sessão encerrada. Senha resetada. Log de auditoria coletado.',status:'Aguardando'},
-  {id:3,titulo:'Falha no backup noturno',area:'TI',resp:'Carlos Souza',sev:'Média',tipo:'Falha de Sistema',dataHora:'2026-06-24T22:00',sistemas:'Storage, Backup',desc:'Rotina de backup falhou sem completar. Dados do dia não foram salvos.',acoes:'Backup manual iniciado. Investigação da causa raiz em andamento.',status:'Resolvido'},
+  {id:1,data:'25/06',cidade:'São José',recebido:'17:00',enviado:'17:01',supervisor:'Bruno',protocolo:'23/06/2026 17:19 301920',servico:'Água',canal:'WhatsApp',prazo:'00:01',status:'Resolvido'},
+  {id:2,data:'25/06',cidade:'Florianópolis',recebido:'17:42',enviado:'18:26',supervisor:'Bruno',protocolo:'25/06/2026 17:35 301807',servico:'Água',canal:'WhatsApp',prazo:'00:44',status:'Resolvido'},
+  {id:3,data:'26/06',cidade:'Florianópolis',recebido:'07:06',enviado:'07:07',supervisor:'Erick',protocolo:'26/06/2026 06:59 301826',servico:'Água',canal:'WhatsApp',prazo:'00:01',status:'Em Atendimento'},
 ];
 
-function sevBadge(s){
-  const m={'Crítica':'badge-red','Alta':'badge-orange','Média':'badge-blue','Baixa':'badge-green'};
-  return `<span class="badge ${m[s]||'badge-gray'}">${s}</span>`;
-}
 function emergStatusBadge(s){
   const m={'Em Atendimento':'badge-orange','Resolvido':'badge-green','Aguardando':'badge-blue','Cancelado':'badge-red'};
   return `<span class="badge ${m[s]||'badge-gray'}"><span class="badge-dot"></span>${s}</span>`;
 }
-function fmtDT(dt){if(!dt)return'—';const[d,t]=dt.split('T');const[y,m,dd]=d.split('-');return`${dd}/${m}/${y} ${t||''}`;}
+
+function calcPrazo(){
+  const r=document.getElementById('eRecebido').value;
+  const e=document.getElementById('eEnviado').value;
+  if(!r||!e){document.getElementById('ePrazo').value='';return}
+  const [rh,rm]=r.split(':').map(Number);
+  const [eh,em]=e.split(':').map(Number);
+  let diff=(eh*60+em)-(rh*60+rm);
+  if(diff<0)diff+=1440;
+  const h=String(Math.floor(diff/60)).padStart(2,'0');
+  const m=String(diff%60).padStart(2,'0');
+  document.getElementById('ePrazo').value=`${h}:${m}`;
+}
 
 function renderEmerg(list){
   const tb=document.getElementById('emergBody');
@@ -726,12 +727,15 @@ function renderEmerg(list){
   em.style.display='none';
   tb.innerHTML=list.map(e=>`
     <tr>
-      <td style="color:var(--its-muted);font-size:.78rem">#${String(e.id).padStart(3,'0')}</td>
-      <td><strong style="font-size:.83rem">${e.titulo}</strong><div style="font-size:.73rem;color:var(--its-muted);margin-top:2px">${e.tipo}</div></td>
-      <td style="font-size:.8rem;color:var(--its-muted)">${e.area}</td>
-      <td style="font-size:.82rem">${e.resp}</td>
-      <td style="font-size:.78rem">${fmtDT(e.dataHora)}</td>
-      <td>${sevBadge(e.sev)}</td>
+      <td style="color:var(--its-muted);font-size:.78rem">${e.data||'—'}</td>
+      <td style="font-size:.83rem;font-weight:600">${e.cidade||'—'}</td>
+      <td style="font-size:.8rem">${e.recebido||'—'}</td>
+      <td style="font-size:.8rem">${e.enviado||'—'}</td>
+      <td style="font-size:.82rem">${e.supervisor||'—'}</td>
+      <td style="font-size:.75rem;color:var(--its-muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.protocolo||'—'}</td>
+      <td><span class="badge ${e.servico==='Esgoto'?'badge-orange':'badge-blue'}">${e.servico||'—'}</span></td>
+      <td style="font-size:.8rem">${e.canal||'—'}</td>
+      <td><span style="font-size:.8rem;font-weight:700;color:var(--its-success);background:#f0fdf4;padding:2px 8px;border-radius:4px">${e.prazo||'00:00'}</span></td>
       <td>${emergStatusBadge(e.status)}</td>
       <td>
         <div style="display:flex;gap:4px">
@@ -750,8 +754,8 @@ function filterEmerg(){
   const sv=document.getElementById('eFilterSev').value;
   const ar=document.getElementById('eFilterArea').value;
   renderEmerg(EMERGS.filter(e=>
-    (!q||e.titulo.toLowerCase().includes(q)||e.area.toLowerCase().includes(q)||e.resp.toLowerCase().includes(q))&&
-    (!st||e.status===st)&&(!sv||e.sev===sv)&&(!ar||e.area===ar)
+    (!q||e.cidade.toLowerCase().includes(q)||e.supervisor.toLowerCase().includes(q)||e.protocolo.toLowerCase().includes(q))&&
+    (!st||e.status===st)&&(!sv||e.servico===sv)&&(!ar||e.cidade===ar)
   ));
 }
 
@@ -759,30 +763,39 @@ function updateEmergStats(){
   document.getElementById('e-total').textContent=EMERGS.length;
   document.getElementById('e-aberto').textContent=EMERGS.filter(e=>e.status==='Em Atendimento').length;
   document.getElementById('e-resolvido').textContent=EMERGS.filter(e=>e.status==='Resolvido').length;
-  document.getElementById('e-critica').textContent=EMERGS.filter(e=>e.sev==='Crítica').length;
+  document.getElementById('e-critica').textContent=EMERGS.filter(e=>{
+    if(!e.prazo)return false;
+    const [h,m]=e.prazo.split(':').map(Number);
+    return(h*60+m)>30;
+  }).length;
 }
 
 function registrarEmerg(){
-  const titulo=document.getElementById('eTitulo').value.trim();
-  if(!titulo){alert('Informe o título da ocorrência.');return}
-  const area=document.getElementById('eArea').value;
-  if(!area){alert('Selecione a área afetada.');return}
-  const resp=document.getElementById('eResp').value;
-  if(!resp){alert('Selecione o responsável.');return}
-  const sev=document.getElementById('eSev').value;
-  if(!sev){alert('Selecione a severidade.');return}
-  const desc=document.getElementById('eDesc').value.trim();
-  if(!desc){alert('Informe a descrição detalhada.');return}
+  const data=document.getElementById('eData').value;
+  if(!data){alert('Informe a data.');return}
+  const recebido=document.getElementById('eRecebido').value;
+  if(!recebido){alert('Informe o horário recebido.');return}
+  const enviado=document.getElementById('eEnviado').value;
+  if(!enviado){alert('Informe o horário enviado.');return}
+  const cidade=document.getElementById('eCidade').value.trim();
+  if(!cidade){alert('Informe a cidade.');return}
+  const supervisor=document.getElementById('eSupervisor').value.trim();
+  if(!supervisor){alert('Informe o supervisor.');return}
+  const servico=document.getElementById('eServico').value;
+  if(!servico){alert('Selecione o serviço.');return}
+  const [dy,dm,dd]=data.split('-');
   EMERGS.unshift({
-    id:nextEmergId++,titulo,area,resp,sev,
-    tipo:document.getElementById('eTipo').value,
-    dataHora:document.getElementById('eDataHora').value||new Date().toISOString().slice(0,16),
-    sistemas:document.getElementById('eSistemas').value,
-    desc,acoes:document.getElementById('eAcoes').value,
+    id:nextEmergId++,
+    data:`${dd}/${dm}`,
+    cidade,recebido,enviado,supervisor,
+    protocolo:document.getElementById('eProtocolo').value,
+    servico,
+    canal:document.getElementById('eCanal').value,
+    prazo:document.getElementById('ePrazo').value||'00:00',
     status:'Em Atendimento'
   });
-  ['eTitulo','eDesc','eAcoes','eSistemas','eDataHora'].forEach(id=>document.getElementById(id).value='');
-  ['eArea','eResp','eSev'].forEach(id=>document.getElementById(id).selectedIndex=0);
+  ['eData','eRecebido','eEnviado','eCidade','eSupervisor','eProtocolo','ePrazo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('eServico').selectedIndex=0;
   const firstTab=document.querySelector('#emergTabs .tab');
   switchEmergTab('lista',firstTab);
   filterEmerg();
@@ -791,21 +804,25 @@ function registrarEmerg(){
 
 function verEmerg(id){
   const e=EMERGS.find(x=>x.id===id);if(!e)return;
-  document.getElementById('modalTitle').textContent='Detalhes da Ocorrência #'+String(e.id).padStart(3,'0');
+  document.getElementById('modalTitle').textContent='Detalhes da Ocorrência — '+e.data;
   document.getElementById('modalContent').innerHTML=`
-    <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center">${sevBadge(e.sev)}${emergStatusBadge(e.status)}<span style="font-size:.75rem;color:var(--its-muted)">${e.tipo}</span></div>
-    <div class="form-group"><label>Título</label><div style="font-size:.9rem;font-weight:600">${e.titulo}</div></div>
+    <div style="margin-bottom:14px">${emergStatusBadge(e.status)}</div>
     <div class="form-row">
-      <div class="form-group"><label>Área</label><div style="font-size:.88rem">${e.area}</div></div>
-      <div class="form-group"><label>Responsável</label><div style="font-size:.88rem">${e.resp}</div></div>
+      <div class="form-group"><label>Data</label><div style="font-size:.88rem;font-weight:600">${e.data}</div></div>
+      <div class="form-group"><label>Cidade</label><div style="font-size:.88rem;font-weight:600">${e.cidade}</div></div>
+    </div>
+    <div class="form-row-3">
+      <div class="form-group"><label>Recebido</label><div style="font-size:.88rem">${e.recebido}</div></div>
+      <div class="form-group"><label>Enviado</label><div style="font-size:.88rem">${e.enviado}</div></div>
+      <div class="form-group"><label>Dentro do Prazo</label><div style="font-size:.88rem;font-weight:700;color:var(--its-success)">${e.prazo}</div></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>Data / Hora</label><div style="font-size:.88rem">${fmtDT(e.dataHora)}</div></div>
-      <div class="form-group"><label>Sistemas Afetados</label><div style="font-size:.88rem">${e.sistemas||'—'}</div></div>
+      <div class="form-group"><label>Supervisor</label><div style="font-size:.88rem">${e.supervisor}</div></div>
+      <div class="form-group"><label>Serviço</label><div style="font-size:.88rem">${e.servico}</div></div>
     </div>
-    <div class="form-group"><label>Descrição</label><div style="font-size:.85rem;line-height:1.6;background:#f8fafc;padding:10px;border-radius:6px">${e.desc}</div></div>
-    <div class="form-group"><label>Ações Tomadas</label><div style="font-size:.85rem;line-height:1.6;background:#f8fafc;padding:10px;border-radius:6px">${e.acoes||'—'}</div></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+    <div class="form-group"><label>Protocolo</label><div style="font-size:.85rem;background:#f8fafc;padding:8px 10px;border-radius:6px">${e.protocolo||'—'}</div></div>
+    <div class="form-group"><label>Canal de Envio</label><div style="font-size:.88rem">${e.canal}</div></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-ghost" onclick="closeModal()">Fechar</button>
       <button class="btn btn-primary" onclick="cycleEmergStatus(${e.id});closeModal()"><i class="ti ti-refresh"></i> Avançar Status</button>
     </div>`;
