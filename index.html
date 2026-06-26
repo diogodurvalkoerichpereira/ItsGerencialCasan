@@ -938,11 +938,11 @@ function renderTasks(list){
       <td>${prioBadge(t.prio)}</td>
       <td>${statusBadge(t.status)}</td>
       <td>
-        <div style="display:flex;gap:4px">
+        ${isCliente()?'':`<div style="display:flex;gap:4px">
           <button class="btn btn-ghost btn-sm" onclick="editTask(${t.id})" title="Editar"><i class="ti ti-edit"></i></button>
           <button class="btn btn-ghost btn-sm" onclick="cycleStatus(${t.id})" title="Próximo status"><i class="ti ti-refresh"></i></button>
           <button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteTask(${t.id})" title="Excluir"><i class="ti ti-trash"></i></button>
-        </div>
+        </div>`}
       </td>
     </tr>`).join('');
 }
@@ -1908,37 +1908,33 @@ function applySession(){
     document.getElementById('loginScreen').style.display='flex';
   }
 }
+function getSession(){return JSON.parse(sessionStorage.getItem('its_session')||'null');}
+function isCliente(){const s=getSession();return s&&s.cargo==='Cliente';}
+// Mapa de permissões: cargo → seções visíveis (null = acesso total)
+const NAV_PERMISSIONS={
+  Operador:['emergencias','avisos'],
+  Cliente:['tarefas'],
+};
 function applyNavPermissions(cargo){
-  const isOperador=cargo==='Operador';
-  // Nav items bloqueados para Operador (todos exceto emergencias e avisos)
-  const bloqueados=['tarefas','ponto','dashboard','relatorio','usuarios','config'];
+  const allowed=NAV_PERMISSIONS[cargo]||null;
   document.querySelectorAll('.nav-item[onclick]').forEach(el=>{
     const m=el.getAttribute('onclick').match(/setNav\(this,'(\w+)'\)/);
-    if(m&&bloqueados.includes(m[1])){
-      el.style.display=isOperador?'none':'';
-    }
+    if(m)el.style.display=(!allowed||allowed.includes(m[1]))?'':'none';
   });
-  // Esconde labels de seção que ficam órfãos para Operador
+  // Oculta seções do nav que ficam sem itens visíveis
   document.querySelectorAll('.nav-section').forEach(sec=>{
-    if(isOperador){
-      // Mostra só a seção "Operação" (que contém emergencias e avisos)
-      const next=sec.nextElementSibling;
-      const hasVisible=next&&next.style.display!=='none';
-      // Verifica se algum nav-item visível existe após esta seção
-      let found=false,cur=sec.nextElementSibling;
-      while(cur&&!cur.classList.contains('nav-section')){
-        if(cur.classList.contains('nav-item')&&cur.style.display!=='none'){found=true;break;}
-        cur=cur.nextElementSibling;
-      }
-      sec.style.display=found?'':'none';
-    }else{
-      sec.style.display='';
+    if(!allowed){sec.style.display='';return;}
+    let found=false,cur=sec.nextElementSibling;
+    while(cur&&!cur.classList.contains('nav-section')){
+      if(cur.classList.contains('nav-item')&&cur.style.display!=='none'){found=true;break;}
+      cur=cur.nextElementSibling;
     }
+    sec.style.display=found?'':'none';
   });
-  // Redireciona Operador para Emergências ao entrar
-  if(isOperador){
-    const emergNav=document.querySelector('.nav-item[onclick*="emergencias"]');
-    if(emergNav)emergNav.click();
+  // Redireciona para a primeira seção permitida
+  if(allowed){
+    const first=document.querySelector(`.nav-item[onclick*="${allowed[0]}"]`);
+    if(first)first.click();
   }
 }
 function logout(){
