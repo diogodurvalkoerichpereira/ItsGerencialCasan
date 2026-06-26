@@ -792,15 +792,7 @@ textarea{resize:vertical;min-height:72px}
         <div class="filter-row">
           <div class="form-group">
             <label>Buscar</label>
-            <input type="text" id="aSearch" name="busca-aviso" placeholder="Cidade, supervisor..." oninput="filterAvisos()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')">
-          </div>
-          <div class="form-group">
-            <label>Supervisor</label>
-            <select id="aFilterSup" onchange="filterAvisos()">
-              <option value="">Todos</option>
-              <option>Bruno</option><option>Wilson</option>
-              <option>Erick</option><option>Janaina</option>
-            </select>
+            <input type="text" id="aSearch" name="busca-aviso" placeholder="Cidade..." oninput="filterAvisos()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')">
           </div>
           <div class="form-group">
             <label>Canal</label>
@@ -823,7 +815,7 @@ textarea{resize:vertical;min-height:72px}
             <thead>
               <tr>
                 <th>Data</th><th>Cidade</th><th>Bairro</th><th>Serviço</th><th>Recebido</th><th>Inserido</th>
-                <th>Supervisor</th><th>Prev. Normalização</th><th>Canal</th>
+                <th>Prev. Normalização</th><th>Canal</th>
                 <th>Encerrado/Prorrogado</th><th>Ações</th>
               </tr>
             </thead>
@@ -867,14 +859,7 @@ textarea{resize:vertical;min-height:72px}
                 <option>Água</option><option>Esgoto</option><option>Água e Esgoto</option>
               </select>
             </div>
-            <div class="form-group">
-              <label>Supervisor *</label>
-              <select id="aSupervisor">
-                <option value="">Selecione...</option>
-                <option>Bruno</option><option>Wilson</option>
-                <option>Erick</option><option>Janaina</option>
-              </select>
-            </div>
+            <div class="form-group"></div>
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -1661,7 +1646,6 @@ function renderAvisos(list){
       <td><span class="badge ${a.servico==='Esgoto'?'badge-orange':a.servico==='Água e Esgoto'?'badge-blue':'badge-blue'}">${a.servico||'—'}</span></td>
       <td style="font-size:.8rem">${a.recebido}</td>
       <td style="font-size:.8rem">${a.inserido}</td>
-      <td style="font-size:.82rem">${a.supervisor}</td>
       <td style="font-size:.8rem;font-weight:600;color:var(--its-sidebar)">${a.prevNorm||'—'}</td>
       <td style="font-size:.8rem">${a.canal}</td>
       <td>${situacaoBadge(a.situacao)}</td>
@@ -1677,12 +1661,11 @@ function renderAvisos(list){
 
 function filterAvisos(){
   const q=document.getElementById('aSearch').value.toLowerCase();
-  const sup=document.getElementById('aFilterSup').value;
   const canal=document.getElementById('aFilterCanal').value;
   const sit=document.getElementById('aFilterSit').value;
   renderAvisos(AVISOS.filter(a=>
-    (!q||a.cidade.toLowerCase().includes(q)||a.supervisor.toLowerCase().includes(q))&&
-    (!sup||a.supervisor===sup)&&(!canal||a.canal===canal)&&
+    (!q||a.cidade.toLowerCase().includes(q))&&
+    (!canal||a.canal===canal)&&
     (!sit||(sit==='Em aberto'?!a.situacao:a.situacao===sit))
   ));
 }
@@ -1705,8 +1688,7 @@ function registrarAviso(){
   if(!bairro){alert('Informe o bairro afetado.');return}
   const servico=document.getElementById('aServico').value;
   if(!servico){alert('Selecione o serviço indisponível.');return}
-  const supervisor=document.getElementById('aSupervisor').value;
-  if(!supervisor){alert('Selecione o supervisor.');return}
+  const supervisor='';
   const canal=document.getElementById('aCanal').value;
   if(!canal){alert('Selecione o canal de envio.');return}
   const now=new Date();
@@ -1720,7 +1702,7 @@ function registrarAviso(){
     situacao:document.getElementById('aSituacao').value
   });
   ['aData','aRecebido','aCidade','aBairro','aPrevNorm'].forEach(id=>document.getElementById(id).value='');
-  ['aServico','aSupervisor','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
+  ['aServico','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
   const firstTab=document.querySelector('#avisosTabs .tab');
   switchAvisosTab('lista',firstTab);
   filterAvisos();
@@ -1732,7 +1714,7 @@ function editarSituacao(id){
   document.getElementById('modalTitle').textContent='Alterar Situação — '+a.cidade;
   document.getElementById('modalContent').innerHTML=`
     <div style="margin-bottom:14px;font-size:.85rem;color:var(--its-muted)">
-      ${a.data} · ${a.recebido} → ${a.inserido} · ${a.supervisor}
+      ${a.data} · ${a.recebido} → ${a.inserido}
     </div>
     <div class="form-group">
       <label>Situação atual</label>
