@@ -1160,10 +1160,12 @@ function onRptTipoChange(){
   document.getElementById('rptInd12Filters').style.display=isInd12?'block':'none';
   if(isPonto){
     const sel=document.getElementById('rptPontoMes');
-    const meses=Object.keys(PONTO_DB).sort().reverse();
-    const mNomes=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const meses=Object.keys(PONTO_DB).sort((a,b)=>{
+      const[ma,ya]=a.split('/'), [mb,yb]=b.split('/');
+      return (parseInt(yb)-parseInt(ya))||(parseInt(mb)-parseInt(ma));
+    });
     sel.innerHTML=meses.length
-      ?meses.map(m=>{const[a,mn]=m.split('-');return`<option value="${m}">${mNomes[parseInt(mn)-1]}/${a}</option>`;}).join('')
+      ?meses.map(m=>`<option value="${m}">${fmtMesLabel(m)}</option>`).join('')
       :'<option value="">Nenhum dado importado</option>';
   }
 }
