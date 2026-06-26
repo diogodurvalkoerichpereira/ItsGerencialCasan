@@ -164,7 +164,7 @@ textarea{resize:vertical;min-height:72px}
   <div class="nav-item" onclick="setNav(this,'emergencias')"><i class="ti ti-alert-octagon"></i> Emergências</div>
   <div class="nav-item" onclick="setNav(this,'avisos')"><i class="ti ti-speakerphone"></i> Quadro de Avisos</div>
   <div class="nav-item" onclick="setNav(this,'ponto')"><i class="ti ti-clock"></i> Ponto</div>
-  <div class="nav-item"><i class="ti ti-users"></i> Equipe</div>
+  <div class="nav-item" onclick="setNav(this,'usuarios')"><i class="ti ti-users"></i> Usuários</div>
   <div class="nav-item"><i class="ti ti-calendar"></i> Agenda</div>
   <div class="nav-section">Sistema</div>
   <div class="nav-item" onclick="setNav(this,'config')"><i class="ti ti-settings"></i> Configurações</div>
@@ -649,6 +649,44 @@ textarea{resize:vertical;min-height:72px}
           </div>
           <div id="cfgStatus" style="margin-top:10px"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- ===== USUÁRIOS ===== -->
+    <div class="panel" id="panel-usuarios">
+      <div class="filter-row">
+        <div class="form-group">
+          <label>Buscar usuário</label>
+          <input type="text" id="userSearch" placeholder="Nome, e-mail..." oninput="filterUsers()">
+        </div>
+        <div class="form-group">
+          <label>Cargo</label>
+          <select id="userFilterCargo" onchange="filterUsers()">
+            <option value="">Todos</option>
+            <option>Gerente</option><option>Coordenador</option><option>Supervisor</option>
+            <option>Monitor</option><option>Operador</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Situação</label>
+          <select id="userFilterStatus" onchange="filterUsers()">
+            <option value="">Todas</option>
+            <option>Ativo</option><option>Inativo</option>
+          </select>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="task-table">
+          <thead>
+            <tr>
+              <th>Nome</th><th>E-mail</th><th>Cargo</th><th>Situação</th><th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="userBody"></tbody>
+        </table>
+      </div>
+      <div id="userEmpty" class="empty-state" style="display:none">
+        <i class="ti ti-user-off"></i>Nenhum usuário encontrado
       </div>
     </div>
 
@@ -1480,7 +1518,10 @@ function setNav(el,tab){
   const isAvisos=tab==='avisos';
   const isPonto=tab==='ponto';
   const isConfig=tab==='config';
-  document.getElementById('mainTabs').style.display=(!isEmerg&&!isAvisos&&!isPonto&&!isConfig)?'flex':'none';
+  const isUsuarios=tab==='usuarios';
+  const titulos={tarefas:'Gestão de Tarefas',relatorio:'Relatórios',dashboard:'Dashboard',emergencias:'Emergências',avisos:'Quadro de Avisos',ponto:'Controle de Ponto',usuarios:'Gestão de Usuários',config:'Configurações'};
+  if(titulos[tab])document.getElementById('pageTitle').textContent=titulos[tab];
+  document.getElementById('mainTabs').style.display=(!isEmerg&&!isAvisos&&!isPonto&&!isConfig&&!isUsuarios)?'flex':'none';
   document.getElementById('emergTabs').style.display=isEmerg?'flex':'none';
   document.getElementById('avisosTabs').style.display=isAvisos?'flex':'none';
   document.getElementById('pontoTabs').style.display=isPonto?'flex':'none';
@@ -1503,6 +1544,10 @@ function setNav(el,tab){
     btn.innerHTML='<i class="ti ti-device-floppy"></i> Salvar Config.';
     btn.onclick=saveConfig;
     loadConfig();
+  } else if(isUsuarios){
+    btn.innerHTML='<i class="ti ti-user-plus"></i> Novo Usuário';
+    btn.onclick=openNewUser;
+    renderUsers();
   } else {
     btn.innerHTML='<i class="ti ti-plus"></i> Nova Tarefa';
     btn.onclick=openNewTask;
@@ -1601,6 +1646,109 @@ function sendNotification(task){
   }).catch(()=>{
     showToast('Tarefa criada. Serviço de e-mail indisponível.');
   });
+}
+
+// ── USUÁRIOS ──────────────────────────────────────────────────────────
+const CARGOS=['Gerente','Coordenador','Supervisor','Monitor','Operador'];
+const CARGO_BADGE={'Gerente':'badge-blue','Coordenador':'badge-orange','Supervisor':'badge-yellow','Monitor':'badge-green','Operador':'badge-gray'};
+let USERS = JSON.parse(localStorage.getItem('its_users')||'null') || [
+  {id:1,nome:'Diogo Pereira',email:'diogo@itscs.com.br',cargo:'Gerente',status:'Ativo'},
+  {id:2,nome:'Ana Lima',email:'ana.lima@itscs.com.br',cargo:'Coordenador',status:'Ativo'},
+  {id:3,nome:'Carlos Souza',email:'carlos.souza@itscs.com.br',cargo:'Supervisor',status:'Ativo'},
+  {id:4,nome:'Bruno Martins',email:'bruno.martins@itscs.com.br',cargo:'Monitor',status:'Ativo'},
+  {id:5,nome:'Mariana R.',email:'mariana.r@itscs.com.br',cargo:'Operador',status:'Inativo'},
+];
+let nextUserId = Math.max(0,...USERS.map(u=>u.id))+1;
+
+function saveUsers(){localStorage.setItem('its_users',JSON.stringify(USERS));}
+function cargoBadge(c){return `<span class="badge ${CARGO_BADGE[c]||'badge-gray'}"><span class="badge-dot"></span>${c}</span>`;}
+function userStatusBadge(s){return `<span class="badge ${s==='Ativo'?'badge-green':'badge-gray'}"><span class="badge-dot"></span>${s}</span>`;}
+
+function renderUsers(list){
+  if(!list)list=USERS;
+  const tb=document.getElementById('userBody');
+  const em=document.getElementById('userEmpty');
+  if(!list.length){tb.innerHTML='';em.style.display='block';return}
+  em.style.display='none';
+  const ordem={Gerente:1,Coordenador:2,Supervisor:3,Monitor:4,Operador:5};
+  list=list.slice().sort((a,b)=>(ordem[a.cargo]||9)-(ordem[b.cargo]||9)||a.nome.localeCompare(b.nome));
+  tb.innerHTML=list.map(u=>`
+    <tr>
+      <td><strong style="font-size:.83rem">${u.nome}</strong></td>
+      <td style="color:var(--its-muted);font-size:.8rem">${u.email}</td>
+      <td>${cargoBadge(u.cargo)}</td>
+      <td>${userStatusBadge(u.status)}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-sm" onclick="editUser(${u.id})" title="Editar"><i class="ti ti-edit"></i></button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleUser(${u.id})" title="Ativar/Inativar"><i class="ti ti-power"></i></button>
+          <button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteUser(${u.id})" title="Excluir"><i class="ti ti-trash"></i></button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function filterUsers(){
+  const q=document.getElementById('userSearch').value.toLowerCase();
+  const c=document.getElementById('userFilterCargo').value;
+  const s=document.getElementById('userFilterStatus').value;
+  renderUsers(USERS.filter(u=>
+    (!q||u.nome.toLowerCase().includes(q)||u.email.toLowerCase().includes(q))&&
+    (!c||u.cargo===c)&&(!s||u.status===s)
+  ));
+}
+
+function buildUserForm(u={}){
+  const sel=(arr,cur)=>arr.map(v=>`<option${cur===v?' selected':''}>${v}</option>`).join('');
+  return `
+    <div class="form-group"><label>Nome completo *</label><input type="text" id="uNome" value="${u.nome||''}" placeholder="Nome do usuário..."></div>
+    <div class="form-group"><label>E-mail *</label><input type="email" id="uEmail" value="${u.email||''}" placeholder="nome@itscs.com.br"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Cargo *</label><select id="uCargo">${sel(CARGOS,u.cargo||'Operador')}</select></div>
+      <div class="form-group"><label>Situação</label><select id="uStatus">${sel(['Ativo','Inativo'],u.status||'Ativo')}</select></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveUser(${u.id||0})"><i class="ti ti-device-floppy"></i> Salvar</button>
+    </div>`;
+}
+
+function openNewUser(){
+  document.getElementById('modalTitle').textContent='Novo Usuário';
+  document.getElementById('modalContent').innerHTML=buildUserForm();
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function editUser(id){
+  const u=USERS.find(x=>x.id===id);if(!u)return;
+  document.getElementById('modalTitle').textContent='Editar Usuário';
+  document.getElementById('modalContent').innerHTML=buildUserForm(u);
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function saveUser(id){
+  const nome=document.getElementById('uNome').value.trim();
+  const email=document.getElementById('uEmail').value.trim();
+  if(!nome){alert('Informe o nome do usuário.');return}
+  if(!email||!email.includes('@')){alert('Informe um e-mail válido.');return}
+  const cargo=document.getElementById('uCargo').value;
+  const status=document.getElementById('uStatus').value;
+  if(id){
+    const i=USERS.findIndex(x=>x.id===id);if(i>-1)Object.assign(USERS[i],{nome,email,cargo,status});
+  }else{
+    USERS.push({id:nextUserId++,nome,email,cargo,status});
+  }
+  saveUsers();closeModal();filterUsers();
+  showToast(id?'Usuário atualizado com sucesso!':'Usuário criado com sucesso!');
+}
+function toggleUser(id){
+  const u=USERS.find(x=>x.id===id);if(!u)return;
+  u.status=u.status==='Ativo'?'Inativo':'Ativo';
+  saveUsers();filterUsers();showToast(`Usuário ${u.status==='Ativo'?'ativado':'inativado'}.`);
+}
+function deleteUser(id){
+  const u=USERS.find(x=>x.id===id);if(!u)return;
+  if(!confirm(`Excluir o usuário "${u.nome}"?`))return;
+  const i=USERS.findIndex(x=>x.id===id);if(i>-1)USERS.splice(i,1);
+  saveUsers();filterUsers();showToast('Usuário excluído.');
 }
 
 // ── TOAST ─────────────────────────────────────────────────────────────
