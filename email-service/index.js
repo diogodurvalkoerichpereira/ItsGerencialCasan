@@ -17,7 +17,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Cores por prioridade (alinhadas ao design kit ITS)
+// Cores por prioridade (alinhadas ao design kit iTS)
 const PRIO_COLORS = {
   'Simples':       { bg: '#f0fdf4', text: '#16a34a', border: '#bbf7d0' },
   'Intermediária': { bg: '#fefce8', text: '#a16207', border: '#fde68a' },
@@ -42,9 +42,9 @@ function buildHtml(task) {
           <tr>
             <td style="background:#183c5a;padding:24px 28px;">
               <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-                <td style="background:#E85928;width:38px;height:38px;border-radius:8px;text-align:center;vertical-align:middle;color:#fff;font-weight:900;font-size:13px;">ITS</td>
+                <td style="background:#E85928;width:38px;height:38px;border-radius:8px;text-align:center;vertical-align:middle;color:#fff;font-weight:900;font-size:13px;">iTS</td>
                 <td style="padding-left:12px;">
-                  <div style="color:#ffffff;font-size:17px;font-weight:700;">ITS Gerencial CASAN</div>
+                  <div style="color:#ffffff;font-size:17px;font-weight:700;">iTS Gerencial CASAN</div>
                   <div style="color:rgba(255,255,255,.65);font-size:12px;">Notificação de Nova Tarefa</div>
                 </td>
               </tr></table>
@@ -81,8 +81,8 @@ function buildHtml(task) {
           <tr>
             <td style="background:#f8fafc;padding:18px 28px;border-top:1px solid #e2e8f0;">
               <div style="font-size:12px;color:#64748b;line-height:1.5;">
-                Esta é uma notificação automática do <strong style="color:#183c5a;">ITS Gerencial CASAN</strong>.<br>
-                ITS Customer Service — não responda a este e-mail.
+                Esta é uma notificação automática do <strong style="color:#183c5a;">iTS Gerencial CASAN</strong>.<br>
+                iTS Customer Service — não responda a este e-mail.
               </div>
             </td>
           </tr>
@@ -94,7 +94,7 @@ function buildHtml(task) {
 }
 
 function buildText(task) {
-  return `Nova tarefa criada no ITS Gerencial CASAN:\n\n` +
+  return `Nova tarefa criada no iTS Gerencial CASAN:\n\n` +
     `Título: ${task.titulo}\n` +
     `Área: ${task.area}\n` +
     `Responsável: ${task.resp}\n` +
@@ -111,7 +111,7 @@ app.post('/send', async (req, res) => {
   }
   try {
     await transporter.sendMail({
-      from: `"ITS Gerencial CASAN" <${process.env.SMTP_USER}>`,
+      from: `"iTS Gerencial CASAN" <${process.env.SMTP_USER}>`,
       to,
       subject: `🔔 Nova Tarefa: ${task.titulo}`,
       text: buildText(task),
