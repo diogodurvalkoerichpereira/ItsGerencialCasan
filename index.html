@@ -610,9 +610,9 @@ textarea{resize:vertical;min-height:72px}
       <div id="ppanel-resumo" style="display:none">
         <div id="resumo-empty" style="text-align:center;padding:48px 20px">
           <div style="width:64px;height:64px;background:#eef4fb;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;color:var(--its-sidebar)"><i class="ti ti-clock-hour-4"></i></div>
-          <div style="font-size:.95rem;font-weight:700;color:var(--its-sidebar);margin-bottom:6px">Nenhuma planilha importada</div>
-          <div style="font-size:.83rem;color:var(--its-muted);margin-bottom:16px">Importe a planilha XLS de ponto para calcular as horas mensais</div>
-          <button class="btn btn-primary" onclick="switchPontoTab('importar',document.querySelectorAll('#pontoTabs .tab')[2])"><i class="ti ti-upload"></i> Importar Planilha</button>
+          <div style="font-size:.95rem;font-weight:700;color:var(--its-sidebar);margin-bottom:6px" id="resumo-empty-title">Nenhum dado disponível</div>
+          <div style="font-size:.83rem;color:var(--its-muted);margin-bottom:16px" id="resumo-empty-sub">Nenhum registro de ponto foi lançado para este mês.</div>
+          <button id="resumo-empty-btn" class="btn btn-primary" onclick="switchPontoTab('importar',document.querySelectorAll('#pontoTabs .tab')[2])"><i class="ti ti-upload"></i> Importar Planilha</button>
         </div>
         <div id="resumo-data-wrap" style="display:none">
           <div class="filter-row" style="margin-bottom:12px">
@@ -1425,6 +1425,10 @@ function fmtHM(minutes){
 function calcularResumoMensal(){
   const hasMonths=Object.keys(PONTO_DB).length>0;
   if(!hasMonths){
+    const cliente=isCliente();
+    document.getElementById('resumo-empty-title').textContent=cliente?'Nenhum dado disponível':'Nenhuma planilha importada';
+    document.getElementById('resumo-empty-sub').textContent=cliente?'Os dados de ponto serão disponibilizados pela equipe gestora.':'Importe a planilha XLS de ponto para calcular as horas mensais.';
+    document.getElementById('resumo-empty-btn').style.display=cliente?'none':'inline-flex';
     document.getElementById('resumo-empty').style.display='block';
     document.getElementById('resumo-data-wrap').style.display='none';
     return;
