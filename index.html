@@ -1538,10 +1538,7 @@ function removeRecipient(i){
 function sendNotification(task){
   if(!CFG.ativo||!CFG.smtpEmail||!CFG.smtpHost) return;
   if(!CFG.recipients||!CFG.recipients.length) return;
-  // O envio SMTP direto não é suportado pelo browser por segurança.
-  // Para envio real, configure um serviço backend (ex: its-email-service) na rede interna.
-  const prazoFmt = task.prazo ? task.prazo.split('-').reverse().join('/') : '';
-  const corpo = `Nova tarefa criada no ITS Gerencial CASAN:\n\nTítulo: ${task.titulo}\nÁrea: ${task.area}\nResponsável: ${task.resp}\nPrazo: ${prazoFmt}\nPrioridade: ${task.prio}\nDescrição: ${task.desc||'—'}`;
+  // O envio SMTP é feito pelo its-email-service (backend nodemailer) na rede interna.
   const destinatarios = CFG.recipients.map(r=>r.email).join(',');
   const emailServiceUrl = `http://${location.hostname}:3101/send`;
   fetch(emailServiceUrl, {
@@ -1549,8 +1546,15 @@ function sendNotification(task){
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
       to: destinatarios,
-      subject: `[ITS Gerencial] Nova Tarefa: ${task.titulo}`,
-      text: corpo,
+      task: {
+        titulo: task.titulo,
+        area: task.area,
+        resp: task.resp,
+        prazo: task.prazo ? task.prazo.split('-').reverse().join('/') : '',
+        prio: task.prio,
+        status: task.status,
+        desc: task.desc,
+      },
     }),
   }).then(r=>{
     if(r.ok) showToast('Notificação enviada por e-mail!');
