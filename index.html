@@ -1421,23 +1421,16 @@ function calcularResumoMensal(){
     if(sit.includes('falt')){ map[key].faltas++; return; }
     if(sit==='folga'){ map[key].folgas++; return; }
     if(r.inc&&r.inc.trim()!=='') map[key].inc++;
-    // Só conta dias com os 4 registros de ponto (entrada + saída intervalo + retorno + saída)
+    // Exige os 4 registros: Início Jornada, Início Intervalo, Fim Intervalo, Fim Jornada
     const ini=parseMinutes(r.iniJornada);
     const iniInt=parseMinutes(r.iniIntervalo);
     const fimInt=parseMinutes(r.fimIntervalo);
     const fim=parseMinutes(r.fimJornada);
-    if(ini!=null&&fim!=null&&fim>ini){
-      const intervalo=(iniInt!=null&&fimInt!=null&&fimInt>iniInt)?(fimInt-iniInt):0;
-      const worked=(fim-ini)-intervalo;
-      if(worked>0){
-        map[key].dias++;
-        map[key].minutos+=worked;
-      } else {
-        // Dados inconsistentes (ex: intervalo maior que jornada)
-        map[key].diasSemRegistro++;
-      }
+    if(ini!=null&&iniInt!=null&&fimInt!=null&&fim!=null&&fim>ini&&fimInt>iniInt){
+      const worked=(fim-ini)-(fimInt-iniInt);
+      if(worked>0){ map[key].dias++; map[key].minutos+=worked; }
+      else map[key].diasSemRegistro++;
     } else {
-      // Registro incompleto (entrada ou saída ausente/inválida)
       map[key].diasSemRegistro++;
     }
   });
