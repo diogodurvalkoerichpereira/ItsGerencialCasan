@@ -325,31 +325,20 @@ textarea{resize:vertical;min-height:72px}
           </div>
         </div>
         <div class="form-group"><label>Tipo de Relatório</label>
-          <select id="rptTipo">
+          <select id="rptTipo" onchange="onRptTipoChange()">
             <option>Resumo executivo</option><option>Detalhado por tarefa</option>
             <option>Por responsável</option><option>Por área</option>
+            <option value="ponto-ind06">Ponto – Indicador 06</option>
           </select>
+        </div>
+        <div id="rptPontoFilters" style="display:none">
+          <div class="form-group"><label>Mês de referência</label>
+            <select id="rptPontoMes"></select>
+          </div>
         </div>
         <button class="btn btn-primary" onclick="generateReport()"><i class="ti ti-file-report"></i> Gerar Relatório</button>
       </div>
-      <div id="reportResult" style="display:none">
-        <div class="card">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-            <div>
-              <div style="font-size:1rem;font-weight:700;color:var(--its-sidebar)">Relatório de Tarefas — iTS Customer Service</div>
-              <div style="font-size:.76rem;color:var(--its-muted)" id="rptSubtitle"></div>
-            </div>
-            <div class="logo-icon" style="width:40px;height:40px;font-size:13px">iTS</div>
-          </div>
-          <div class="stat-grid" id="rptStats"></div>
-          <hr class="divider">
-          <div class="section-title" style="font-size:.78rem">Tarefas no período</div>
-          <table class="task-table">
-            <thead><tr><th>Título</th><th>Área</th><th>Responsável</th><th>Prazo</th><th>Prioridade</th><th>Status</th></tr></thead>
-            <tbody id="rptBody"></tbody>
-          </table>
-        </div>
-      </div>
+      <div id="reportResult" style="display:none"></div>
     </div>
 
     <!-- ===== DASHBOARD ===== -->
@@ -1102,7 +1091,21 @@ function closeModal(){document.getElementById('modalOverlay').classList.remove('
 document.getElementById('modalOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal()});
 
 // ── RELATÓRIO ─────────────────────────────────────────────────────────
+function onRptTipoChange(){
+  const isPonto=document.getElementById('rptTipo').value==='ponto-ind06';
+  document.getElementById('rptPontoFilters').style.display=isPonto?'block':'none';
+  if(isPonto){
+    const sel=document.getElementById('rptPontoMes');
+    const meses=Object.keys(PONTO_DB).sort().reverse();
+    const mNomes=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    sel.innerHTML=meses.length
+      ?meses.map(m=>{const[a,mn]=m.split('-');return`<option value="${m}">${mNomes[parseInt(mn)-1]}/${a}</option>`;}).join('')
+      :'<option value="">Nenhum dado importado</option>';
+  }
+}
+
 function generateReport(){
+  if(document.getElementById('rptTipo').value==='ponto-ind06'){gerarRelatorioPonto();return;}
   const de=document.getElementById('rptDe').value;
   const ate=document.getElementById('rptAte').value;
   const area=document.getElementById('rptArea').value;
@@ -1116,16 +1119,102 @@ function generateReport(){
   const conc=list.filter(t=>t.status==='Concluído').length;
   const and=list.filter(t=>t.status==='Em andamento').length;
   const alta=list.filter(t=>t.prio==='Complexa').length;
-  document.getElementById('rptSubtitle').textContent=`Período: ${fmtDate(de)} a ${fmtDate(ate)} · Gerado em ${fmtDate(today())}`;
-  document.getElementById('rptStats').innerHTML=[
+  const statsHtml=[
     {v:total,l:'Total',bg:'#eef4fb',c:'var(--its-sidebar)'},
     {v:conc,l:'Concluídas',bg:'#f0fdf4',c:'var(--its-success)'},
     {v:and,l:'Em Andamento',bg:'#fff3ee',c:'var(--its-orange)'},
     {v:alta,l:'Prioridade Complexa',bg:'#fef2f2',c:'var(--its-danger)'},
   ].map(s=>`<div class="stat-card" style="background:${s.bg}"><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('');
-  document.getElementById('rptBody').innerHTML=list.map(t=>
+  const rowsHtml=list.map(t=>
     `<tr><td>${t.titulo}</td><td>${t.area}</td><td>${t.resp}</td><td>${fmtPrazo(t.prazo)}</td><td>${prioBadge(t.prio)}</td><td>${statusBadge(t.status)}</td></tr>`
   ).join('');
+  document.getElementById('reportResult').innerHTML=`
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div style="font-size:1rem;font-weight:700;color:var(--its-sidebar)">Relatório de Tarefas — iTS Customer Service</div>
+          <div style="font-size:.76rem;color:var(--its-muted)">Período: ${fmtDate(de)} a ${fmtDate(ate)} · Gerado em ${fmtDate(today())}</div>
+        </div>
+        <div class="logo-icon" style="width:40px;height:40px;font-size:13px">iTS</div>
+      </div>
+      <div class="stat-grid">${statsHtml}</div>
+      <hr class="divider">
+      <div class="section-title" style="font-size:.78rem">Tarefas no período</div>
+      <table class="task-table">
+        <thead><tr><th>Título</th><th>Área</th><th>Responsável</th><th>Prazo</th><th>Prioridade</th><th>Status</th></tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>`;
+  document.getElementById('reportResult').style.display='block';
+  showToast('Relatório gerado!');
+}
+
+function gerarRelatorioPonto(){
+  const mes=document.getElementById('rptPontoMes').value;
+  if(!mes||!PONTO_DB[mes]){showToast('Selecione um mês com dados importados.','warn');return;}
+  const data=PONTO_DB[mes].registros||[];
+  const map={};
+  data.forEach(r=>{
+    const key=r.mat||r.nome;
+    if(!map[key])map[key]={mat:r.mat,nome:r.nome,sup:r.sup,minutos:0};
+    const sit=(r.sit||'').toLowerCase();
+    if(sit.includes('falt')||sit==='folga')return;
+    const ini=parseMinutes(r.iniJornada),fim=parseMinutes(r.fimJornada);
+    const iIni=parseMinutes(r.iniIntervalo),iFim=parseMinutes(r.fimIntervalo);
+    if(ini!=null&&fim!=null&&iIni!=null&&iFim!=null){const dur=fim-ini-(iFim-iIni);if(dur>0)map[key].minutos+=dur;}
+  });
+  const rows=Object.values(map).sort((a,b)=>a.nome.localeCompare(b.nome));
+  const totalMin=rows.reduce((s,r)=>s+r.minutos,0);
+  const supMin=rows.filter(r=>r.sup&&r.sup.trim()!==''&&r.sup!=='—').reduce((s,r)=>s+r.minutos,0);
+  const pct=totalMin>0?((supMin/totalMin)*100).toFixed(2):null;
+  const cor=pct===null?'var(--its-muted)':parseFloat(pct)>=100?'var(--its-success)':parseFloat(pct)>=90?'var(--its-warning)':'var(--its-danger)';
+  const mNomes=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const [ano,mNum]=mes.split('-');
+  const mLabel=`${mNomes[parseInt(mNum)-1]} / ${ano}`;
+  document.getElementById('reportResult').innerHTML=`
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div style="font-size:1rem;font-weight:700;color:var(--its-sidebar)">Relatório de Ponto – Indicador 06</div>
+          <div style="font-size:.76rem;color:var(--its-muted)">Referência: ${mLabel} · Gerado em ${fmtDate(today())}</div>
+        </div>
+        <div class="logo-icon" style="width:40px;height:40px;font-size:13px">iTS</div>
+      </div>
+      <table class="task-table">
+        <thead><tr><th>Matrícula</th><th>Nome</th><th>Superior</th><th style="text-align:center">Total Horas</th></tr></thead>
+        <tbody>${rows.map(r=>`<tr>
+          <td style="font-size:.75rem;color:var(--its-muted)">${r.mat||'—'}</td>
+          <td style="font-size:.83rem;font-weight:600">${r.nome}</td>
+          <td style="font-size:.78rem;color:var(--its-muted)">${r.sup||'—'}</td>
+          <td style="text-align:center;font-weight:700;color:var(--its-sidebar)">${fmtHM(r.minutos)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+      <div style="margin-top:20px;border:1px solid var(--its-border);border-radius:var(--radius-md);overflow:hidden">
+        <div style="background:var(--its-sidebar);padding:10px 16px;display:flex;align-items:center;gap:10px">
+          <span style="background:var(--its-orange);color:#fff;font-size:.7rem;font-weight:800;padding:2px 9px;border-radius:4px;letter-spacing:.04em">IND 06</span>
+          <span style="color:#fff;font-size:.85rem;font-weight:700;letter-spacing:.03em">PRESENÇA DO SUPERVISOR</span>
+          <span style="margin-left:auto;color:rgba(255,255,255,.55);font-size:.75rem">Meta: 100%</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);background:#fff">
+          <div style="padding:14px 18px;border-right:1px solid var(--its-border)">
+            <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Horas c/ Supervisão</div>
+            <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar);font-variant-numeric:tabular-nums">${fmtHM(supMin)}</div>
+          </div>
+          <div style="padding:14px 18px;border-right:1px solid var(--its-border)">
+            <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Total Horas do Mês</div>
+            <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar);font-variant-numeric:tabular-nums">${fmtHM(totalMin)}</div>
+          </div>
+          <div style="padding:14px 18px">
+            <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Indicador 06</div>
+            <div style="font-size:1.4rem;font-weight:800;font-variant-numeric:tabular-nums;color:${cor}">${pct!==null?`${pct.replace('.',',')}%`:'—'}</div>
+          </div>
+        </div>
+        <div style="background:#f8fafc;padding:8px 16px;font-size:.74rem;color:var(--its-muted);border-top:1px solid var(--its-border)">
+          <strong style="color:var(--its-text)">Cálculo:</strong> Tempo total com supervisão ÷ Total de horas do mês × 100 &nbsp;·&nbsp;
+          <strong style="color:var(--its-text)">Instrumento:</strong> Folhas ponto importadas
+        </div>
+      </div>
+    </div>`;
   document.getElementById('reportResult').style.display='block';
   showToast('Relatório gerado!');
 }
