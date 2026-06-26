@@ -341,12 +341,8 @@ textarea{resize:vertical;min-height:72px}
           </div>
         </div>
         <div id="rptInd11Filters" style="display:none">
-          <div class="form-row">
-            <div class="form-group"><label>Período — De</label><input type="date" id="rptInd11De"></div>
-            <div class="form-group"><label>Período — Até</label><input type="date" id="rptInd11Ate"></div>
-          </div>
           <div style="font-size:.8rem;color:var(--its-muted);background:#f8fafc;border:1px solid var(--its-border);border-radius:var(--radius-sm);padding:8px 12px">
-            <i class="ti ti-info-circle"></i> Calculado a partir das tarefas cadastradas no sistema. Deixe o período em branco para incluir todas.
+            <i class="ti ti-info-circle"></i> Calculado a partir das tarefas cadastradas. Use o período acima para filtrar por data de criação.
           </div>
         </div>
         <button class="btn btn-primary" onclick="generateReport()"><i class="ti ti-file-report"></i> Gerar Relatório</button>
@@ -1296,8 +1292,8 @@ function gerarRelatorioInd09(){
 }
 
 function gerarRelatorioInd11(){
-  const de=document.getElementById('rptInd11De').value;
-  const ate=document.getElementById('rptInd11Ate').value;
+  const de=document.getElementById('rptDe').value;
+  const ate=document.getElementById('rptAte').value;
   const lista=TASKS.filter(t=>{
     const cr=(t.criado||'').slice(0,10);
     if(de&&cr&&cr<de)return false;
