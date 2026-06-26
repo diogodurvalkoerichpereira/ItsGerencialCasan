@@ -231,6 +231,7 @@ textarea{resize:vertical;min-height:72px}
     </div>
     <div class="tabs" id="pontoTabs" style="display:none">
       <button class="tab active" onclick="switchPontoTab('lista',this)"><i class="ti ti-table"></i> Registros</button>
+      <button class="tab" onclick="switchPontoTab('resumo',this)"><i class="ti ti-clock-hour-4"></i> Resumo Mensal</button>
       <button class="tab" onclick="switchPontoTab('importar',this)"><i class="ti ti-upload"></i> Importar XLS</button>
     </div>
     <div class="tabs" id="avisosTabs" style="display:none">
@@ -607,6 +608,34 @@ textarea{resize:vertical;min-height:72px}
             </table>
           </div>
           <div style="padding:8px 4px;font-size:.75rem;color:var(--its-muted)" id="pontoCount"></div>
+        </div>
+      </div>
+
+      <!-- SUB-PANEL: RESUMO MENSAL -->
+      <div id="ppanel-resumo" style="display:none">
+        <div id="resumo-empty" style="text-align:center;padding:48px 20px">
+          <div style="width:64px;height:64px;background:#eef4fb;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;color:var(--its-sidebar)"><i class="ti ti-clock-hour-4"></i></div>
+          <div style="font-size:.95rem;font-weight:700;color:var(--its-sidebar);margin-bottom:6px">Nenhuma planilha importada</div>
+          <div style="font-size:.83rem;color:var(--its-muted);margin-bottom:16px">Importe a planilha XLS de ponto para calcular as horas mensais</div>
+          <button class="btn btn-primary" onclick="switchPontoTab('importar',document.querySelectorAll('#pontoTabs .tab')[2])"><i class="ti ti-upload"></i> Importar Planilha</button>
+        </div>
+        <div id="resumo-data-wrap" style="display:none">
+          <div class="card" style="padding:0;overflow:hidden">
+            <table class="task-table" id="resumoTable">
+              <thead>
+                <tr>
+                  <th>Matrícula</th><th>Nome</th><th>Superior</th>
+                  <th style="text-align:center">Dias Trab.</th>
+                  <th style="text-align:center">Faltas</th>
+                  <th style="text-align:center">Folgas</th>
+                  <th style="text-align:center">Total Horas</th>
+                  <th style="text-align:center">Inconsist.</th>
+                </tr>
+              </thead>
+              <tbody id="resumoBody"></tbody>
+            </table>
+          </div>
+          <div style="padding:8px 4px;font-size:.75rem;color:var(--its-muted)" id="resumoTotal"></div>
         </div>
       </div>
 
@@ -1282,8 +1311,68 @@ function switchPontoTab(name, el){
   document.querySelectorAll('#pontoTabs .tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('ppanel-lista').style.display = name==='lista' ? 'block' : 'none';
+  document.getElementById('ppanel-resumo').style.display = name==='resumo' ? 'block' : 'none';
   document.getElementById('ppanel-importar').style.display = name==='importar' ? 'block' : 'none';
   if(name==='lista') filterPonto();
+  if(name==='resumo') calcularResumoMensal();
+}
+
+function parseMinutes(t){
+  if(!t||t==='—')return null;
+  const parts=t.toString().trim().split(':');
+  if(parts.length<2)return null;
+  const h=parseInt(parts[0],10),m=parseInt(parts[1],10);
+  if(isNaN(h)||isNaN(m))return null;
+  return h*60+m;
+}
+
+function fmtHM(minutes){
+  if(minutes==null||isNaN(minutes))return '—';
+  const neg=minutes<0;
+  const abs=Math.abs(minutes);
+  const h=Math.floor(abs/60),m=abs%60;
+  return (neg?'-':'')+String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+}
+
+function calcularResumoMensal(){
+  if(!PONTO_DATA.length){
+    document.getElementById('resumo-empty').style.display='block';
+    document.getElementById('resumo-data-wrap').style.display='none';
+    return;
+  }
+  document.getElementById('resumo-empty').style.display='none';
+  document.getElementById('resumo-data-wrap').style.display='block';
+  const map={};
+  PONTO_DATA.forEach(r=>{
+    const key=r.mat||r.nome;
+    if(!map[key])map[key]={mat:r.mat,nome:r.nome,sup:r.sup,dias:0,minutos:0,faltas:0,folgas:0,inc:0};
+    const sit=(r.sit||'').toLowerCase();
+    if(sit.includes('presen')){
+      map[key].dias++;
+      const ini=parseMinutes(r.iniJornada),fim=parseMinutes(r.fimJornada);
+      const iniInt=parseMinutes(r.iniIntervalo),fimInt=parseMinutes(r.fimIntervalo);
+      if(ini!=null&&fim!=null){
+        let worked=fim-ini;
+        if(iniInt!=null&&fimInt!=null)worked-=(fimInt-iniInt);
+        map[key].minutos+=worked;
+      }
+    }else if(sit.includes('falt'))map[key].faltas++;
+    else if(sit==='folga')map[key].folgas++;
+    if(r.inc&&r.inc.trim()!=='')map[key].inc++;
+  });
+  const rows=Object.values(map).sort((a,b)=>a.nome.localeCompare(b.nome));
+  document.getElementById('resumoBody').innerHTML=rows.map(r=>`
+    <tr>
+      <td style="font-size:.75rem;color:var(--its-muted)">${r.mat||'—'}</td>
+      <td style="font-size:.83rem;font-weight:600">${r.nome}</td>
+      <td style="font-size:.78rem;color:var(--its-muted)">${r.sup||'—'}</td>
+      <td style="text-align:center">${r.dias}</td>
+      <td style="text-align:center;color:${r.faltas?'var(--its-danger)':'inherit'}">${r.faltas}</td>
+      <td style="text-align:center;color:var(--its-muted)">${r.folgas}</td>
+      <td style="text-align:center;font-weight:700;color:var(--its-sidebar)">${fmtHM(r.minutos)}</td>
+      <td style="text-align:center;color:${r.inc?'var(--its-danger)':'var(--its-muted)'}">${r.inc||'—'}</td>
+    </tr>`).join('');
+  document.getElementById('resumoTotal').textContent=`${rows.length} funcionário(s) · Total calculado a partir dos registros de presença`;
 }
 
 function handlePontoDrop(e){
@@ -1340,7 +1429,7 @@ function importarPonto(file){
       sel.innerHTML = '<option value="">Todos</option>' + sups.map(s=>`<option>${s}</option>`).join('');
       status.innerHTML=`<div class="alert alert-success"><i class="ti ti-check"></i> <strong>${PONTO_DATA.length}</strong> registros importados com sucesso.</div>`;
       setTimeout(()=>{
-        switchPontoTab('lista', document.querySelectorAll('#pontoTabs .tab')[0]);
+        switchPontoTab('resumo', document.querySelectorAll('#pontoTabs .tab')[1]);
       }, 1200);
     } catch(err){
       status.innerHTML=`<div class="alert alert-error"><i class="ti ti-x"></i> Erro ao ler o arquivo: ${err.message}</div>`;
