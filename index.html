@@ -1111,11 +1111,14 @@ function renderTasks(list){
       <td>${prioBadge(t.prio)}</td>
       <td>${statusBadge(t.status)}</td>
       <td>
-        ${isCliente()?'':`<div style="display:flex;gap:4px">
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-ghost btn-sm" onclick="verTarefa(${t.id})" title="Ver detalhes/resposta"><i class="ti ti-eye"></i></button>
+          ${isCliente()?'':`
+          ${t.status!=='Concluído'?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="responderTarefa(${t.id})" title="Responder e concluir"><i class="ti ti-message-reply"></i></button>`:''}
           <button class="btn btn-ghost btn-sm" onclick="editTask(${t.id})" title="Editar"><i class="ti ti-edit"></i></button>
           <button class="btn btn-ghost btn-sm" onclick="cycleStatus(${t.id})" title="Próximo status"><i class="ti ti-refresh"></i></button>
-          <button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteTask(${t.id})" title="Excluir"><i class="ti ti-trash"></i></button>
-        </div>`}
+          <button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteTask(${t.id})" title="Excluir"><i class="ti ti-trash"></i></button>`}
+        </div>
       </td>
     </tr>`).join('');
 }
@@ -1225,6 +1228,39 @@ function deleteTask(id){
   saveTasks();
   applyFilters();updateDashboard();showToast('Tarefa excluída.');
 }
+// Responder + concluir uma tarefa (com texto e anexos).
+function responderTarefa(id){
+  const t=TASKS.find(x=>x.id===id);if(!t)return;
+  abrirResposta('Responder Tarefa — '+t.titulo, ({texto,anexos,em})=>{
+    t.resposta=texto; t.anexos=anexos; t.resolvidoEm=em; t.status='Concluído';
+    saveTasks(); closeModal(); applyFilters(); updateDashboard();
+    notifyWhatsApp(`✅ *Tarefa Concluída* — iTS Gerencial CASAN\n\n*${t.titulo}*\nResposta: ${texto}\nConcluída em: ${em}${anexos.length?`\n📎 ${anexos.length} anexo(s)`:''}`);
+    notifyEmail(`✅ Tarefa Concluída: ${t.titulo}`, t.titulo, 'Tarefa concluída', 'Notificação de Tarefa',
+      [{label:'Resposta',valor:texto},{label:'Área',valor:t.area},{label:'Responsável',valor:t.resp},{label:'Concluída em',valor:em},{label:'Anexos',valor:anexos.length?anexos.map(a=>a.name).join(', '):'—'}]);
+    showToast('Tarefa respondida e concluída!');
+  });
+}
+
+// Ver detalhes + resposta + anexos de uma tarefa.
+function verTarefa(id){
+  const t=TASKS.find(x=>x.id===id);if(!t)return;
+  document.getElementById('modalTitle').textContent='Tarefa — '+t.titulo;
+  document.getElementById('modalContent').innerHTML=`
+    <div style="margin-bottom:12px">${statusBadge(t.status)} ${prioBadge(t.prio)}</div>
+    <div class="form-group"><label>Título</label><div style="font-size:.9rem;font-weight:600">${esc(t.titulo)}</div></div>
+    <div class="form-row">
+      <div class="form-group"><label>Área</label><div style="font-size:.85rem">${esc(t.area)||'—'}</div></div>
+      <div class="form-group"><label>Responsável</label><div style="font-size:.85rem">${esc(t.resp)||'—'}</div></div>
+    </div>
+    <div class="form-group"><label>Descrição</label><div style="font-size:.85rem">${esc(t.desc)||'—'}</div></div>
+    ${t.resposta?`<hr class="divider"><div class="form-group"><label>Resposta</label><div style="font-size:.85rem;background:#f8fafc;padding:10px;border-radius:6px">${esc(t.resposta)}</div></div>${renderAnexos(t.anexos)}`:''}
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      ${(!isCliente()&&t.status!=='Concluído')?`<button class="btn btn-primary" onclick="responderTarefa(${t.id})"><i class="ti ti-message-reply"></i> Responder e Concluir</button>`:''}
+      <button class="btn btn-ghost" onclick="closeModal()">Fechar</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
 function closeModal(){document.getElementById('modalOverlay').classList.remove('open')}
 document.getElementById('modalOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal()});
 
@@ -1735,7 +1771,8 @@ function renderChamados(list){
       <td>${chamadoStatusBadge(c.status)}</td>
       <td style="font-size:.82rem">${prazoHtml}</td>
       <td><div style="display:flex;gap:4px">
-        ${c.status==='Em Atendimento'?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="resolverChamado(${c.id})" title="Resolver"><i class="ti ti-check"></i></button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="verChamado(${c.id})" title="Ver detalhes/resposta"><i class="ti ti-eye"></i></button>
+        ${c.status==='Em Atendimento'?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="responderChamado(${c.id})" title="Responder e resolver"><i class="ti ti-message-reply"></i></button>`:''}
         <button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteChamado(${c.id})" title="Excluir"><i class="ti ti-trash"></i></button>
       </div></td>
     </tr>`;
@@ -1788,6 +1825,109 @@ function salvarChamado(criadoIso){
     [{label:'Descrição',valor:descCh},{label:'Aberto em',valor:criadoIso},{label:'Status',valor:'Em Atendimento'}]);
   closeModal();filterChamados();showToast('Chamado registrado com sucesso!');
 }
+// ── ANEXOS DE RESPOSTA (base64, com limite de tamanho) ────────────────
+const ANEXO_MAX_MB = 4;                       // limite por arquivo
+const ANEXO_MAX_TOTAL_MB = 12;                // limite somado por resposta
+const ANEXO_ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.txt,.png,.jpg,.jpeg,.mp3,.ogg,.opus,.m4a,.wav,.aac,audio/*,image/*';
+
+function fmtTamanho(b){ return b<1024?b+' B':b<1048576?(b/1024).toFixed(0)+' KB':(b/1048576).toFixed(1)+' MB'; }
+
+// Lê os arquivos de um <input type=file> como base64, validando tamanho.
+function lerAnexos(inputId){
+  return new Promise((resolve,reject)=>{
+    const files=Array.from(document.getElementById(inputId).files||[]);
+    let total=0;
+    for(const f of files){
+      if(f.size > ANEXO_MAX_MB*1048576){ reject(new Error(`"${f.name}" passa de ${ANEXO_MAX_MB} MB.`)); return; }
+      total+=f.size;
+    }
+    if(total > ANEXO_MAX_TOTAL_MB*1048576){ reject(new Error(`Total de anexos passa de ${ANEXO_MAX_TOTAL_MB} MB.`)); return; }
+    if(!files.length){ resolve([]); return; }
+    const out=[]; let pend=files.length;
+    files.forEach(f=>{
+      const rd=new FileReader();
+      rd.onload=()=>{ out.push({name:f.name,type:f.type,size:f.size,data:rd.result}); if(--pend===0)resolve(out); };
+      rd.onerror=()=>reject(new Error('Falha ao ler '+f.name));
+      rd.readAsDataURL(f);
+    });
+  });
+}
+
+// Renderiza anexos como links de download.
+function renderAnexos(anexos){
+  if(!anexos||!anexos.length) return '';
+  return `<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">`+anexos.map(a=>{
+    const isAudio=(a.type||'').startsWith('audio/');
+    return `<div style="display:flex;align-items:center;gap:8px;font-size:.82rem">
+      <i class="ti ${isAudio?'ti-microphone':'ti-paperclip'}" style="color:var(--its-muted)"></i>
+      <a href="${a.data}" download="${esc(a.name)}" style="color:var(--its-sidebar);font-weight:600">${esc(a.name)}</a>
+      <span style="color:var(--its-muted);font-size:.75rem">(${fmtTamanho(a.size)})</span>
+      ${isAudio?`<audio controls src="${a.data}" style="height:30px;margin-left:auto"></audio>`:''}
+    </div>`;
+  }).join('')+`</div>`;
+}
+
+// Modal genérico de resposta (usado por chamados e tarefas).
+function abrirResposta(titulo, onSalvar){
+  document.getElementById('modalTitle').textContent=titulo;
+  document.getElementById('modalContent').innerHTML=`
+    <div class="form-group"><label>Resposta *</label><textarea id="respTexto" placeholder="Descreva a resolução..." style="min-height:90px"></textarea></div>
+    <div class="form-group">
+      <label>Anexos (documentos / áudios) — opcional</label>
+      <input type="file" id="respAnexos" multiple accept="${ANEXO_ACCEPT}">
+      <div style="font-size:.72rem;color:var(--its-muted);margin-top:4px">Até ${ANEXO_MAX_MB} MB por arquivo, ${ANEXO_MAX_TOTAL_MB} MB no total. Áudio: anexe um arquivo (.mp3, .ogg, .m4a...).</div>
+    </div>
+    <div id="respErro" class="its-alert alert-error" style="display:none;margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="respBtn"><i class="ti ti-check"></i> Salvar e Resolver</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('respBtn').onclick=async()=>{
+    const texto=document.getElementById('respTexto').value.trim();
+    const erro=document.getElementById('respErro');
+    if(!texto){ erro.textContent='Informe a resposta.'; erro.style.display='flex'; return; }
+    let anexos=[];
+    try{ anexos=await lerAnexos('respAnexos'); }
+    catch(e){ erro.textContent=e.message; erro.style.display='flex'; return; }
+    onSalvar({texto, anexos, em: agoraISO()});
+  };
+}
+function agoraISO(){ const d=new Date();const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+
+// Responder + resolver um chamado.
+function responderChamado(id){
+  const c=CHAMADOS.find(x=>x.id===id);if(!c)return;
+  abrirResposta('Responder Chamado — '+c.titulo, ({texto,anexos,em})=>{
+    c.resposta=texto; c.anexos=anexos; c.resolvidoEm=em; c.status='Resolvido';
+    saveChamados(); closeModal(); filterChamados();
+    notifyWhatsApp(`✅ *Chamado Resolvido* — iTS Gerencial CASAN\n\n*${c.titulo}*\nResposta: ${texto}\nResolvido em: ${em}${anexos.length?`\n📎 ${anexos.length} anexo(s)`:''}`);
+    notifyEmail(`✅ Chamado Resolvido: ${c.titulo}`, c.titulo, 'Chamado resolvido', 'Notificação de Chamado',
+      [{label:'Resposta',valor:texto},{label:'Resolvido em',valor:em},{label:'Anexos',valor:anexos.length?anexos.map(a=>a.name).join(', '):'—'}]);
+    showToast('Chamado respondido e resolvido!');
+  });
+}
+
+// Ver detalhes + resposta + anexos de um chamado.
+function verChamado(id){
+  const c=CHAMADOS.find(x=>x.id===id);if(!c)return;
+  document.getElementById('modalTitle').textContent='Chamado — '+c.titulo;
+  document.getElementById('modalContent').innerHTML=`
+    <div style="margin-bottom:12px">${chamadoStatusBadge(c.status)}</div>
+    <div class="form-group"><label>Título</label><div style="font-size:.9rem;font-weight:600">${esc(c.titulo)}</div></div>
+    <div class="form-group"><label>Descrição</label><div style="font-size:.85rem">${esc(c.desc)||'—'}</div></div>
+    <div class="form-row">
+      <div class="form-group"><label>Aberto em</label><div style="font-size:.85rem">${esc(c.criado)||'—'}</div></div>
+      <div class="form-group"><label>Resolvido em</label><div style="font-size:.85rem">${esc(c.resolvidoEm)||'—'}</div></div>
+    </div>
+    ${c.resposta?`<hr class="divider"><div class="form-group"><label>Resposta</label><div style="font-size:.85rem;background:#f8fafc;padding:10px;border-radius:6px">${esc(c.resposta)}</div></div>${renderAnexos(c.anexos)}`:''}
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      ${c.status==='Em Atendimento'?`<button class="btn btn-primary" onclick="responderChamado(${c.id})"><i class="ti ti-message-reply"></i> Responder e Resolver</button>`:''}
+      <button class="btn btn-ghost" onclick="closeModal()">Fechar</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
 function resolverChamado(id){
   const c=CHAMADOS.find(x=>x.id===id);if(!c)return;
   const now=new Date();const p=n=>String(n).padStart(2,'0');
