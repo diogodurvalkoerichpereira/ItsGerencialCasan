@@ -979,7 +979,7 @@ textarea{resize:vertical;min-height:72px}
 <script>
 // ── DATA ──────────────────────────────────────────────────────────────
 let nextId = 11;
-const TASKS = [
+let TASKS = JSON.parse(localStorage.getItem('its_tasks')||'null') || [
   {id:1,titulo:'Atualizar base de conhecimento CRM',area:'TI',resp:'Carlos Souza',prazo:'2026-06-28',prio:'Complexa',status:'Em andamento',desc:'Revisar e atualizar os artigos de suporte no sistema CRM para refletir novos produtos.'},
   {id:2,titulo:'Revisar contratos de fornecedores',area:'Financeiro',resp:'Diogo',prazo:'2026-06-30',prio:'Complexa',status:'Aguardando',desc:'Análise dos contratos vigentes com fornecedores de telecom e TI.'},
   {id:3,titulo:'Treinamento equipe operações',area:'Operações',resp:'Ana Lima',prazo:'2026-07-05',prio:'Intermediária',status:'Em andamento',desc:'Ministrar treinamento sobre novos procedimentos de atendimento.'},
@@ -991,6 +991,8 @@ const TASKS = [
   {id:9,titulo:'Proposta comercial cliente X',area:'Comercial',resp:'Mariana R.',prazo:'2026-07-03',prio:'Intermediária',status:'Em andamento',desc:'Elaborar proposta de contact center para cliente do setor bancário.'},
   {id:10,titulo:'Backup mensal dados operacionais',area:'TI',resp:'Carlos Souza',prazo:'2026-06-30',prio:'Simples',status:'Concluído',desc:'Realizar backup e verificação de integridade dos dados.'},
 ];
+function saveTasks(){localStorage.setItem('its_tasks',JSON.stringify(TASKS));remoteSet('its_tasks',TASKS);}
+nextId = Math.max(0,...TASKS.map(t=>t.id))+1;
 
 // ── HELPERS ───────────────────────────────────────────────────────────
 function fmtDate(d){if(!d)return'—';const[y,m,dd]=d.split('-');return`${dd}/${m}/${y}`}
@@ -1138,6 +1140,7 @@ function saveTask(id){
       criadoPorCliente:s&&s.cargo==='Cliente',criadoPor:s?s.nome:''};
     obj.id=nextId++;TASKS.push(obj);sendNotification(obj);
   }
+  saveTasks();
   closeModal();applyFilters();updateDashboard();
   showToast(id?'Tarefa atualizada com sucesso!':'Tarefa criada com sucesso!');
 }
@@ -1147,12 +1150,14 @@ function cycleStatus(id){
   const prev=t.status;
   t.status=opts[(opts.indexOf(t.status)+1)%opts.length];
   if(t.status==='Concluído'&&prev!=='Concluído'&&t.criadoPorCliente) sendNotificacaoConclusao(t);
+  saveTasks();
   applyFilters();updateDashboard();
   showToast('Status: '+t.status);
 }
 function deleteTask(id){
   if(!confirm('Excluir esta tarefa?'))return;
   const i=TASKS.findIndex(x=>x.id===id);if(i>-1)TASKS.splice(i,1);
+  saveTasks();
   applyFilters();updateDashboard();showToast('Tarefa excluída.');
 }
 function closeModal(){document.getElementById('modalOverlay').classList.remove('open')}
@@ -1577,10 +1582,12 @@ function updateDashboard(){
 
 // ── CHAMADOS ──────────────────────────────────────────────────────────
 let nextChamadoId=3;
-const CHAMADOS=[
+let CHAMADOS = JSON.parse(localStorage.getItem('its_chamados')||'null') || [
   {id:1,titulo:'Sistema indisponível — módulo relatórios',desc:'Usuários sem acesso ao módulo de relatórios desde as 08h.',criado:'2026-06-25 08:00',status:'Resolvido',resolvidoEm:'2026-06-25 08:42'},
   {id:2,titulo:'Falha de login — sistema principal',desc:'Clientes reportam erro 403 ao tentar acessar o sistema.',criado:'2026-06-26 14:10',status:'Em Atendimento',resolvidoEm:null},
 ];
+function saveChamados(){localStorage.setItem('its_chamados',JSON.stringify(CHAMADOS));remoteSet('its_chamados',CHAMADOS);}
+nextChamadoId = Math.max(0,...CHAMADOS.map(c=>c.id))+1;
 function diffMinChamado(criado,resolvidoEm){
   if(!resolvidoEm)return null;
   return Math.round((new Date(resolvidoEm.replace(' ','T'))-new Date(criado.replace(' ','T')))/60000);
@@ -1655,6 +1662,7 @@ function salvarChamado(criadoIso){
   const titulo=document.getElementById('cTitulo').value.trim();
   if(!titulo){alert('Informe o título do chamado.');return;}
   CHAMADOS.unshift({id:nextChamadoId++,titulo,desc:document.getElementById('cDesc').value,criado:criadoIso,status:'Em Atendimento',resolvidoEm:null});
+  saveChamados();
   closeModal();filterChamados();showToast('Chamado registrado com sucesso!');
 }
 function resolverChamado(id){
@@ -1662,21 +1670,25 @@ function resolverChamado(id){
   const now=new Date();const p=n=>String(n).padStart(2,'0');
   c.resolvidoEm=`${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
   c.status='Resolvido';
+  saveChamados();
   filterChamados();showToast('Chamado resolvido!');
 }
 function deleteChamado(id){
   if(!confirm('Excluir este chamado?'))return;
   const i=CHAMADOS.findIndex(x=>x.id===id);if(i>-1)CHAMADOS.splice(i,1);
+  saveChamados();
   filterChamados();showToast('Chamado excluído.');
 }
 
 // ── EMERGÊNCIAS ───────────────────────────────────────────────────────
 let nextEmergId = 4;
-const EMERGS = [
+let EMERGS = JSON.parse(localStorage.getItem('its_emergs')||'null') || [
   {id:1,data:'25/06',cidade:'São José',recebido:'17:00',enviado:'17:01',supervisor:'Bruno',protocolo:'23/06/2026 17:19 301920',servico:'Água',canal:'WhatsApp',prazo:'00:01',status:'Resolvido'},
   {id:2,data:'25/06',cidade:'Florianópolis',recebido:'17:42',enviado:'18:26',supervisor:'Bruno',protocolo:'25/06/2026 17:35 301807',servico:'Água',canal:'WhatsApp',prazo:'00:44',status:'Resolvido'},
   {id:3,data:'26/06',cidade:'Florianópolis',recebido:'07:06',enviado:'07:07',supervisor:'Erick',protocolo:'26/06/2026 06:59 301826',servico:'Água',canal:'WhatsApp',prazo:'00:01',status:'Em Atendimento'},
 ];
+function saveEmergs(){localStorage.setItem('its_emergs',JSON.stringify(EMERGS));remoteSet('its_emergs',EMERGS);}
+nextEmergId = Math.max(0,...EMERGS.map(e=>e.id))+1;
 
 function emergStatusBadge(s){
   const m={'Em Atendimento':'badge-orange','Resolvido':'badge-green','Aguardando':'badge-blue','Cancelado':'badge-red'};
@@ -1758,6 +1770,7 @@ function registrarEmerg(){
     prazo,
     status:'Em Atendimento'
   });
+  saveEmergs();
   ['eData','eRecebido','eCidade','eProtocolo'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('eServico').selectedIndex=0;
   const firstTab=document.querySelector('#emergTabs .tab');
@@ -1796,12 +1809,14 @@ function cycleEmergStatus(id){
   const e=EMERGS.find(x=>x.id===id);if(!e)return;
   const opts=['Em Atendimento','Aguardando','Resolvido','Cancelado'];
   e.status=opts[(opts.indexOf(e.status)+1)%opts.length];
+  saveEmergs();
   filterEmerg();showToast('Status: '+e.status);
 }
 
 function deleteEmerg(id){
   if(!confirm('Excluir esta ocorrência?'))return;
   const i=EMERGS.findIndex(x=>x.id===id);if(i>-1)EMERGS.splice(i,1);
+  saveEmergs();
   filterEmerg();showToast('Ocorrência excluída.');
 }
 
@@ -2150,7 +2165,7 @@ function filterPonto(){
 
 // ── QUADRO DE AVISOS ──────────────────────────────────────────────────
 let nextAvisoId = 4;
-const AVISOS = [
+let AVISOS = JSON.parse(localStorage.getItem('its_avisos')||'null') || [
   {id:1,data:'25/06',cidade:'Florianópolis',bairro:'Centro',servico:'Água',recebido:'16:01',inserido:'16:07',supervisor:'Bruno',prevNorm:'21:00',canal:'WhatsApp',situacao:''},
   {id:2,data:'25/06',cidade:'Florianópolis',bairro:'Trindade',servico:'Esgoto',recebido:'17:08',inserido:'17:16',supervisor:'Bruno',prevNorm:'02:00',canal:'WhatsApp',situacao:'Encerrado'},
   {id:3,data:'25/06',cidade:'Laguna',bairro:'Mar Grosso',servico:'Água',recebido:'17:08',inserido:'17:20',supervisor:'Bruno',prevNorm:'00:00',canal:'E-mail',situacao:''},
@@ -2158,6 +2173,8 @@ const AVISOS = [
   {id:5,data:'25/06',cidade:'Angelina',bairro:'Sede',servico:'Água',recebido:'19:35',inserido:'20:08',supervisor:'Wilson',prevNorm:'00:00',canal:'E-mail',situacao:''},
   {id:6,data:'26/06',cidade:'Biguaçu',bairro:'Ponta de Baixo',servico:'Água',recebido:'07:49',inserido:'07:49',supervisor:'Janaina',prevNorm:'18:00',canal:'E-mail',situacao:''},
 ];
+function saveAvisos(){localStorage.setItem('its_avisos',JSON.stringify(AVISOS));remoteSet('its_avisos',AVISOS);}
+nextAvisoId = Math.max(0,...AVISOS.map(a=>a.id))+1;
 
 function situacaoBadge(s){
   if(s==='Encerrado') return `<span class="badge badge-green"><span class="badge-dot"></span>Encerrado</span>`;
@@ -2239,6 +2256,7 @@ function registrarAviso(){
     canal,
     situacao:document.getElementById('aSituacao').value
   });
+  saveAvisos();
   ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aInserido','aInseridoData'].forEach(id=>document.getElementById(id).value='');
   ['aServico','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
   const firstTab=document.querySelector('#avisosTabs .tab');
@@ -2274,12 +2292,14 @@ function editarSituacao(id){
 function salvarSituacao(id){
   const a=AVISOS.find(x=>x.id===id);if(!a)return;
   a.situacao=document.getElementById('mSituacao').value;
+  saveAvisos();
   closeModal();filterAvisos();showToast('Situação atualizada!');
 }
 
 function deleteAviso(id){
   if(!confirm('Excluir este aviso?'))return;
   const i=AVISOS.findIndex(x=>x.id===id);if(i>-1)AVISOS.splice(i,1);
+  saveAvisos();
   filterAvisos();showToast('Aviso excluído.');
 }
 
@@ -2978,11 +2998,15 @@ async function remoteGet(chave){
 
 // Puxa os dados do servidor; reatribui as variáveis em memória e re-renderiza.
 async function hydrateFromAPI(){
-  const [ponto, cfg, users, adminHash] = await Promise.all([
+  const [ponto, cfg, users, adminHash, tasks, chamados, emergs, avisos] = await Promise.all([
     remoteGet('its_ponto_db'),
     remoteGet('its_cfg'),
     remoteGet('its_users'),
     remoteGet('its_admin_hash'),
+    remoteGet('its_tasks'),
+    remoteGet('its_chamados'),
+    remoteGet('its_emergs'),
+    remoteGet('its_avisos'),
   ]);
   if(ponto && typeof ponto==='object'){ PONTO_DB = ponto; localStorage.setItem('its_ponto_db', JSON.stringify(ponto)); }
   if(cfg && typeof cfg==='object'){ CFG = cfg; localStorage.setItem('its_cfg', JSON.stringify(cfg)); }
@@ -2992,9 +3016,17 @@ async function hydrateFromAPI(){
     localStorage.setItem('its_users', JSON.stringify(users));
   }
   if(typeof adminHash==='string' && adminHash){ localStorage.setItem('its_admin_hash', adminHash); }
+  if(Array.isArray(tasks)){ TASKS = tasks; nextId = Math.max(0,...TASKS.map(t=>t.id))+1; localStorage.setItem('its_tasks', JSON.stringify(tasks)); }
+  if(Array.isArray(chamados)){ CHAMADOS = chamados; nextChamadoId = Math.max(0,...CHAMADOS.map(c=>c.id))+1; localStorage.setItem('its_chamados', JSON.stringify(chamados)); }
+  if(Array.isArray(emergs)){ EMERGS = emergs; nextEmergId = Math.max(0,...EMERGS.map(e=>e.id))+1; localStorage.setItem('its_emergs', JSON.stringify(emergs)); }
+  if(Array.isArray(avisos)){ AVISOS = avisos; nextAvisoId = Math.max(0,...AVISOS.map(a=>a.id))+1; localStorage.setItem('its_avisos', JSON.stringify(avisos)); }
 
   // Re-renderiza com os dados do servidor.
   try{ if(typeof renderUsers==='function') renderUsers(); }catch(_){}
+  try{ if(typeof applyFilters==='function') applyFilters(); }catch(_){}
+  try{ if(typeof filterChamados==='function') filterChamados(); }catch(_){}
+  try{ if(typeof filterEmerg==='function') filterEmerg(); }catch(_){}
+  try{ if(typeof filterAvisos==='function') filterAvisos(); }catch(_){}
   try{ if(typeof updateDashboard==='function') updateDashboard(); }catch(_){}
   try{ if(typeof loadConfig==='function') loadConfig(); }catch(_){}
 
@@ -3002,6 +3034,10 @@ async function hydrateFromAPI(){
   if(ponto===null) remoteSet('its_ponto_db', PONTO_DB);
   if(cfg===null) remoteSet('its_cfg', CFG);
   if(users===null) remoteSet('its_users', USERS);
+  if(tasks===null) remoteSet('its_tasks', TASKS);
+  if(chamados===null) remoteSet('its_chamados', CHAMADOS);
+  if(emergs===null) remoteSet('its_emergs', EMERGS);
+  if(avisos===null) remoteSet('its_avisos', AVISOS);
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────
