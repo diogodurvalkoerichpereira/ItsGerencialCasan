@@ -4,7 +4,7 @@ services:
     container_name: its-gerencial-casan
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost/"]
       interval: 30s
       timeout: 5s
       start_period: 10s
@@ -15,7 +15,7 @@ services:
     container_name: its-email-service
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3001/health"]
       interval: 30s
       timeout: 5s
       start_period: 10s
@@ -31,10 +31,10 @@ services:
     build: ./api
     container_name: its-api
     restart: unless-stopped
-    ports:
-      - "3002:3002"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3002/health"]
+      # /health e' liveness (nao toca o banco), entao o container fica saudavel
+      # mesmo antes do Postgres estar pronto.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:3002/health"]
       interval: 30s
       timeout: 5s
       start_period: 15s

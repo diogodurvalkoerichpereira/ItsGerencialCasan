@@ -51,11 +51,15 @@ async function initSchema() {
 }
 
 // ---------------------------------------------------------------------------
-// Health check
+// Health check — liveness (nao depende do banco, para nao derrubar a stack
+// caso o Postgres ainda nao esteja configurado/disponivel).
 // ---------------------------------------------------------------------------
-app.get('/health', asyncH(async (_req, res) => {
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+
+// Readiness — verifica o banco de fato.
+app.get('/ready', asyncH(async (_req, res) => {
   await pool.query('SELECT 1');
-  res.json({ status: 'ok' });
+  res.json({ status: 'ready' });
 }));
 
 // ---------------------------------------------------------------------------
@@ -323,9 +327,19 @@ app.put('/config/:chave', asyncH(async (req, res) => {
 }));
 
 const PORT = process.env.PORT || 3002;
-initSchema()
-  .then(() => app.listen(PORT, () => console.log(`api rodando na porta ${PORT}`)))
-  .catch((err) => {
-    console.error('Falha ao iniciar:', err.message);
-    process.exit(1);
-  });
+
+// Sobe o servidor IMEDIATAMENTE (health responde na hora) e inicializa o
+// schema em segundo plano com novas tentativas. Assim, um Postgres ausente
+// ou ainda nao pronto nao deixa o container em crash-loop nem derruba a stack.
+app.listen(PORT, () => console.log(`api rodando na porta ${PORT}`));
+
+async function initComRetry(tentativa = 1) {
+  try {
+    await initSchema();
+  } catch (err) {
+    const espera = Math.min(30, tentativa * 3);
+    console.error(`Schema ainda nao pronto (tentativa ${tentativa}): ${err.message}. Nova tentativa em ${espera}s.`);
+    setTimeout(() => initComRetry(tentativa + 1), espera * 1000);
+  }
+}
+initComRetry();
