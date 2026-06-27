@@ -2609,8 +2609,8 @@ function renderRecipients(){
   }
   list.innerHTML = CFG.recipients.map((r,i)=>`
     <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f8fafc;border:1px solid var(--its-border);border-radius:var(--radius-sm)">
-      <i class="ti ti-mail" style="color:var(--its-muted);font-size:15px"></i>
-      <span style="flex:1;font-size:.83rem"><strong>${esc(r.name)}</strong> &lt;${esc(r.email)}&gt;${r.phone?` <span style="color:var(--its-success)"><i class="ti ti-brand-whatsapp"></i> ${esc(r.phone)}</span>`:''}</span>
+      <i class="ti ti-user" style="color:var(--its-muted);font-size:15px"></i>
+      <span style="flex:1;font-size:.83rem"><strong>${esc(r.name)}</strong>${r.email?` &lt;${esc(r.email)}&gt;`:''}${r.phone?` <span style="color:var(--its-success)"><i class="ti ti-brand-whatsapp"></i> ${esc(r.phone)}</span>`:''}</span>
       <button class="btn btn-ghost btn-sm" style="color:var(--its-danger);padding:2px 6px" onclick="removeRecipient(${i})"><i class="ti ti-trash"></i></button>
     </div>`).join('');
 }
@@ -2619,11 +2619,12 @@ function addRecipient(){
   const email = document.getElementById('newRecipientEmail').value.trim();
   const name = document.getElementById('newRecipientName').value.trim();
   const phone = document.getElementById('newRecipientPhone').value.replace(/\D/g,'');
-  if(!email){alert('Informe o e-mail.');return}
-  if(!email.includes('@')){alert('E-mail inválido.');return}
+  if(!email && !phone){alert('Informe ao menos um e-mail ou um número de WhatsApp.');return}
+  if(email && !email.includes('@')){alert('E-mail inválido. Deixe em branco se for só WhatsApp.');return}
+  if(phone && phone.length<10){alert('Número de WhatsApp inválido. Use DDI+DDD+número (ex: 5548999998888).');return}
   if(!CFG.recipients) CFG.recipients=[];
-  if(CFG.recipients.find(r=>r.email===email)){alert('E-mail já cadastrado.');return}
-  CFG.recipients.push({email, name: name||email, phone});
+  if(email && CFG.recipients.find(r=>r.email===email)){alert('E-mail já cadastrado.');return}
+  CFG.recipients.push({email, name: name||email||phone, phone});
   document.getElementById('newRecipientEmail').value='';
   document.getElementById('newRecipientName').value='';
   document.getElementById('newRecipientPhone').value='';
@@ -2666,7 +2667,8 @@ function sendNotification(task){
   if(!CFG.ativo||!CFG.smtpEmail||!CFG.smtpHost) return;
   if(!CFG.recipients||!CFG.recipients.length) return;
   // O envio SMTP é feito pelo its-email-service (backend nodemailer) na rede interna.
-  const destinatarios = CFG.recipients.map(r=>r.email).join(',');
+  const destinatarios = CFG.recipients.map(r=>r.email).filter(e=>e&&e.includes('@')).join(',');
+  if(!destinatarios) return; // ninguém com e-mail válido (pode ter só WhatsApp)
   const emailServiceUrl = `${location.origin}/email/send`;
   fetch(emailServiceUrl, {
     method: 'POST',
@@ -2701,7 +2703,8 @@ function sendNotificacaoConclusao(task){
   );
   if(!CFG.ativo||!CFG.smtpEmail||!CFG.smtpHost) return;
   if(!CFG.recipients||!CFG.recipients.length) return;
-  const destinatarios=CFG.recipients.map(r=>r.email).join(',');
+  const destinatarios=CFG.recipients.map(r=>r.email).filter(e=>e&&e.includes('@')).join(',');
+  if(!destinatarios) return;
   const emailServiceUrl=`${location.origin}/email/send`;
   fetch(emailServiceUrl,{
     method:'POST',
