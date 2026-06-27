@@ -111,8 +111,80 @@ function buildText(task) {
     `Descrição: ${task.desc || '—'}`;
 }
 
+// Email generico para qualquer evento (chamado, emergencia, aviso, etc.)
+// n = { titulo, subtitulo, linhas: [{label, valor}], cabecalho }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+function buildHtmlGeneric(n) {
+  const linha = (label, valor) => `
+    <tr>
+      <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;font-size:13px;color:#64748b;font-weight:600;width:140px;vertical-align:top;">${esc(label)}</td>
+      <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;font-size:14px;color:#1e293b;">${esc(valor) || '—'}</td>
+    </tr>`;
+  const linhasHtml = (n.linhas || []).map(l => linha(l.label, l.valor)).join('');
+  return `
+  <body style="margin:0;padding:0;background:#f0f2f5;font-family:'Segoe UI',system-ui,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f0f2f5;padding:24px 0;">
+      <tr><td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.10);">
+          <tr>
+            <td style="background:#183c5a;padding:24px 28px;">
+              <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+                <td style="background:#E85928;width:38px;height:38px;border-radius:8px;text-align:center;vertical-align:middle;color:#fff;font-weight:900;font-size:13px;">iTS</td>
+                <td style="padding-left:12px;">
+                  <div style="color:#ffffff;font-size:17px;font-weight:700;">iTS Gerencial CASAN</div>
+                  <div style="color:rgba(255,255,255,.65);font-size:12px;">${esc(n.cabecalho || 'Notificação')}</div>
+                </td>
+              </tr></table>
+            </td>
+          </tr>
+          <tr><td style="height:4px;background:#E85928;"></td></tr>
+          <tr>
+            <td style="padding:28px;">
+              <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;font-weight:600;border-left:3px solid #E85928;padding-left:10px;margin-bottom:16px;">${esc(n.subtitulo || '')}</div>
+              <h1 style="margin:0 0 18px;font-size:20px;color:#183c5a;line-height:1.3;">${esc(n.titulo)}</h1>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${linhasHtml}</table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#f8fafc;padding:18px 28px;border-top:1px solid #e2e8f0;">
+              <div style="font-size:12px;color:#64748b;line-height:1.5;">
+                Esta é uma notificação automática do <strong style="color:#183c5a;">iTS Gerencial CASAN</strong>.<br>
+                iTS Customer Service — não responda a este e-mail.
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td></tr>
+    </table>
+  </body>`;
+}
+
+function buildTextGeneric(n) {
+  return `${n.titulo}\n\n` + (n.linhas || []).map(l => `${l.label}: ${l.valor || '—'}`).join('\n') +
+    `\n\n— iTS Gerencial CASAN`;
+}
+
 app.post('/send', async (req, res) => {
-  const { to, task } = req.body;
+  const { to, task, notificacao, assunto } = req.body;
+  // Caminho generico: qualquer evento (chamado, emergencia, aviso, etc.)
+  if (notificacao && notificacao.titulo) {
+    if (!to) return res.status(400).json({ error: 'Campo obrigatório: to' });
+    try {
+      await transporter.sendMail({
+        from: `"iTS Gerencial CASAN" <${process.env.SMTP_USER}>`,
+        to,
+        subject: assunto || `🔔 ${notificacao.titulo}`,
+        text: buildTextGeneric(notificacao),
+        html: buildHtmlGeneric(notificacao),
+      });
+      return res.json({ ok: true });
+    } catch (err) {
+      console.error('Erro ao enviar e-mail:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+  }
+  // Caminho legado: tarefa.
   if (!to || !task || !task.titulo) {
     return res.status(400).json({ error: 'Campos obrigatórios: to, task.titulo' });
   }
@@ -120,7 +192,7 @@ app.post('/send', async (req, res) => {
     await transporter.sendMail({
       from: `"iTS Gerencial CASAN" <${process.env.SMTP_USER}>`,
       to,
-      subject: `🔔 Nova Tarefa: ${task.titulo}`,
+      subject: assunto || `🔔 Nova Tarefa: ${task.titulo}`,
       text: buildText(task),
       html: buildHtml(task),
     });

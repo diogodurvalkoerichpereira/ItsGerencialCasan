@@ -1784,6 +1784,8 @@ function salvarChamado(criadoIso){
     `${descCh||'—'}\n`+
     `Aberto em: ${criadoIso}`
   );
+  notifyEmail(`🆘 Novo Chamado: ${titulo}`, titulo, 'Um novo chamado foi aberto', 'Notificação de Chamado',
+    [{label:'Descrição',valor:descCh},{label:'Aberto em',valor:criadoIso},{label:'Status',valor:'Em Atendimento'}]);
   closeModal();filterChamados();showToast('Chamado registrado com sucesso!');
 }
 function resolverChamado(id){
@@ -1798,6 +1800,8 @@ function resolverChamado(id){
     `Aberto em: ${c.criado||'—'}\n`+
     `Resolvido em: ${c.resolvidoEm}`
   );
+  notifyEmail(`✅ Chamado Resolvido: ${c.titulo}`, c.titulo, 'Chamado resolvido', 'Notificação de Chamado',
+    [{label:'Aberto em',valor:c.criado},{label:'Resolvido em',valor:c.resolvidoEm},{label:'Status',valor:'Resolvido'}]);
   filterChamados();showToast('Chamado resolvido!');
 }
 function deleteChamado(id){
@@ -1905,6 +1909,8 @@ function registrarEmerg(){
     `Recebido: ${recebido}\n`+
     `Dentro do prazo: ${prazo}`
   );
+  notifyEmail(`🚨 Nova Emergência: ${cidade}`, `Emergência — ${cidade}`, 'Nova ocorrência de emergência', 'Notificação de Emergência',
+    [{label:'Cidade',valor:cidade},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Dentro do prazo',valor:prazo}]);
   ['eData','eRecebido','eCidade','eProtocolo'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('eServico').selectedIndex=0;
   const firstTab=document.querySelector('#emergTabs .tab');
@@ -2399,6 +2405,8 @@ function registrarAviso(){
     `Recebido: ${recebido}\n`+
     `Canal: ${canal}`
   );
+  notifyEmail(`📢 Novo Aviso: ${cidade}`, `Aviso — ${cidade}`, 'Novo aviso registrado', 'Notificação de Aviso',
+    [{label:'Cidade',valor:cidade},{label:'Bairro',valor:bairro},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Canal',valor:canal}]);
   ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aInserido','aInseridoData'].forEach(id=>document.getElementById(id).value='');
   ['aServico','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
   const firstTab=document.querySelector('#avisosTabs .tab');
@@ -2727,6 +2735,19 @@ function notifyWhatsApp(message){
     method:'POST',
     headers:authHeaders({'Content-Type':'application/json'}),
     body:JSON.stringify({message})
+  }).catch(()=>{});
+}
+
+// Envia e-mail genérico (chamados, emergências, avisos) para destinatários
+// com e-mail válido, usando o email-service. Silencioso.
+function notifyEmail(assunto, titulo, subtitulo, cabecalho, linhas){
+  if(!CFG.ativo||!CFG.smtpEmail||!CFG.smtpHost) return;
+  const dest=(CFG.recipients||[]).map(r=>r.email).filter(e=>e&&e.includes('@')).join(',');
+  if(!dest) return;
+  fetch(`${location.origin}/email/send`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({to:dest, assunto, notificacao:{titulo, subtitulo, cabecalho, linhas}})
   }).catch(()=>{});
 }
 
