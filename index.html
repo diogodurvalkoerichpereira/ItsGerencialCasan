@@ -1021,6 +1021,13 @@ function prioBadge(p){
 }
 function prioClass(p){return p==='Complexa'?'p-alta':p==='Intermediária'?'p-media':'p-baixa'}
 
+// Escapa texto do usuario antes de injetar via innerHTML (previne XSS).
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c=>(
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+  ));
+}
+
 // ── RENDER TASKS ──────────────────────────────────────────────────────
 function renderTasks(list){
   const tb=document.getElementById('taskBody');
@@ -1030,9 +1037,9 @@ function renderTasks(list){
   list=list.slice().sort((a,b)=>b.id-a.id);
   tb.innerHTML=list.map(t=>`
     <tr>
-      <td><span class="priority-dot ${prioClass(t.prio)}"></span><strong style="font-size:.83rem">${t.titulo}</strong></td>
-      <td style="color:var(--its-muted);font-size:.8rem">${t.area}</td>
-      <td style="font-size:.82rem">${t.resp}</td>
+      <td><span class="priority-dot ${prioClass(t.prio)}"></span><strong style="font-size:.83rem">${esc(t.titulo)}</strong></td>
+      <td style="color:var(--its-muted);font-size:.8rem">${esc(t.area)}</td>
+      <td style="font-size:.82rem">${esc(t.resp)}</td>
       <td style="font-size:.8rem">${fmtPrazo(t.prazo)}</td>
       <td>${prioBadge(t.prio)}</td>
       <td>${statusBadge(t.status)}</td>
@@ -1083,7 +1090,7 @@ function buildForm(t={}){
   const statuses=['Em andamento','Aguardando','Concluído','Cancelado pela iTS','Cancelado pela CASAN'];
   const sel=(arr,cur)=>arr.map(v=>`<option${cur===v?' selected':''}>${v}</option>`).join('');
   return `
-    <div class="form-group"><label>Título *</label><input type="text" id="fTitulo" value="${t.titulo||''}" placeholder="Descreva a tarefa..."></div>
+    <div class="form-group"><label>Título *</label><input type="text" id="fTitulo" value="${esc(t.titulo||'')}" placeholder="Descreva a tarefa..."></div>
     <div class="form-row">
       <div class="form-group"><label>Área *</label><select id="fArea">${sel(areas,t.area)}</select></div>
       <div class="form-group"><label>Responsável *</label><select id="fResp">${sel(resps,t.resp)}</select></div>
@@ -1100,7 +1107,7 @@ function buildForm(t={}){
         <i class="ti ti-clock-hour-4" style="color:var(--its-orange)"></i><span id="prazoPreviewTxt">—</span>
       </div>
     </div>
-    <div class="form-group"><label>Descrição</label><textarea id="fDesc" placeholder="Detalhes adicionais...">${t.desc||''}</textarea></div>
+    <div class="form-group"><label>Descrição</label><textarea id="fDesc" placeholder="Detalhes adicionais...">${esc(t.desc||'')}</textarea></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="saveTask(${t.id||0})"><i class="ti ti-device-floppy"></i> Salvar</button>
@@ -1600,9 +1607,9 @@ function renderChamados(list){
       :noPrazo?'<span style="color:var(--its-success);font-weight:600">✓ No prazo</span>'
       :'<span style="color:var(--its-danger);font-weight:600">✗ Fora do prazo</span>';
     return`<tr>
-      <td style="font-weight:600;max-width:180px">${c.titulo}</td>
-      <td style="font-size:.78rem">${c.criado}</td>
-      <td style="font-size:.78rem">${c.resolvidoEm||'—'}</td>
+      <td style="font-weight:600;max-width:180px">${esc(c.titulo)}</td>
+      <td style="font-size:.78rem">${esc(c.criado)}</td>
+      <td style="font-size:.78rem">${esc(c.resolvidoEm)||'—'}</td>
       <td style="font-size:.78rem">${fmtTempoChamado(min)}</td>
       <td>${chamadoStatusBadge(c.status)}</td>
       <td style="font-size:.82rem">${prazoHtml}</td>
@@ -2359,7 +2366,9 @@ let CFG = JSON.parse(localStorage.getItem('its_cfg')||'{"smtpEmail":"","smtpSenh
 
 function loadConfig(){
   document.getElementById('cfgEmail').value      = CFG.smtpEmail||'';
-  document.getElementById('cfgSenha').value      = CFG.smtpSenha||'';
+  // Senha SMTP nao e exibida: gerenciada nas variaveis de ambiente do servidor.
+  document.getElementById('cfgSenha').value      = '';
+  document.getElementById('cfgSenha').placeholder = 'Gerenciada no servidor (env SMTP_PASS)';
   document.getElementById('cfgSmtpHost').value   = CFG.smtpHost||'';
   document.getElementById('cfgSmtpPort').value   = CFG.smtpPort||'465';
   document.getElementById('cfgSeguranca').value  = CFG.smtpSeg||'SSL';
@@ -2369,11 +2378,14 @@ function loadConfig(){
 
 function saveConfig(){
   CFG.smtpEmail = document.getElementById('cfgEmail').value.trim();
-  CFG.smtpSenha = document.getElementById('cfgSenha').value;
   CFG.smtpHost  = document.getElementById('cfgSmtpHost').value.trim();
   CFG.smtpPort  = document.getElementById('cfgSmtpPort').value.trim();
   CFG.smtpSeg   = document.getElementById('cfgSeguranca').value;
   CFG.ativo     = document.getElementById('cfgAtivo').checked;
+  // Seguranca: a senha SMTP NUNCA e persistida no navegador/servidor.
+  // As credenciais reais de envio ficam nas variaveis de ambiente do servidor
+  // (SMTP_USER / SMTP_PASS no email-service).
+  delete CFG.smtpSenha;
   localStorage.setItem('its_cfg', JSON.stringify(CFG)); remoteSet('its_cfg', CFG);
   const st = document.getElementById('cfgStatus');
   st.innerHTML='<div class="its-alert alert-success"><i class="ti ti-check"></i> Configurações salvas com sucesso!</div>';
@@ -2389,7 +2401,7 @@ function renderRecipients(){
   list.innerHTML = CFG.recipients.map((r,i)=>`
     <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f8fafc;border:1px solid var(--its-border);border-radius:var(--radius-sm)">
       <i class="ti ti-mail" style="color:var(--its-muted);font-size:15px"></i>
-      <span style="flex:1;font-size:.83rem"><strong>${r.name}</strong> &lt;${r.email}&gt;</span>
+      <span style="flex:1;font-size:.83rem"><strong>${esc(r.name)}</strong> &lt;${esc(r.email)}&gt;</span>
       <button class="btn btn-ghost btn-sm" style="color:var(--its-danger);padding:2px 6px" onclick="removeRecipient(${i})"><i class="ti ti-trash"></i></button>
     </div>`).join('');
 }
@@ -2499,8 +2511,8 @@ function renderUsers(list){
   list=list.slice().sort((a,b)=>(ordem[a.cargo]||9)-(ordem[b.cargo]||9)||a.nome.localeCompare(b.nome));
   tb.innerHTML=list.map(u=>`
     <tr>
-      <td><strong style="font-size:.83rem">${u.nome}</strong></td>
-      <td style="color:var(--its-muted);font-size:.8rem">${u.email}</td>
+      <td><strong style="font-size:.83rem">${esc(u.nome)}</strong></td>
+      <td style="color:var(--its-muted);font-size:.8rem">${esc(u.email)}</td>
       <td>${cargoBadge(u.cargo)}</td>
       <td>${userStatusBadge(u.status)}</td>
       <td>
@@ -2526,8 +2538,8 @@ function filterUsers(){
 function buildUserForm(u={}){
   const sel=(arr,cur)=>arr.map(v=>`<option${cur===v?' selected':''}>${v}</option>`).join('');
   return `
-    <div class="form-group"><label>Nome completo *</label><input type="text" id="uNome" value="${u.nome||''}" placeholder="Nome do usuário..."></div>
-    <div class="form-group"><label>E-mail *</label><input type="email" id="uEmail" value="${u.email||''}" placeholder="nome@itscs.com.br"></div>
+    <div class="form-group"><label>Nome completo *</label><input type="text" id="uNome" value="${esc(u.nome||'')}" placeholder="Nome do usuário..."></div>
+    <div class="form-group"><label>E-mail *</label><input type="email" id="uEmail" value="${esc(u.email||'')}" placeholder="nome@itscs.com.br"></div>
     <div class="form-row">
       <div class="form-group"><label>Cargo *</label><select id="uCargo">${sel(CARGOS,u.cargo||'Operador')}</select></div>
       <div class="form-group"><label>Situação</label><select id="uStatus">${sel(['Ativo','Inativo'],u.status||'Ativo')}</select></div>
