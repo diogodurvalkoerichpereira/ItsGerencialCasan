@@ -2571,6 +2571,40 @@ USERS.forEach(u=>{if(!u.hash)u.hash=HASH_PADRAO;});
 let nextUserId = Math.max(0,...USERS.map(u=>u.id))+1;
 
 function saveUsers(){localStorage.setItem('its_users',JSON.stringify(USERS));remoteSet('its_users',USERS);}
+
+// ── Sincronização de usuários com a API (tabela casan_usuarios / bcrypt) ──
+// O login da API valida contra casan_usuarios. Sem isso, um usuário criado só
+// na lista local não consegue logar. Estas funções espelham na API quando há
+// sessão (token). A chave de correlação é o e-mail (único).
+async function apiUserId(email){
+  try{
+    const r=await fetch(`${ITS_API}/usuarios`,{headers:authHeaders()});
+    if(!r.ok) return null;
+    const list=await r.json();
+    const u=list.find(x=>(x.email||'').toLowerCase()===String(email).toLowerCase());
+    return u?u.id:null;
+  }catch(_){ return null; }
+}
+async function apiCreateUser(o){
+  try{
+    const r=await fetch(`${ITS_API}/usuarios`,{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),
+      body:JSON.stringify({nome:o.nome,email:o.email,senha:o.senha||'123456',perfil:o.cargo})});
+    if(!r.ok){ const d=await r.json().catch(()=>({})); throw new Error(d.error||('HTTP '+r.status)); }
+    const created=await r.json();
+    if(o.status==='Inativo'&&created&&created.id){
+      await fetch(`${ITS_API}/usuarios/${created.id}`,{method:'PUT',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify({ativo:false})});
+    }
+    return created;
+  }catch(e){ showToast('Falha ao criar no servidor: '+e.message); return null; }
+}
+async function apiUpdateUser(o){
+  const idc=await apiUserId(o.email);
+  if(!idc){ return apiCreateUser(o); } // não existe no servidor → cria
+  try{
+    await fetch(`${ITS_API}/usuarios/${idc}`,{method:'PUT',headers:authHeaders({'Content-Type':'application/json'}),
+      body:JSON.stringify({nome:o.nome,perfil:o.cargo,ativo:o.status==='Ativo'})});
+  }catch(_){}
+}
 function cargoBadge(c){return `<span class="badge ${CARGO_BADGE[c]||'badge-gray'}"><span class="badge-dot"></span>${c}</span>`;}
 function userStatusBadge(s){return `<span class="badge ${s==='Ativo'?'badge-green':'badge-gray'}"><span class="badge-dot"></span>${s}</span>`;}
 
@@ -2640,36 +2674,55 @@ function editUser(id){
   document.getElementById('modalContent').innerHTML=buildUserForm(u);
   document.getElementById('modalOverlay').classList.add('open');
 }
-function saveUser(id){
+async function saveUser(id){
   const nome=document.getElementById('uNome').value.trim();
   const email=document.getElementById('uEmail').value.trim();
   if(!nome){alert('Informe o nome do usuário.');return}
   if(!email||!email.includes('@')){alert('Informe um e-mail válido.');return}
   const cargo=document.getElementById('uCargo').value;
   const status=document.getElementById('uStatus').value;
+  const online=!!sessionStorage.getItem('its_token');
   if(id){
     const i=USERS.findIndex(x=>x.id===id);if(i>-1)Object.assign(USERS[i],{nome,email,cargo,status});
+    if(online) await apiUpdateUser({nome,email,cargo,status});
   }else{
     USERS.push({id:nextUserId++,nome,email,cargo,status,hash:HASH_PADRAO});
+    if(online) await apiCreateUser({nome,email,cargo,status,senha:'123456'});
   }
   saveUsers();closeModal();filterUsers();
   showToast(id?'Usuário atualizado com sucesso!':'Usuário criado (senha padrão 123456).');
 }
-function resetUserPass(id){
+async function resetUserPass(id){
   const u=USERS.find(x=>x.id===id);if(!u)return;
   if(!confirm(`Redefinir a senha de "${u.nome}" para o padrão (123456)?`))return;
-  u.hash=HASH_PADRAO;saveUsers();showToast('Senha redefinida para 123456.');
+  u.hash=HASH_PADRAO;saveUsers();
+  if(sessionStorage.getItem('its_token')){
+    const idc=await apiUserId(u.email);
+    if(idc){ try{ await fetch(`${ITS_API}/usuarios/${idc}`,{method:'PUT',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify({senha:'123456'})}); }catch(_){} }
+  }
+  showToast('Senha redefinida para 123456.');
 }
-function toggleUser(id){
+async function toggleUser(id){
   const u=USERS.find(x=>x.id===id);if(!u)return;
   u.status=u.status==='Ativo'?'Inativo':'Ativo';
-  saveUsers();filterUsers();showToast(`Usuário ${u.status==='Ativo'?'ativado':'inativado'}.`);
+  saveUsers();filterUsers();
+  if(sessionStorage.getItem('its_token')){
+    const idc=await apiUserId(u.email);
+    if(idc){ try{ await fetch(`${ITS_API}/usuarios/${idc}`,{method:'PUT',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify({ativo:u.status==='Ativo'})}); }catch(_){} }
+  }
+  showToast(`Usuário ${u.status==='Ativo'?'ativado':'inativado'}.`);
 }
-function deleteUser(id){
+async function deleteUser(id){
   const u=USERS.find(x=>x.id===id);if(!u)return;
   if(!confirm(`Excluir o usuário "${u.nome}"?`))return;
+  const email=u.email;
   const i=USERS.findIndex(x=>x.id===id);if(i>-1)USERS.splice(i,1);
-  saveUsers();filterUsers();showToast('Usuário excluído.');
+  saveUsers();filterUsers();
+  if(sessionStorage.getItem('its_token')){
+    const idc=await apiUserId(email);
+    if(idc){ try{ await fetch(`${ITS_API}/usuarios/${idc}`,{method:'DELETE',headers:authHeaders()}); }catch(_){} }
+  }
+  showToast('Usuário excluído.');
 }
 
 // ── TOAST ─────────────────────────────────────────────────────────────
