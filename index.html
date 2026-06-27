@@ -1867,15 +1867,63 @@ function renderAnexos(anexos){
   }).join('')+`</div>`;
 }
 
+// Lista de anexos acumulada no modal de resposta atual.
+let _anexosResp=[];
+
+function lerArquivo(f){
+  return new Promise((resolve,reject)=>{
+    const rd=new FileReader();
+    rd.onload=()=>resolve({name:f.name,type:f.type,size:f.size,data:rd.result});
+    rd.onerror=()=>reject(new Error('Falha ao ler '+f.name));
+    rd.readAsDataURL(f);
+  });
+}
+
+// Acrescenta ao acumulado os arquivos escolhidos agora (valida limites).
+async function adicionarAnexos(){
+  const inp=document.getElementById('respAnexos');
+  const erro=document.getElementById('respErro');
+  const novos=Array.from(inp.files||[]);
+  for(const f of novos){
+    if(f.size > ANEXO_MAX_MB*1048576){ erro.textContent=`"${f.name}" passa de ${ANEXO_MAX_MB} MB.`; erro.style.display='flex'; inp.value=''; return; }
+  }
+  const total=_anexosResp.reduce((s,a)=>s+a.size,0)+novos.reduce((s,f)=>s+f.size,0);
+  if(total > ANEXO_MAX_TOTAL_MB*1048576){ erro.textContent=`Total de anexos passa de ${ANEXO_MAX_TOTAL_MB} MB.`; erro.style.display='flex'; inp.value=''; return; }
+  erro.style.display='none';
+  for(const f of novos){ try{ _anexosResp.push(await lerArquivo(f)); }catch(e){ erro.textContent=e.message; erro.style.display='flex'; } }
+  inp.value=''; // limpa para permitir escolher mais depois
+  renderListaAnexos();
+}
+
+function removerAnexoResp(i){ _anexosResp.splice(i,1); renderListaAnexos(); }
+
+function renderListaAnexos(){
+  const el=document.getElementById('respLista');
+  if(!el) return;
+  if(!_anexosResp.length){ el.innerHTML='<div style="font-size:.78rem;color:var(--its-muted)">Nenhum anexo adicionado.</div>'; return; }
+  const total=_anexosResp.reduce((s,a)=>s+a.size,0);
+  el.innerHTML=_anexosResp.map((a,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:#f8fafc;border:1px solid var(--its-border);border-radius:var(--radius-sm);font-size:.82rem">
+      <i class="ti ${(a.type||'').startsWith('audio/')?'ti-microphone':'ti-paperclip'}" style="color:var(--its-muted)"></i>
+      <span style="flex:1">${esc(a.name)} <span style="color:var(--its-muted);font-size:.72rem">(${fmtTamanho(a.size)})</span></span>
+      <button class="btn btn-ghost btn-sm" style="color:var(--its-danger);padding:2px 6px" onclick="removerAnexoResp(${i})"><i class="ti ti-x"></i></button>
+    </div>`).join('')+`<div style="font-size:.72rem;color:var(--its-muted);margin-top:2px">${_anexosResp.length} arquivo(s) · ${fmtTamanho(total)} de ${ANEXO_MAX_TOTAL_MB} MB</div>`;
+}
+
 // Modal genérico de resposta (usado por chamados e tarefas).
 function abrirResposta(titulo, onSalvar){
+  _anexosResp=[];
   document.getElementById('modalTitle').textContent=titulo;
   document.getElementById('modalContent').innerHTML=`
     <div class="form-group"><label>Resposta *</label><textarea id="respTexto" placeholder="Descreva a resolução..." style="min-height:90px"></textarea></div>
     <div class="form-group">
       <label>Anexos (documentos / áudios) — opcional</label>
-      <input type="file" id="respAnexos" multiple accept="${ANEXO_ACCEPT}">
-      <div style="font-size:.72rem;color:var(--its-muted);margin-top:4px">Até ${ANEXO_MAX_MB} MB por arquivo, ${ANEXO_MAX_TOTAL_MB} MB no total. Áudio: anexe um arquivo (.mp3, .ogg, .m4a...).</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="file" id="respAnexos" multiple accept="${ANEXO_ACCEPT}" style="flex:1">
+        <button type="button" class="btn btn-outline btn-sm" onclick="adicionarAnexos()"><i class="ti ti-plus"></i> Adicionar</button>
+      </div>
+      <div style="font-size:.72rem;color:var(--its-muted);margin:4px 0 8px">Selecione um ou vários e clique em Adicionar. Repita para incluir mais. Até ${ANEXO_MAX_MB} MB por arquivo, ${ANEXO_MAX_TOTAL_MB} MB no total.</div>
+      <div id="respLista" style="display:flex;flex-direction:column;gap:5px"></div>
     </div>
     <div id="respErro" class="its-alert alert-error" style="display:none;margin-bottom:10px"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -1883,14 +1931,13 @@ function abrirResposta(titulo, onSalvar){
       <button class="btn btn-primary" id="respBtn"><i class="ti ti-check"></i> Salvar e Resolver</button>
     </div>`;
   document.getElementById('modalOverlay').classList.add('open');
-  document.getElementById('respBtn').onclick=async()=>{
+  renderListaAnexos();
+  document.getElementById('respAnexos').addEventListener('change',adicionarAnexos);
+  document.getElementById('respBtn').onclick=()=>{
     const texto=document.getElementById('respTexto').value.trim();
     const erro=document.getElementById('respErro');
     if(!texto){ erro.textContent='Informe a resposta.'; erro.style.display='flex'; return; }
-    let anexos=[];
-    try{ anexos=await lerAnexos('respAnexos'); }
-    catch(e){ erro.textContent=e.message; erro.style.display='flex'; return; }
-    onSalvar({texto, anexos, em: agoraISO()});
+    onSalvar({texto, anexos:_anexosResp.slice(), em: agoraISO()});
   };
 }
 function agoraISO(){ const d=new Date();const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
