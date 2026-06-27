@@ -1204,11 +1204,16 @@ function imprimirRelatorio(){
   if(!conteudo||conteudo.style.display==='none'){showToast('Gere um relatório primeiro.','warn');return;}
   const w=window.open('','_blank','width=900,height=700');
   if(!w){showToast('Permita pop-ups para imprimir/baixar.','warn');return;}
+  // Dados do rodapé: usuário logado + data/hora de geração.
+  const s=getSession();
+  const emitidoPor=s&&s.nome?s.nome:'—';
+  const d=new Date();const p=n=>String(n).padStart(2,'0');
+  const geradoEm=`${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} às ${p(d.getHours())}:${p(d.getMinutes())}`;
   w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
     <title>Relatório iTS Gerencial CASAN</title>
     <style>
       *{box-sizing:border-box;margin:0;padding:0}
-      body{font-family:'Segoe UI',system-ui,Arial,sans-serif;color:#1e293b;padding:24px;background:#fff}
+      body{font-family:'Segoe UI',system-ui,Arial,sans-serif;color:#1e293b;padding:24px 24px 70px;background:#fff}
       .card{border:1px solid #e2e8f0;border-radius:10px;padding:18px}
       table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
       th{background:#183c5a;color:#fff;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
@@ -1221,8 +1226,19 @@ function imprimirRelatorio(){
       .divider,hr{border:none;border-top:1px solid #e2e8f0;margin:12px 0}
       .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid #e2e8f0}
       .logo-icon{background:#E85928;color:#fff;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-weight:900}
-      @media print{body{padding:0}.card{border:none}}
-    </style></head><body>${conteudo.innerHTML}</body></html>`);
+      .rodape{position:fixed;bottom:0;left:0;right:0;border-top:1px solid #e2e8f0;background:#fff;
+        padding:8px 24px;display:flex;justify-content:space-between;align-items:center;
+        font-size:9px;color:#64748b;gap:12px}
+      .rodape strong{color:#183c5a}
+      .pagina:after{counter-increment:page;content:"Página " counter(page) " de " counter(pages);}
+      @page{margin:14mm 12mm 22mm;
+        @bottom-right{content:"Página " counter(page) " de " counter(pages);font-size:9px;color:#64748b;}}
+      @media print{body{padding:0 0 70px}.card{border:none}}
+    </style></head><body>${conteudo.innerHTML}
+    <div class="rodape">
+      <span><strong>iTS Customer Service</strong> — Contrato CASAN · Documento confidencial</span>
+      <span>Emitido por: <strong>${esc(emitidoPor)}</strong> · Gerado em ${geradoEm} · <span class="pagina"></span></span>
+    </div></body></html>`);
   w.document.close();
   w.focus();
   setTimeout(()=>{ w.print(); }, 350);
