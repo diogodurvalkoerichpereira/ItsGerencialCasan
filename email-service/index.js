@@ -7,6 +7,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Permite acesso via prefixo de caminho /email (Traefik roteia /email/* ate aqui
+// sem remover o prefixo). Assim o front chama https://<dominio>/email/send.
+app.use((req, _res, next) => {
+  if (req.url === '/email' || req.url.startsWith('/email/')) req.url = req.url.slice(6) || '/';
+  next();
+});
+
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT || '465'),

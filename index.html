@@ -2429,7 +2429,7 @@ function sendNotification(task){
   if(!CFG.recipients||!CFG.recipients.length) return;
   // O envio SMTP é feito pelo its-email-service (backend nodemailer) na rede interna.
   const destinatarios = CFG.recipients.map(r=>r.email).join(',');
-  const emailServiceUrl = `http://${location.hostname}:3001/send`;
+  const emailServiceUrl = `${location.origin}/email/send`;
   fetch(emailServiceUrl, {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
@@ -2457,7 +2457,7 @@ function sendNotificacaoConclusao(task){
   if(!CFG.ativo||!CFG.smtpEmail||!CFG.smtpHost) return;
   if(!CFG.recipients||!CFG.recipients.length) return;
   const destinatarios=CFG.recipients.map(r=>r.email).join(',');
-  const emailServiceUrl=`http://${location.hostname}:3001/send`;
+  const emailServiceUrl=`${location.origin}/email/send`;
   fetch(emailServiceUrl,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
@@ -2932,7 +2932,9 @@ function changePassword(){
 // ── SINCRONIZAÇÃO COM A API (Postgres) ────────────────────────────────
 // Espelha as chaves persistentes no servidor. Se a API estiver fora do ar,
 // o app continua funcionando apenas com o localStorage local.
-const ITS_API = `http://${location.hostname}:3002`;
+// Mesma origem (HTTPS), roteado pelo Traefik: /api -> its-api, /email -> email-service.
+// Evita mixed content. Em dev/arquivo local cai no fallback offline.
+const ITS_API = `${location.origin}/api`;
 
 function authHeaders(extra){
   const t = sessionStorage.getItem('its_token');

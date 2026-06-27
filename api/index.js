@@ -22,6 +22,14 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
+// Permite acesso via prefixo de caminho /api (Traefik roteia /api/* ate aqui
+// sem remover o prefixo). Assim o front chama https://<dominio>/api/... na
+// mesma origem HTTPS, evitando bloqueio de mixed content.
+app.use((req, _res, next) => {
+  if (req.url === '/api' || req.url.startsWith('/api/')) req.url = req.url.slice(4) || '/';
+  next();
+});
+
 const asyncH = (fn) => (req, res, next) =>
   Promise.resolve(fn(req, res, next)).catch((err) => {
     console.error(err.message);

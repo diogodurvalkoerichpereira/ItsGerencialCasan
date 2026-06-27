@@ -23,9 +23,16 @@ The **Postgres database is NOT in this compose file** — it is a separate Cooli
 resource. `its-api` reaches it through `DATABASE_URL` (the Coolify "Postgres URL internal"),
 set in the Coolify Environment Variables UI, never committed.
 
-The browser calls the backend services directly at `http://<hostname>:3001` and
-`:3002` (see `ITS_API` and `emailServiceUrl` in `index.html`). If you add a backend
-route the frontend must reach, the port must be published in compose and reachable.
+The browser reaches the backends **same-origin over HTTPS via path prefixes** to avoid
+mixed-content blocking (the site is HTTPS; calling `http://host:port` is blocked by browsers):
+- `ITS_API = location.origin + '/api'` → routed by Traefik to `its-api:3002`
+- email calls use `location.origin + '/email/send'` → `its-email-service:3001`
+
+Both backends include a small middleware that strips the `/api` (resp. `/email`) prefix from
+`req.url`, so their routes are defined at root but work behind the prefixed Traefik route.
+**This requires Coolify to map the domain+path** to each service:
+`casan.../api` → its-api, `casan.../email` → its-email-service. Until that mapping exists,
+the frontend silently falls back to offline/local mode.
 
 ## Architecture: how data and auth flow
 
