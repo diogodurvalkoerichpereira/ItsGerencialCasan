@@ -1754,8 +1754,15 @@ function abrirNovoChamado(){
 function salvarChamado(criadoIso){
   const titulo=document.getElementById('cTitulo').value.trim();
   if(!titulo){alert('Informe o título do chamado.');return;}
-  CHAMADOS.unshift({id:nextChamadoId++,titulo,desc:document.getElementById('cDesc').value,criado:criadoIso,status:'Em Atendimento',resolvidoEm:null});
+  const descCh=document.getElementById('cDesc').value;
+  CHAMADOS.unshift({id:nextChamadoId++,titulo,desc:descCh,criado:criadoIso,status:'Em Atendimento',resolvidoEm:null});
   saveChamados();
+  notifyWhatsApp(
+    `🆘 *Novo Chamado* — iTS Gerencial CASAN\n\n`+
+    `*${titulo}*\n`+
+    `${descCh||'—'}\n`+
+    `Aberto em: ${criadoIso}`
+  );
   closeModal();filterChamados();showToast('Chamado registrado com sucesso!');
 }
 function resolverChamado(id){
@@ -1764,6 +1771,12 @@ function resolverChamado(id){
   c.resolvidoEm=`${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
   c.status='Resolvido';
   saveChamados();
+  notifyWhatsApp(
+    `✅ *Chamado Resolvido* — iTS Gerencial CASAN\n\n`+
+    `*${c.titulo}*\n`+
+    `Aberto em: ${c.criado||'—'}\n`+
+    `Resolvido em: ${c.resolvidoEm}`
+  );
   filterChamados();showToast('Chamado resolvido!');
 }
 function deleteChamado(id){
