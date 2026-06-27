@@ -205,6 +205,22 @@ app.post('/auth/2fa/disable', requireAuth, asyncH(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// Troca de senha do proprio usuario (exige a senha atual).
+app.post('/auth/password', requireAuth, asyncH(async (req, res) => {
+  const { atual, nova } = req.body || {};
+  if (!atual || !nova) return res.status(400).json({ error: 'senha atual e nova obrigatorias' });
+  if (String(nova).length < 4) return res.status(400).json({ error: 'a nova senha deve ter ao menos 4 caracteres' });
+  if (!(await bcrypt.compare(String(atual), req.user.senha_hash))) {
+    return res.status(401).json({ error: 'senha atual incorreta' });
+  }
+  const hash = await bcrypt.hash(String(nova), 12);
+  await pool.query(
+    'UPDATE casan_usuarios SET senha_hash = $2, updated_at = now() WHERE id = $1',
+    [req.user.id, hash]
+  );
+  res.json({ ok: true });
+}));
+
 // ---------------------------------------------------------------------------
 // A PARTIR DAQUI todas as rotas exigem token de sessao valido.
 // ---------------------------------------------------------------------------

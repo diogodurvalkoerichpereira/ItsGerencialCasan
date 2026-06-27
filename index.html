@@ -2909,17 +2909,32 @@ async function disable2fa(){
     showToast('2FA desativado.'); render2faBox();
   }catch(_){ err.textContent='Falha de conexão.'; err.style.display='flex'; }
 }
-function changePassword(){
+async function changePassword(){
   const s=JSON.parse(sessionStorage.getItem('its_session')||'null');if(!s)return;
   const atual=document.getElementById('pAtual').value;
   const nova=document.getElementById('pNova').value;
   const conf=document.getElementById('pConf').value;
   const erro=document.getElementById('pErro');
   const show=m=>{erro.textContent=m;erro.style.display='flex';};
-  const acc=findAccount(s.email);
-  if(!acc||acc.hash!==sha256(atual)){show('Senha atual incorreta.');return;}
   if(nova.length<4){show('A nova senha deve ter ao menos 4 caracteres.');return;}
   if(nova!==conf){show('A confirmação não confere com a nova senha.');return;}
+  // Modo online: troca a senha no servidor (bcrypt em casan_usuarios).
+  if(sessionStorage.getItem('its_token')){
+    try{
+      const r=await fetch(`${ITS_API}/auth/password`,{
+        method:'POST',
+        headers:authHeaders({'Content-Type':'application/json'}),
+        body:JSON.stringify({atual,nova})
+      });
+      const d=await r.json().catch(()=>({}));
+      if(!r.ok){show(d.error||'Não foi possível alterar a senha.');return;}
+      erro.style.display='none';closeModal();showToast('Senha alterada com sucesso!');
+    }catch(_){ show('Serviço indisponível. Tente novamente.'); }
+    return;
+  }
+  // Modo offline (sem token): mantém o comportamento legado em localStorage.
+  const acc=findAccount(s.email);
+  if(!acc||acc.hash!==sha256(atual)){show('Senha atual incorreta.');return;}
   const novoHash=sha256(nova);
   if(s.isAdmin){
     localStorage.setItem('its_admin_hash',novoHash);remoteSet('its_admin_hash',novoHash);
