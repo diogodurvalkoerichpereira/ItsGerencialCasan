@@ -31,6 +31,8 @@ services:
     build: ./api
     container_name: its-api
     restart: unless-stopped
+    ports:
+      - "3002:3002"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3002/health"]
       interval: 30s

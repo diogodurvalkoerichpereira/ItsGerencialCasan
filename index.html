@@ -1811,7 +1811,7 @@ function switchEmergTab(name,el){
 let PONTO_DB = JSON.parse(localStorage.getItem('its_ponto_db')||'{}');
 let _pendingPonto = null; // dados aguardando confirmação de duplicata
 
-function savePontoDB(){ localStorage.setItem('its_ponto_db', JSON.stringify(PONTO_DB)); }
+function savePontoDB(){ localStorage.setItem('its_ponto_db', JSON.stringify(PONTO_DB)); remoteSet('its_ponto_db', PONTO_DB); }
 
 function extractMesAno(dateStr){
   if(!dateStr) return null;
@@ -2370,7 +2370,7 @@ function saveConfig(){
   CFG.smtpPort  = document.getElementById('cfgSmtpPort').value.trim();
   CFG.smtpSeg   = document.getElementById('cfgSeguranca').value;
   CFG.ativo     = document.getElementById('cfgAtivo').checked;
-  localStorage.setItem('its_cfg', JSON.stringify(CFG));
+  localStorage.setItem('its_cfg', JSON.stringify(CFG)); remoteSet('its_cfg', CFG);
   const st = document.getElementById('cfgStatus');
   st.innerHTML='<div class="its-alert alert-success"><i class="ti ti-check"></i> Configurações salvas com sucesso!</div>';
   setTimeout(()=>st.innerHTML='',3000);
@@ -2481,7 +2481,7 @@ let USERS = JSON.parse(localStorage.getItem('its_users')||'null') || [
 USERS.forEach(u=>{if(!u.hash)u.hash=HASH_PADRAO;});
 let nextUserId = Math.max(0,...USERS.map(u=>u.id))+1;
 
-function saveUsers(){localStorage.setItem('its_users',JSON.stringify(USERS));}
+function saveUsers(){localStorage.setItem('its_users',JSON.stringify(USERS));remoteSet('its_users',USERS);}
 function cargoBadge(c){return `<span class="badge ${CARGO_BADGE[c]||'badge-gray'}"><span class="badge-dot"></span>${c}</span>`;}
 function userStatusBadge(s){return `<span class="badge ${s==='Ativo'?'badge-green':'badge-gray'}"><span class="badge-dot"></span>${s}</span>`;}
 
@@ -2771,17 +2771,69 @@ function changePassword(){
   if(nova!==conf){show('A confirmação não confere com a nova senha.');return;}
   const novoHash=sha256(nova);
   if(s.isAdmin){
-    localStorage.setItem('its_admin_hash',novoHash);
+    localStorage.setItem('its_admin_hash',novoHash);remoteSet('its_admin_hash',novoHash);
   }else{
     const u=USERS.find(x=>x.id===s.id);if(u){u.hash=novoHash;saveUsers();}
   }
   erro.style.display='none';closeModal();showToast('Senha alterada com sucesso!');
 }
 
+// ── SINCRONIZAÇÃO COM A API (Postgres) ────────────────────────────────
+// Espelha as chaves persistentes no servidor. Se a API estiver fora do ar,
+// o app continua funcionando apenas com o localStorage local.
+const ITS_API = `http://${location.hostname}:3002`;
+
+function remoteSet(chave, valor){
+  try{
+    fetch(`${ITS_API}/config/${chave}`, {
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(valor)
+    }).catch(()=>{});
+  }catch(_){}
+}
+
+async function remoteGet(chave){
+  try{
+    const r = await fetch(`${ITS_API}/config/${chave}`);
+    if(!r.ok) return undefined;
+    return await r.json();
+  }catch(_){ return undefined; }
+}
+
+// Puxa os dados do servidor; reatribui as variáveis em memória e re-renderiza.
+async function hydrateFromAPI(){
+  const [ponto, cfg, users, adminHash] = await Promise.all([
+    remoteGet('its_ponto_db'),
+    remoteGet('its_cfg'),
+    remoteGet('its_users'),
+    remoteGet('its_admin_hash'),
+  ]);
+  if(ponto && typeof ponto==='object'){ PONTO_DB = ponto; localStorage.setItem('its_ponto_db', JSON.stringify(ponto)); }
+  if(cfg && typeof cfg==='object'){ CFG = cfg; localStorage.setItem('its_cfg', JSON.stringify(cfg)); }
+  if(Array.isArray(users) && users.length){
+    USERS = users; USERS.forEach(u=>{if(!u.hash)u.hash=HASH_PADRAO;});
+    nextUserId = Math.max(0,...USERS.map(u=>u.id))+1;
+    localStorage.setItem('its_users', JSON.stringify(users));
+  }
+  if(typeof adminHash==='string' && adminHash){ localStorage.setItem('its_admin_hash', adminHash); }
+
+  // Re-renderiza com os dados do servidor.
+  try{ if(typeof renderUsers==='function') renderUsers(); }catch(_){}
+  try{ if(typeof updateDashboard==='function') updateDashboard(); }catch(_){}
+  try{ if(typeof loadConfig==='function') loadConfig(); }catch(_){}
+
+  // Na primeira execução (servidor vazio), envia o que já existe localmente.
+  if(ponto===null) remoteSet('its_ponto_db', PONTO_DB);
+  if(cfg===null) remoteSet('its_cfg', CFG);
+  if(users===null) remoteSet('its_users', USERS);
+}
+
 // ── INIT ──────────────────────────────────────────────────────────────
 renderTasks(TASKS);
 updateDashboard();
 applySession();
+hydrateFromAPI();
 </script>
 </body>
 </html>
