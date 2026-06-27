@@ -161,9 +161,13 @@ textarea{resize:vertical;min-height:72px}
         <label>E-mail</label>
         <input type="email" id="loginEmail" placeholder="seu.email@itscs.com.br" autocomplete="username" required>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="loginPassGroup">
         <label>Senha</label>
         <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password" required>
+      </div>
+      <div class="form-group" id="login2faGroup" style="display:none">
+        <label>Código do Google Authenticator</label>
+        <input type="text" id="login2faCode" inputmode="numeric" autocomplete="one-time-code" placeholder="000000" maxlength="6" style="letter-spacing:4px;text-align:center;font-size:1.1rem">
       </div>
       <div id="loginError" class="its-alert alert-error" style="display:none;margin-bottom:12px"></div>
       <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center"><i class="ti ti-login"></i> Entrar</button>
@@ -2650,24 +2654,87 @@ function findAccount(email){
   if(u)return {id:u.id,email:u.email,nome:u.nome,cargo:u.cargo,hash:u.hash,status:u.status,isAdmin:false};
   return null;
 }
+// Estado intermediario do 2FA (login_token retornado pela API).
+let _login2fa = null;
+
+function show2faField(on){
+  document.getElementById('login2faGroup').style.display = on ? '' : 'none';
+  if(on){ const f=document.getElementById('login2faCode'); f.value=''; setTimeout(()=>f.focus(),50); }
+}
+
+// Cria a sessao local a partir da resposta da API e entra no sistema.
+function entrarComToken(token, user){
+  sessionStorage.setItem('its_token', token);
+  sessionStorage.setItem('its_session', JSON.stringify({
+    id:user.id, email:user.email, nome:user.nome,
+    cargo:user.perfil, isAdmin:(user.perfil==='Admin'||user.perfil==='Gerente'),
+    totp_enabled:!!user.totp_enabled
+  }));
+  _login2fa=null; show2faField(false);
+  document.getElementById('loginError').style.display='none';
+  applySession();
+}
+
 async function doLogin(ev){
   ev.preventDefault();
   const email=document.getElementById('loginEmail').value.trim().toLowerCase();
   const pass=document.getElementById('loginPass').value;
   const err=document.getElementById('loginError');
+  const showErr=m=>{err.textContent=m;err.style.display='flex';};
+
+  // Passo 2: ja temos login_token aguardando o codigo do Authenticator.
+  if(_login2fa){
+    const code=document.getElementById('login2faCode').value.trim();
+    try{
+      const r=await fetch(`${ITS_API}/auth/2fa/verify`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({login_token:_login2fa,code})
+      });
+      const d=await r.json();
+      if(r.ok&&d.token){ entrarComToken(d.token,d.user); }
+      else{ showErr(d.error||'Código inválido.'); document.getElementById('login2faCode').value=''; }
+    }catch(_){ showErr('Falha de conexão com o servidor.'); }
+    return false;
+  }
+
+  // Passo 1: e-mail + senha contra a API.
+  try{
+    const r=await fetch(`${ITS_API}/auth/login`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,senha:pass})
+    });
+    const d=await r.json();
+    if(r.ok&&d.need2fa){
+      _login2fa=d.login_token; show2faField(true);
+      showErr('Digite o código de 6 dígitos do Google Authenticator.');
+      err.classList.remove('alert-error');
+      return false;
+    }
+    if(r.ok&&d.token){ entrarComToken(d.token,d.user); return false; }
+    showErr(d.error||'E-mail ou senha inválidos.');
+    document.getElementById('loginPass').value='';
+    return false;
+  }catch(_){
+    // API indisponivel → modo offline com a base local (sem sincronizacao).
+    return doLoginOffline(email,pass,showErr);
+  }
+}
+
+// Login local de contingência quando a API está fora do ar.
+function doLoginOffline(email,pass,showErr){
   const acc=findAccount(email);
   const hash=sha256(pass);
   if(acc&&!acc.isAdmin&&acc.status==='Inativo'){
-    err.textContent='Usuário inativo. Procure o administrador.';
-    err.style.display='flex';document.getElementById('loginPass').value='';return false;
+    showErr('Usuário inativo. Procure o administrador.');
+    document.getElementById('loginPass').value='';return false;
   }
   if(acc&&acc.hash===hash){
+    sessionStorage.removeItem('its_token');
     sessionStorage.setItem('its_session',JSON.stringify({id:acc.id||null,email:acc.email,nome:acc.nome,cargo:acc.cargo,isAdmin:acc.isAdmin}));
-    err.style.display='none';
+    document.getElementById('loginError').style.display='none';
     applySession();
   }else{
-    err.textContent='E-mail ou senha inválidos.';
-    err.style.display='flex';
+    showErr('E-mail ou senha inválidos.');
     document.getElementById('loginPass').value='';
   }
   return false;
@@ -2681,6 +2748,7 @@ function applySession(){
     const mp=document.getElementById('meuPerfil');
     if(mp)mp.innerHTML=`<i class="ti ti-user"></i> ${s.nome}`;
     applyNavPermissions(s.cargo);
+    if(sessionStorage.getItem('its_token')) hydrateFromAPI();
   }else{
     document.getElementById('loginScreen').style.display='flex';
   }
@@ -2725,7 +2793,11 @@ function applyNavPermissions(cargo){
   }
 }
 function logout(){
+  const t=sessionStorage.getItem('its_token');
+  if(t){ try{ fetch(`${ITS_API}/auth/logout`,{method:'POST',headers:authHeaders()}).catch(()=>{}); }catch(_){} }
   sessionStorage.removeItem('its_session');
+  sessionStorage.removeItem('its_token');
+  _login2fa=null; show2faField(false);
   document.getElementById('loginPass').value='';
   document.getElementById('loginEmail').value='';
   document.getElementById('loginScreen').style.display='flex';
@@ -2755,8 +2827,75 @@ function openProfile(){
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="changePassword()"><i class="ti ti-lock"></i> Salvar nova senha</button>
-    </div>`;
+    </div>
+    <hr class="divider">
+    <div class="section-title" style="font-size:.8rem;margin-bottom:6px">Verificação em duas etapas (Google Authenticator)</div>
+    <div id="twofaBox" style="font-size:.85rem;color:var(--its-muted)"></div>`;
   document.getElementById('modalOverlay').classList.add('open');
+  render2faBox();
+}
+
+// ── 2FA / GOOGLE AUTHENTICATOR ───────────────────────────────────────
+function render2faBox(){
+  const box=document.getElementById('twofaBox'); if(!box) return;
+  if(!sessionStorage.getItem('its_token')){
+    box.innerHTML='<div class="its-alert alert-error" style="display:flex">Disponível apenas com login pelo servidor (online).</div>';
+    return;
+  }
+  const s=getSession();
+  if(s&&s.totp_enabled){
+    box.innerHTML=`<div class="its-alert alert-success" style="display:flex;margin-bottom:10px"><i class="ti ti-shield-check"></i> 2FA ativado nesta conta.</div>
+      <div class="form-group"><label>Código atual para desativar</label><input type="text" id="tf2Code" inputmode="numeric" maxlength="6" placeholder="000000" style="letter-spacing:4px;text-align:center"></div>
+      <div id="tf2Err" class="its-alert alert-error" style="display:none;margin-bottom:8px"></div>
+      <button class="btn btn-ghost" onclick="disable2fa()"><i class="ti ti-shield-off"></i> Desativar 2FA</button>`;
+  }else{
+    box.innerHTML=`<p style="margin:0 0 10px">Proteja sua conta com um código que muda a cada 30 segundos.</p>
+      <button class="btn btn-primary" onclick="setup2fa()"><i class="ti ti-qrcode"></i> Configurar Google Authenticator</button>
+      <div id="tf2Setup" style="margin-top:12px"></div>`;
+  }
+}
+
+async function setup2fa(){
+  const wrap=document.getElementById('tf2Setup');
+  wrap.innerHTML='Gerando QR Code...';
+  try{
+    const r=await fetch(`${ITS_API}/auth/2fa/setup`,{method:'POST',headers:authHeaders()});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.error||'erro');
+    wrap.innerHTML=`
+      <p style="margin:0 0 8px">1. Abra o <b>Google Authenticator</b> e escaneie:</p>
+      <img src="${d.qr}" alt="QR Code" style="width:170px;height:170px;border:1px solid var(--its-border);border-radius:8px">
+      <p style="margin:10px 0 4px;font-size:.78rem">Ou digite a chave manualmente:</p>
+      <code style="font-size:.72rem;word-break:break-all">${d.secret}</code>
+      <div class="form-group" style="margin-top:12px"><label>2. Digite o código gerado para confirmar</label>
+        <input type="text" id="tf2Enable" inputmode="numeric" maxlength="6" placeholder="000000" style="letter-spacing:4px;text-align:center"></div>
+      <div id="tf2Err" class="its-alert alert-error" style="display:none;margin-bottom:8px"></div>
+      <button class="btn btn-primary" onclick="enable2fa()"><i class="ti ti-check"></i> Ativar 2FA</button>`;
+  }catch(e){ wrap.innerHTML=`<div class="its-alert alert-error" style="display:flex">Falha: ${e.message}</div>`; }
+}
+
+async function enable2fa(){
+  const code=document.getElementById('tf2Enable').value.trim();
+  const err=document.getElementById('tf2Err');
+  try{
+    const r=await fetch(`${ITS_API}/auth/2fa/enable`,{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify({code})});
+    const d=await r.json();
+    if(!r.ok){ err.textContent=d.error||'Código inválido.'; err.style.display='flex'; return; }
+    const s=getSession(); if(s){ s.totp_enabled=true; sessionStorage.setItem('its_session',JSON.stringify(s)); }
+    showToast('2FA ativado com sucesso!'); render2faBox();
+  }catch(_){ err.textContent='Falha de conexão.'; err.style.display='flex'; }
+}
+
+async function disable2fa(){
+  const code=document.getElementById('tf2Code').value.trim();
+  const err=document.getElementById('tf2Err');
+  try{
+    const r=await fetch(`${ITS_API}/auth/2fa/disable`,{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify({code})});
+    const d=await r.json();
+    if(!r.ok){ err.textContent=d.error||'Código inválido.'; err.style.display='flex'; return; }
+    const s=getSession(); if(s){ s.totp_enabled=false; sessionStorage.setItem('its_session',JSON.stringify(s)); }
+    showToast('2FA desativado.'); render2faBox();
+  }catch(_){ err.textContent='Falha de conexão.'; err.style.display='flex'; }
 }
 function changePassword(){
   const s=JSON.parse(sessionStorage.getItem('its_session')||'null');if(!s)return;
@@ -2783,19 +2922,26 @@ function changePassword(){
 // o app continua funcionando apenas com o localStorage local.
 const ITS_API = `http://${location.hostname}:3002`;
 
+function authHeaders(extra){
+  const t = sessionStorage.getItem('its_token');
+  return Object.assign({}, extra||{}, t ? {Authorization:`Bearer ${t}`} : {});
+}
+
 function remoteSet(chave, valor){
+  if(!sessionStorage.getItem('its_token')) return; // sem sessao no servidor → modo local
   try{
     fetch(`${ITS_API}/config/${chave}`, {
       method:'PUT',
-      headers:{'Content-Type':'application/json'},
+      headers: authHeaders({'Content-Type':'application/json'}),
       body: JSON.stringify(valor)
     }).catch(()=>{});
   }catch(_){}
 }
 
 async function remoteGet(chave){
+  if(!sessionStorage.getItem('its_token')) return undefined;
   try{
-    const r = await fetch(`${ITS_API}/config/${chave}`);
+    const r = await fetch(`${ITS_API}/config/${chave}`, { headers: authHeaders() });
     if(!r.ok) return undefined;
     return await r.json();
   }catch(_){ return undefined; }
@@ -2833,7 +2979,6 @@ async function hydrateFromAPI(){
 renderTasks(TASKS);
 updateDashboard();
 applySession();
-hydrateFromAPI();
 </script>
 </body>
 </html>

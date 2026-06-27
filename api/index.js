@@ -1,8 +1,11 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
+const { authenticator } = require('otplib');
+const QRCode = require('qrcode');
 const { Pool } = require('pg');
 
 // ---------------------------------------------------------------------------
@@ -56,22 +59,144 @@ app.get('/health', asyncH(async (_req, res) => {
 }));
 
 // ---------------------------------------------------------------------------
-// Autenticacao
+// Autenticacao (login por token + 2FA TOTP / Google Authenticator)
 // ---------------------------------------------------------------------------
+const APP_NAME = 'iTS Gerencial CASAN';
+const SESSION_DIAS = 7;
+// Tokens temporarios para o passo 2 do 2FA (em memoria, curta duracao).
+const pending2fa = new Map();
+
+function novoToken() { return crypto.randomBytes(32).toString('hex'); }
+
+async function criarSessao(usuarioId) {
+  const token = novoToken();
+  await pool.query(
+    `INSERT INTO casan_sessions (token, usuario_id, expires_at)
+     VALUES ($1, $2, now() + ($3 || ' days')::interval)`,
+    [token, usuarioId, String(SESSION_DIAS)]
+  );
+  return token;
+}
+
+function pubUser(u) {
+  return { id: u.id, nome: u.nome, email: u.email, perfil: u.perfil, totp_enabled: u.totp_enabled };
+}
+
+// Middleware: exige token de sessao valido (Authorization: Bearer <token>)
+const requireAuth = asyncH(async (req, res, next) => {
+  const h = req.headers.authorization || '';
+  const token = h.startsWith('Bearer ') ? h.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'nao autenticado' });
+  const { rows } = await pool.query(
+    `SELECT u.* FROM casan_sessions s
+       JOIN casan_usuarios u ON u.id = s.usuario_id
+      WHERE s.token = $1 AND s.expires_at > now() AND u.ativo = true`,
+    [token]
+  );
+  if (!rows[0]) return res.status(401).json({ error: 'sessao invalida ou expirada' });
+  req.user = rows[0];
+  req.token = token;
+  next();
+});
+
 app.post('/auth/login', asyncH(async (req, res) => {
   const { email, senha } = req.body || {};
   if (!email || !senha) return res.status(400).json({ error: 'email e senha obrigatorios' });
 
   const { rows } = await pool.query(
-    'SELECT id, nome, email, senha_hash, perfil, ativo FROM casan_usuarios WHERE email = $1',
+    'SELECT * FROM casan_usuarios WHERE email = $1',
     [String(email).toLowerCase()]
   );
   const u = rows[0];
   if (!u || !u.ativo || !(await bcrypt.compare(senha, u.senha_hash))) {
     return res.status(401).json({ error: 'Credenciais invalidas' });
   }
-  res.json({ id: u.id, nome: u.nome, email: u.email, perfil: u.perfil });
+
+  // Se tem 2FA ativo, exige o segundo passo.
+  if (u.totp_enabled) {
+    const loginToken = novoToken();
+    pending2fa.set(loginToken, { id: u.id, exp: Date.now() + 5 * 60 * 1000 });
+    return res.json({ need2fa: true, login_token: loginToken });
+  }
+
+  const token = await criarSessao(u.id);
+  res.json({ token, user: pubUser(u) });
 }));
+
+// Passo 2 do 2FA: valida o codigo do Google Authenticator.
+app.post('/auth/2fa/verify', asyncH(async (req, res) => {
+  const { login_token, code } = req.body || {};
+  const p = pending2fa.get(login_token);
+  if (!p || p.exp < Date.now()) {
+    pending2fa.delete(login_token);
+    return res.status(401).json({ error: 'sessao de login expirada, faca login novamente' });
+  }
+  const { rows } = await pool.query('SELECT * FROM casan_usuarios WHERE id = $1', [p.id]);
+  const u = rows[0];
+  if (!u || !u.totp_secret || !authenticator.verify({ token: String(code || ''), secret: u.totp_secret })) {
+    return res.status(401).json({ error: 'codigo invalido' });
+  }
+  pending2fa.delete(login_token);
+  const token = await criarSessao(u.id);
+  res.json({ token, user: pubUser(u) });
+}));
+
+app.post('/auth/logout', requireAuth, asyncH(async (req, res) => {
+  await pool.query('DELETE FROM casan_sessions WHERE token = $1', [req.token]);
+  res.json({ ok: true });
+}));
+
+app.get('/auth/me', requireAuth, asyncH(async (req, res) => {
+  res.json(pubUser(req.user));
+}));
+
+// ---------------------------------------------------------------------------
+// 2FA — cadastro do Google Authenticator
+// ---------------------------------------------------------------------------
+// Gera segredo e QR Code para o usuario escanear no app.
+app.post('/auth/2fa/setup', requireAuth, asyncH(async (req, res) => {
+  const secret = authenticator.generateSecret();
+  await pool.query(
+    'UPDATE casan_usuarios SET totp_secret = $2, updated_at = now() WHERE id = $1',
+    [req.user.id, secret]
+  );
+  const otpauth = authenticator.keyuri(req.user.email, APP_NAME, secret);
+  const qr = await QRCode.toDataURL(otpauth);
+  res.json({ qr, secret, otpauth });
+}));
+
+// Confirma o primeiro codigo e ativa o 2FA.
+app.post('/auth/2fa/enable', requireAuth, asyncH(async (req, res) => {
+  const { code } = req.body || {};
+  const { rows } = await pool.query('SELECT totp_secret FROM casan_usuarios WHERE id = $1', [req.user.id]);
+  const secret = rows[0] && rows[0].totp_secret;
+  if (!secret) return res.status(400).json({ error: 'inicie o cadastro do 2FA primeiro' });
+  if (!authenticator.verify({ token: String(code || ''), secret })) {
+    return res.status(401).json({ error: 'codigo invalido' });
+  }
+  await pool.query('UPDATE casan_usuarios SET totp_enabled = true, updated_at = now() WHERE id = $1', [req.user.id]);
+  res.json({ ok: true });
+}));
+
+// Desativa o 2FA (exige codigo atual).
+app.post('/auth/2fa/disable', requireAuth, asyncH(async (req, res) => {
+  const { code } = req.body || {};
+  const { rows } = await pool.query('SELECT totp_secret FROM casan_usuarios WHERE id = $1', [req.user.id]);
+  const secret = rows[0] && rows[0].totp_secret;
+  if (!secret || !authenticator.verify({ token: String(code || ''), secret })) {
+    return res.status(401).json({ error: 'codigo invalido' });
+  }
+  await pool.query(
+    'UPDATE casan_usuarios SET totp_enabled = false, totp_secret = NULL, updated_at = now() WHERE id = $1',
+    [req.user.id]
+  );
+  res.json({ ok: true });
+}));
+
+// ---------------------------------------------------------------------------
+// A PARTIR DAQUI todas as rotas exigem token de sessao valido.
+// ---------------------------------------------------------------------------
+app.use(requireAuth);
 
 // ---------------------------------------------------------------------------
 // Usuarios

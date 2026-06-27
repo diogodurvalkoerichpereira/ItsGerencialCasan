@@ -2,15 +2,30 @@
 -- Tabelas com prefixo casan_ para isolamento.
 
 CREATE TABLE IF NOT EXISTS casan_usuarios (
-  id          SERIAL PRIMARY KEY,
-  nome        TEXT NOT NULL,
-  email       TEXT UNIQUE NOT NULL,
-  senha_hash  TEXT NOT NULL,
-  perfil      TEXT NOT NULL DEFAULT 'Cliente',
-  ativo       BOOLEAN NOT NULL DEFAULT true,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+  id            SERIAL PRIMARY KEY,
+  nome          TEXT NOT NULL,
+  email         TEXT UNIQUE NOT NULL,
+  senha_hash    TEXT NOT NULL,
+  perfil        TEXT NOT NULL DEFAULT 'Cliente',
+  ativo         BOOLEAN NOT NULL DEFAULT true,
+  totp_secret   TEXT,
+  totp_enabled  BOOLEAN NOT NULL DEFAULT false,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Colunas adicionadas em bases ja existentes (idempotente)
+ALTER TABLE casan_usuarios ADD COLUMN IF NOT EXISTS totp_secret  TEXT;
+ALTER TABLE casan_usuarios ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN NOT NULL DEFAULT false;
+
+-- Sessoes (tokens de acesso a API)
+CREATE TABLE IF NOT EXISTS casan_sessions (
+  token       TEXT PRIMARY KEY,
+  usuario_id  INTEGER NOT NULL REFERENCES casan_usuarios(id) ON DELETE CASCADE,
+  expires_at  TIMESTAMPTZ NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_exp ON casan_sessions (expires_at);
 
 -- Registros de ponto, agrupados por mês (MM/YYYY)
 CREATE TABLE IF NOT EXISTS casan_ponto (
