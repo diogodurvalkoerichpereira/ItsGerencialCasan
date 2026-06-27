@@ -2223,6 +2223,7 @@ function registrarAviso(){
   const supervisor='';
   const canal=document.getElementById('aCanal').value;
   if(!canal){alert('Selecione o canal de envio.');return}
+  const [dy,dm,dd]=data.split('-');
   const now=new Date();const p=n=>String(n).padStart(2,'0');
   const _iHora=document.getElementById('aInserido').value;
   const _iData=document.getElementById('aInseridoData').value;
@@ -2231,7 +2232,6 @@ function registrarAviso(){
   const inseridoHora=_iHora||_horaAuto;
   const inseridoDataFmt=_iData?`${_iData.slice(8,10)}/${_iData.slice(5,7)}`:_dataAuto;
   const inserido=inseridoDataFmt===`${dd}/${dm}`?inseridoHora:`${inseridoDataFmt} ${inseridoHora}`;
-  const [dy,dm,dd]=data.split('-');
   AVISOS.unshift({
     id:nextAvisoId++,
     data:`${dd}/${dm}`,cidade,bairro,servico,recebido,inserido,supervisor,
