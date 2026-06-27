@@ -26,3 +26,20 @@ services:
       - SMTP_SECURE=${SMTP_SECURE}
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASS=${SMTP_PASS}
+
+  its-api:
+    build: ./api
+    container_name: its-api
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    environment:
+      # DATABASE_URL = "Postgres URL (internal)" do recurso Postgres no Coolify.
+      # Definir na aba Environment Variables do Coolify, NUNCA commitar no git.
+      - DATABASE_URL=${DATABASE_URL}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
+      - ADMIN_SENHA=${ADMIN_SENHA}
