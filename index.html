@@ -781,11 +781,13 @@ textarea{resize:vertical;min-height:72px}
           <hr class="divider">
           <div class="section-title" style="font-size:.8rem;margin-bottom:12px">Destinatários das Notificações</div>
           <div id="recipientList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
-          <div style="display:flex;gap:8px">
-            <input type="email" id="newRecipientEmail" placeholder="nome@empresa.com.br" style="flex:1">
-            <input type="text" id="newRecipientName" placeholder="Nome" style="width:160px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="email" id="newRecipientEmail" placeholder="nome@empresa.com.br" style="flex:1;min-width:180px">
+            <input type="text" id="newRecipientName" placeholder="Nome" style="width:140px">
+            <input type="text" id="newRecipientPhone" placeholder="WhatsApp (5548999998888)" style="width:190px">
             <button class="btn btn-outline btn-sm" onclick="addRecipient()"><i class="ti ti-plus"></i> Adicionar</button>
           </div>
+          <div style="font-size:.72rem;color:var(--its-muted);margin-top:5px">O telefone é opcional e só é usado se a integração WhatsApp (Z-API) estiver ativa. Formato: DDI+DDD+número (ex: 5548999998888).</div>
 
           <hr class="divider">
           <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
@@ -1862,6 +1864,13 @@ function registrarEmerg(){
     status:'Em Atendimento'
   });
   saveEmergs();
+  notifyWhatsApp(
+    `🚨 *Nova Emergência* — iTS Gerencial CASAN\n\n`+
+    `Cidade: ${cidade}\n`+
+    `Serviço: ${servico}\n`+
+    `Recebido: ${recebido}\n`+
+    `Dentro do prazo: ${prazo}`
+  );
   ['eData','eRecebido','eCidade','eProtocolo'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('eServico').selectedIndex=0;
   const firstTab=document.querySelector('#emergTabs .tab');
@@ -2348,6 +2357,14 @@ function registrarAviso(){
     situacao:document.getElementById('aSituacao').value
   });
   saveAvisos();
+  notifyWhatsApp(
+    `📢 *Novo Aviso* — iTS Gerencial CASAN\n\n`+
+    `Cidade: ${cidade}\n`+
+    `Bairro: ${bairro}\n`+
+    `Serviço: ${servico}\n`+
+    `Recebido: ${recebido}\n`+
+    `Canal: ${canal}`
+  );
   ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aInserido','aInseridoData'].forEach(id=>document.getElementById(id).value='');
   ['aServico','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
   const firstTab=document.querySelector('#avisosTabs .tab');
@@ -2580,7 +2597,7 @@ function renderRecipients(){
   list.innerHTML = CFG.recipients.map((r,i)=>`
     <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f8fafc;border:1px solid var(--its-border);border-radius:var(--radius-sm)">
       <i class="ti ti-mail" style="color:var(--its-muted);font-size:15px"></i>
-      <span style="flex:1;font-size:.83rem"><strong>${esc(r.name)}</strong> &lt;${esc(r.email)}&gt;</span>
+      <span style="flex:1;font-size:.83rem"><strong>${esc(r.name)}</strong> &lt;${esc(r.email)}&gt;${r.phone?` <span style="color:var(--its-success)"><i class="ti ti-brand-whatsapp"></i> ${esc(r.phone)}</span>`:''}</span>
       <button class="btn btn-ghost btn-sm" style="color:var(--its-danger);padding:2px 6px" onclick="removeRecipient(${i})"><i class="ti ti-trash"></i></button>
     </div>`).join('');
 }
@@ -2588,13 +2605,15 @@ function renderRecipients(){
 function addRecipient(){
   const email = document.getElementById('newRecipientEmail').value.trim();
   const name = document.getElementById('newRecipientName').value.trim();
+  const phone = document.getElementById('newRecipientPhone').value.replace(/\D/g,'');
   if(!email){alert('Informe o e-mail.');return}
   if(!email.includes('@')){alert('E-mail inválido.');return}
   if(!CFG.recipients) CFG.recipients=[];
   if(CFG.recipients.find(r=>r.email===email)){alert('E-mail já cadastrado.');return}
-  CFG.recipients.push({email, name: name||email});
+  CFG.recipients.push({email, name: name||email, phone});
   document.getElementById('newRecipientEmail').value='';
   document.getElementById('newRecipientName').value='';
+  document.getElementById('newRecipientPhone').value='';
   renderRecipients();
 }
 
@@ -2603,7 +2622,34 @@ function removeRecipient(i){
   renderRecipients();
 }
 
+// Envia uma mensagem de texto por WhatsApp (Z-API) para todos os destinatários
+// que tenham telefone cadastrado. O envio é feito pela API its-api (token fica
+// no servidor). Silencioso: não atrapalha o fluxo se a integração estiver off.
+function notifyWhatsApp(message){
+  if(!sessionStorage.getItem('its_token')) return;          // só modo online
+  if(!CFG.recipients||!CFG.recipients.length) return;
+  const fones=CFG.recipients.map(r=>(r.phone||'').replace(/\D/g,'')).filter(p=>p.length>=10);
+  if(!fones.length) return;
+  fones.forEach(phone=>{
+    fetch(`${ITS_API}/integracoes/zapi/send`,{
+      method:'POST',
+      headers:authHeaders({'Content-Type':'application/json'}),
+      body:JSON.stringify({phone,message})
+    }).catch(()=>{});
+  });
+}
+
 function sendNotification(task){
+  // WhatsApp (independente do e-mail; respeita destinatários com telefone).
+  notifyWhatsApp(
+    `🔔 *Nova Tarefa* — iTS Gerencial CASAN\n\n`+
+    `*${task.titulo}*\n`+
+    `Área: ${task.area||'—'}\n`+
+    `Responsável: ${task.resp||'—'}\n`+
+    `Prazo: ${fmtPrazo(task.prazo)||'—'}\n`+
+    `Prioridade: ${task.prio||'—'}\n`+
+    `Status: ${task.status||'—'}`
+  );
   if(!CFG.ativo||!CFG.smtpEmail||!CFG.smtpHost) return;
   if(!CFG.recipients||!CFG.recipients.length) return;
   // O envio SMTP é feito pelo its-email-service (backend nodemailer) na rede interna.
@@ -2633,6 +2679,13 @@ function sendNotification(task){
 }
 
 function sendNotificacaoConclusao(task){
+  notifyWhatsApp(
+    `✅ *Tarefa Concluída* — iTS Gerencial CASAN\n\n`+
+    `*${task.titulo}*\n`+
+    `Área: ${task.area||'—'}\n`+
+    `Responsável: ${task.resp||'—'}\n`+
+    `Concluída por: ${task.criadoPor||'—'}`
+  );
   if(!CFG.ativo||!CFG.smtpEmail||!CFG.smtpHost) return;
   if(!CFG.recipients||!CFG.recipients.length) return;
   const destinatarios=CFG.recipients.map(r=>r.email).join(',');
