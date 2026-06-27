@@ -843,7 +843,11 @@ textarea{resize:vertical;min-height:72px}
           </div>
           <div class="form-group">
             <label>ID do Grupo</label>
-            <input type="text" id="zapiGroupId" placeholder="120363012345678901-group">
+            <div style="display:flex;gap:8px">
+              <input type="text" id="zapiGroupId" placeholder="120363012345678901-group" style="flex:1">
+              <button class="btn btn-ghost btn-sm" onclick="buscarGruposZapi()"><i class="ti ti-search"></i> Buscar meus grupos</button>
+            </div>
+            <select id="zapiGroupSelect" style="margin-top:8px;display:none" onchange="document.getElementById('zapiGroupId').value=this.value"></select>
           </div>
           <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap">
             <div style="display:flex;align-items:center;gap:8px">
@@ -2603,6 +2607,21 @@ async function testarZapi(){
     if(r.ok && d.connected){ zapiMsg('<div class="its-alert alert-success"><i class="ti ti-check"></i> Conectado! WhatsApp pareado e pronto.</div>'); }
     else if(r.ok){ zapiMsg(`<div class="its-alert alert-warning"><i class="ti ti-alert-triangle"></i> Instância respondeu, mas não está conectada (${esc(d.status||'desconhecido')}). Verifique o QR Code no painel Z-API.</div>`); }
     else { zapiMsg(`<div class="its-alert alert-error"><i class="ti ti-x"></i> ${esc(d.error||'Falha na conexão.')}</div>`); }
+  }catch(_){ zapiMsg('<div class="its-alert alert-error"><i class="ti ti-x"></i> Serviço indisponível.</div>'); }
+}
+
+async function buscarGruposZapi(){
+  if(!sessionStorage.getItem('its_token')){ zapiMsg('<div class="its-alert alert-error">Faça login primeiro.</div>'); return; }
+  zapiMsg('<div class="its-alert alert-info"><i class="ti ti-loader"></i> Buscando grupos...</div>');
+  try{
+    const r=await fetch(`${ITS_API}/integracoes/zapi/groups`,{headers:authHeaders()});
+    const d=await r.json().catch(()=>([]));
+    if(!r.ok){ zapiMsg(`<div class="its-alert alert-error"><i class="ti ti-x"></i> ${esc(d.error||'Falha ao buscar grupos.')}</div>`); return; }
+    const sel=document.getElementById('zapiGroupSelect');
+    if(!Array.isArray(d)||!d.length){ sel.style.display='none'; zapiMsg('<div class="its-alert alert-warning">Nenhum grupo encontrado. O número Z-API precisa ser membro do grupo.</div>'); return; }
+    sel.innerHTML='<option value="">Selecione um grupo...</option>'+d.map(g=>`<option value="${esc(g.id)}">${esc(g.name)} — ${esc(g.id)}</option>`).join('');
+    sel.style.display='block';
+    zapiMsg(`<div class="its-alert alert-success"><i class="ti ti-check"></i> ${d.length} grupo(s) encontrado(s). Escolha na lista.</div>`);
   }catch(_){ zapiMsg('<div class="its-alert alert-error"><i class="ti ti-x"></i> Serviço indisponível.</div>'); }
 }
 

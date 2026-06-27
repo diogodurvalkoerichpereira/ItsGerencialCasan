@@ -521,6 +521,27 @@ app.post('/integracoes/zapi/send-group', asyncH(async (req, res) => {
   res.json(out);
 }));
 
+// Lista os grupos em que o numero conectado participa (para o usuario pegar o ID).
+app.get('/integracoes/zapi/groups', requirePerfil(...PERFIS_GESTAO), asyncH(async (_req, res) => {
+  const c = await getZapi();
+  if (!c.instance || !c.token) return res.status(400).json({ error: 'configure a Z-API primeiro' });
+  try {
+    const r = await fetch(`${zapiBase(c)}/chats`, {
+      headers: c.clientToken ? { 'Client-Token': c.clientToken } : {},
+    });
+    const d = await r.json().catch(() => ([]));
+    if (!r.ok) return res.status(502).json({ error: (d && d.error) || `Z-API respondeu HTTP ${r.status}` });
+    const lista = Array.isArray(d) ? d : [];
+    const grupos = lista
+      .filter((x) => x && (x.isGroup === true || /(-group|@g\.us)$/.test(String(x.phone || x.id || ''))))
+      .map((x) => ({ id: String(x.phone || x.id || ''), name: x.name || x.subject || x.phone || '(sem nome)' }))
+      .filter((g) => g.id);
+    res.json(grupos);
+  } catch (e) {
+    res.status(502).json({ error: 'nao foi possivel listar grupos: ' + e.message });
+  }
+}));
+
 // Teste manual do grupo (gestao), ignora a flag groupAtivo.
 app.post('/integracoes/zapi/test-group', requirePerfil(...PERFIS_GESTAO), asyncH(async (_req, res) => {
   const out = await enviarGrupo('✅ Teste de grupo — iTS Gerencial CASAN. Notificações chegarão aqui!', { ignorarFlag: true })
