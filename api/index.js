@@ -19,7 +19,20 @@ const pool = new Pool({
 });
 
 const app = express();
-app.use(cors());
+
+// CORS restrito: apenas as origens permitidas (CORS_ORIGINS no Coolify,
+// separadas por virgula). O front roda same-origin via /api, entao o padrao
+// e' o dominio de producao. Sem credenciais por cookie (auth e' Bearer token).
+const ORIGENS = (process.env.CORS_ORIGINS ||
+  'https://casan.its-customer-service.online')
+  .split(',').map((s) => s.trim()).filter(Boolean);
+app.use(cors({
+  origin(origin, cb) {
+    // Requests same-origin/curl nao mandam Origin → permitidos.
+    if (!origin || ORIGENS.includes(origin)) return cb(null, true);
+    return cb(new Error('Origem nao permitida pelo CORS'));
+  },
+}));
 app.use(express.json({ limit: '5mb' }));
 
 // Permite acesso via prefixo de caminho /api (Traefik roteia /api/* ate aqui
@@ -94,6 +107,40 @@ function pubUser(u) {
   return { id: u.id, nome: u.nome, email: u.email, perfil: u.perfil, totp_enabled: u.totp_enabled };
 }
 
+// ---------------------------------------------------------------------------
+// Rate limit simples para o login (em memoria). Bloqueia forca bruta por
+// chave email+IP: max de tentativas falhas numa janela deslizante.
+// ---------------------------------------------------------------------------
+const LOGIN_MAX = 8;            // tentativas falhas
+const LOGIN_JANELA = 15 * 60e3; // 15 minutos
+const loginTentativas = new Map(); // chave -> { n, reset }
+
+function loginChave(req, email) {
+  const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim();
+  return `${ip}|${String(email || '').toLowerCase()}`;
+}
+function loginBloqueado(chave) {
+  const e = loginTentativas.get(chave);
+  if (!e) return false;
+  if (Date.now() > e.reset) { loginTentativas.delete(chave); return false; }
+  return e.n >= LOGIN_MAX;
+}
+function registrarFalha(chave) {
+  const e = loginTentativas.get(chave);
+  if (!e || Date.now() > e.reset) loginTentativas.set(chave, { n: 1, reset: Date.now() + LOGIN_JANELA });
+  else e.n += 1;
+}
+function limparTentativas(chave) { loginTentativas.delete(chave); }
+
+// Middleware: exige que o usuario autenticado tenha um dos perfis informados.
+const requirePerfil = (...perfis) => (req, res, next) => {
+  if (!req.user || !perfis.includes(req.user.perfil)) {
+    return res.status(403).json({ error: 'acesso negado: permissao insuficiente' });
+  }
+  next();
+};
+const PERFIS_GESTAO = ['Admin', 'Gerente'];
+
 // Middleware: exige token de sessao valido (Authorization: Bearer <token>)
 const requireAuth = asyncH(async (req, res, next) => {
   const h = req.headers.authorization || '';
@@ -115,14 +162,21 @@ app.post('/auth/login', asyncH(async (req, res) => {
   const { email, senha } = req.body || {};
   if (!email || !senha) return res.status(400).json({ error: 'email e senha obrigatorios' });
 
+  const chave = loginChave(req, email);
+  if (loginBloqueado(chave)) {
+    return res.status(429).json({ error: 'Muitas tentativas. Tente novamente em alguns minutos.' });
+  }
+
   const { rows } = await pool.query(
     'SELECT * FROM casan_usuarios WHERE email = $1',
     [String(email).toLowerCase()]
   );
   const u = rows[0];
   if (!u || !u.ativo || !(await bcrypt.compare(senha, u.senha_hash))) {
+    registrarFalha(chave);
     return res.status(401).json({ error: 'Credenciais invalidas' });
   }
+  limparTentativas(chave);
 
   // Se tem 2FA ativo, exige o segundo passo.
   if (u.totp_enabled) {
@@ -236,7 +290,7 @@ app.get('/usuarios', asyncH(async (_req, res) => {
   res.json(rows);
 }));
 
-app.post('/usuarios', asyncH(async (req, res) => {
+app.post('/usuarios', requirePerfil(...PERFIS_GESTAO), asyncH(async (req, res) => {
   const { nome, email, senha, perfil } = req.body || {};
   if (!nome || !email || !senha) return res.status(400).json({ error: 'nome, email e senha obrigatorios' });
   const hash = await bcrypt.hash(senha, 12);
@@ -249,7 +303,7 @@ app.post('/usuarios', asyncH(async (req, res) => {
   res.status(201).json(rows[0]);
 }));
 
-app.put('/usuarios/:id', asyncH(async (req, res) => {
+app.put('/usuarios/:id', requirePerfil(...PERFIS_GESTAO), asyncH(async (req, res) => {
   const { nome, perfil, ativo, senha } = req.body || {};
   const hash = senha ? await bcrypt.hash(senha, 12) : null;
   const { rows } = await pool.query(
@@ -267,7 +321,7 @@ app.put('/usuarios/:id', asyncH(async (req, res) => {
   res.json(rows[0]);
 }));
 
-app.delete('/usuarios/:id', asyncH(async (req, res) => {
+app.delete('/usuarios/:id', requirePerfil(...PERFIS_GESTAO), asyncH(async (req, res) => {
   await pool.query('DELETE FROM casan_usuarios WHERE id = $1', [req.params.id]);
   res.json({ ok: true });
 }));
@@ -341,7 +395,13 @@ app.get('/config/:chave', asyncH(async (req, res) => {
   res.json(rows[0] ? rows[0].valor : null);
 }));
 
+// Chaves de configuracao sensiveis: escrita restrita a perfis de gestao.
+const CONFIG_SENSIVEL = new Set(['its_users', 'its_admin_hash', 'its_cfg']);
+
 app.put('/config/:chave', asyncH(async (req, res) => {
+  if (CONFIG_SENSIVEL.has(req.params.chave) && !PERFIS_GESTAO.includes(req.user.perfil)) {
+    return res.status(403).json({ error: 'acesso negado: permissao insuficiente' });
+  }
   await pool.query(
     `INSERT INTO casan_config (chave, valor, updated_at) VALUES ($1, $2, now())
      ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor, updated_at = now()`,

@@ -1212,7 +1212,7 @@ function generateReport(){
     {v:alta,l:'Prioridade Complexa',bg:'#fef2f2',c:'var(--its-danger)'},
   ].map(s=>`<div class="stat-card" style="background:${s.bg}"><div class="stat-value" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('');
   const rowsHtml=list.map(t=>
-    `<tr><td>${t.titulo}</td><td>${t.area}</td><td>${t.resp}</td><td>${fmtPrazo(t.prazo)}</td><td>${prioBadge(t.prio)}</td><td>${statusBadge(t.status)}</td></tr>`
+    `<tr><td>${esc(t.titulo)}</td><td>${esc(t.area)}</td><td>${esc(t.resp)}</td><td>${fmtPrazo(t.prazo)}</td><td>${prioBadge(t.prio)}</td><td>${statusBadge(t.status)}</td></tr>`
   ).join('');
   document.getElementById('reportResult').innerHTML=`
     <div class="card">
@@ -1387,9 +1387,9 @@ function gerarRelatorioInd12(){
     const np=c.resolvidoEm?min<=60:null;
     const prazoHtml=np===null?'—':np?`<span style="color:var(--its-success);font-weight:600">✓ No prazo</span>`:`<span style="color:var(--its-danger);font-weight:600">✗ Fora do prazo</span>`;
     return`<tr>
-      <td style="font-weight:600">${c.titulo}</td>
-      <td style="font-size:.78rem">${c.criado}</td>
-      <td style="font-size:.78rem">${c.resolvidoEm||'—'}</td>
+      <td style="font-weight:600">${esc(c.titulo)}</td>
+      <td style="font-size:.78rem">${esc(c.criado)}</td>
+      <td style="font-size:.78rem">${esc(c.resolvidoEm)||'—'}</td>
       <td style="font-size:.78rem">${fmtTempoChamado(min)}</td>
       <td>${chamadoStatusBadge(c.status)}</td>
       <td style="font-size:.82rem">${prazoHtml}</td>
@@ -1576,7 +1576,7 @@ function updateDashboard(){
   const up=TASKS.filter(t=>t.prazo&&t.prazo.slice(0,10)>=todayStr&&t.prazo.slice(0,10)<=in7Str&&t.status!=='Concluído'&&t.status!=='Cancelado pela iTS'&&t.status!=='Cancelado pela CASAN')
     .sort((a,b)=>a.prazo.localeCompare(b.prazo));
   document.getElementById('upcoming').innerHTML=up.length
-    ?up.map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--its-border)"><span class="priority-dot ${prioClass(t.prio)}"></span><div style="flex:1"><div style="font-size:.83rem;font-weight:600">${t.titulo}</div><div style="font-size:.75rem;color:var(--its-muted)">${t.resp} · ${t.area}</div></div><span style="font-size:.78rem;color:var(--its-danger);font-weight:600">${fmtPrazo(t.prazo)}</span>${statusBadge(t.status)}</div>`).join('')
+    ?up.map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--its-border)"><span class="priority-dot ${prioClass(t.prio)}"></span><div style="flex:1"><div style="font-size:.83rem;font-weight:600">${esc(t.titulo)}</div><div style="font-size:.75rem;color:var(--its-muted)">${esc(t.resp)} · ${esc(t.area)}</div></div><span style="font-size:.78rem;color:var(--its-danger);font-weight:600">${fmtPrazo(t.prazo)}</span>${statusBadge(t.status)}</div>`).join('')
     :`<div class="empty-state"><i class="ti ti-circle-check" style="color:var(--its-success)"></i>Nenhuma tarefa vencendo nos próximos 7 dias</div>`;
 }
 
@@ -1702,14 +1702,14 @@ function renderEmerg(list){
   em.style.display='none';
   tb.innerHTML=list.map(e=>`
     <tr>
-      <td style="color:var(--its-muted);font-size:.78rem">${e.data||'—'}</td>
-      <td style="font-size:.83rem;font-weight:600">${e.cidade||'—'}</td>
-      <td style="font-size:.8rem">${e.recebido||'—'}</td>
-      <td style="font-size:.8rem">${e.enviado||'—'}</td>
-      <td style="font-size:.75rem;color:var(--its-muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.protocolo||'—'}</td>
-      <td><span class="badge ${e.servico==='Esgoto'?'badge-orange':'badge-blue'}">${e.servico||'—'}</span></td>
-      <td style="font-size:.8rem">${e.canal||'—'}</td>
-      <td><span style="font-size:.8rem;font-weight:700;color:var(--its-success);background:#f0fdf4;padding:2px 8px;border-radius:4px">${e.prazo||'00:00'}</span></td>
+      <td style="color:var(--its-muted);font-size:.78rem">${esc(e.data)||'—'}</td>
+      <td style="font-size:.83rem;font-weight:600">${esc(e.cidade)||'—'}</td>
+      <td style="font-size:.8rem">${esc(e.recebido)||'—'}</td>
+      <td style="font-size:.8rem">${esc(e.enviado)||'—'}</td>
+      <td style="font-size:.75rem;color:var(--its-muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.protocolo)||'—'}</td>
+      <td><span class="badge ${e.servico==='Esgoto'?'badge-orange':'badge-blue'}">${esc(e.servico)||'—'}</span></td>
+      <td style="font-size:.8rem">${esc(e.canal)||'—'}</td>
+      <td><span style="font-size:.8rem;font-weight:700;color:var(--its-success);background:#f0fdf4;padding:2px 8px;border-radius:4px">${esc(e.prazo)||'00:00'}</span></td>
       <td>${emergStatusBadge(e.status)}</td>
       <td>
         <div style="display:flex;gap:4px">
@@ -1785,19 +1785,19 @@ function verEmerg(id){
   document.getElementById('modalContent').innerHTML=`
     <div style="margin-bottom:14px">${emergStatusBadge(e.status)}</div>
     <div class="form-row">
-      <div class="form-group"><label>Data</label><div style="font-size:.88rem;font-weight:600">${e.data}</div></div>
-      <div class="form-group"><label>Cidade</label><div style="font-size:.88rem;font-weight:600">${e.cidade}</div></div>
+      <div class="form-group"><label>Data</label><div style="font-size:.88rem;font-weight:600">${esc(e.data)}</div></div>
+      <div class="form-group"><label>Cidade</label><div style="font-size:.88rem;font-weight:600">${esc(e.cidade)}</div></div>
     </div>
     <div class="form-row-3">
-      <div class="form-group"><label>Recebido</label><div style="font-size:.88rem">${e.recebido}</div></div>
-      <div class="form-group"><label>Enviado</label><div style="font-size:.88rem">${e.enviado}</div></div>
-      <div class="form-group"><label>Dentro do Prazo</label><div style="font-size:.88rem;font-weight:700;color:var(--its-success)">${e.prazo}</div></div>
+      <div class="form-group"><label>Recebido</label><div style="font-size:.88rem">${esc(e.recebido)}</div></div>
+      <div class="form-group"><label>Enviado</label><div style="font-size:.88rem">${esc(e.enviado)}</div></div>
+      <div class="form-group"><label>Dentro do Prazo</label><div style="font-size:.88rem;font-weight:700;color:var(--its-success)">${esc(e.prazo)}</div></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>Serviço</label><div style="font-size:.88rem">${e.servico}</div></div>
+      <div class="form-group"><label>Serviço</label><div style="font-size:.88rem">${esc(e.servico)}</div></div>
     </div>
-    <div class="form-group"><label>Protocolo</label><div style="font-size:.85rem;background:#f8fafc;padding:8px 10px;border-radius:6px">${e.protocolo||'—'}</div></div>
-    <div class="form-group"><label>Canal de Envio</label><div style="font-size:.88rem">${e.canal}</div></div>
+    <div class="form-group"><label>Protocolo</label><div style="font-size:.85rem;background:#f8fafc;padding:8px 10px;border-radius:6px">${esc(e.protocolo)||'—'}</div></div>
+    <div class="form-group"><label>Canal de Envio</label><div style="font-size:.88rem">${esc(e.canal)}</div></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-ghost" onclick="closeModal()">Fechar</button>
       <button class="btn btn-primary" onclick="cycleEmergStatus(${e.id});closeModal()"><i class="ti ti-refresh"></i> Avançar Status</button>
@@ -2189,14 +2189,14 @@ function renderAvisos(list){
   em.style.display='none';
   tb.innerHTML=list.map(a=>`
     <tr>
-      <td style="font-size:.78rem;color:var(--its-muted)">${a.data}</td>
-      <td style="font-size:.83rem;font-weight:600">${a.cidade}</td>
-      <td style="font-size:.8rem;color:var(--its-muted)">${a.bairro||'—'}</td>
-      <td><span class="badge ${a.servico==='Esgoto'?'badge-orange':a.servico==='Água e Esgoto'?'badge-blue':'badge-blue'}">${a.servico||'—'}</span></td>
-      <td style="font-size:.8rem">${a.recebido}</td>
-      <td style="font-size:.8rem">${a.inserido}</td>
-      <td style="font-size:.8rem;font-weight:600;color:var(--its-sidebar)">${a.prevNorm||'—'}</td>
-      <td style="font-size:.8rem">${a.canal}</td>
+      <td style="font-size:.78rem;color:var(--its-muted)">${esc(a.data)}</td>
+      <td style="font-size:.83rem;font-weight:600">${esc(a.cidade)}</td>
+      <td style="font-size:.8rem;color:var(--its-muted)">${esc(a.bairro)||'—'}</td>
+      <td><span class="badge ${a.servico==='Esgoto'?'badge-orange':a.servico==='Água e Esgoto'?'badge-blue':'badge-blue'}">${esc(a.servico)||'—'}</span></td>
+      <td style="font-size:.8rem">${esc(a.recebido)}</td>
+      <td style="font-size:.8rem">${esc(a.inserido)}</td>
+      <td style="font-size:.8rem;font-weight:600;color:var(--its-sidebar)">${esc(a.prevNorm)||'—'}</td>
+      <td style="font-size:.8rem">${esc(a.canal)}</td>
       <td>${situacaoBadge(a.situacao)}</td>
       <td>
         <div style="display:flex;gap:4px">
@@ -2270,7 +2270,7 @@ function editarSituacao(id){
   document.getElementById('modalTitle').textContent='Alterar Situação — '+a.cidade;
   document.getElementById('modalContent').innerHTML=`
     <div style="margin-bottom:14px;font-size:.85rem;color:var(--its-muted)">
-      ${a.data} · ${a.recebido} → ${a.inserido}
+      ${esc(a.data)} · ${esc(a.recebido)} → ${esc(a.inserido)}
     </div>
     <div class="form-group">
       <label>Situação atual</label>
