@@ -399,6 +399,10 @@ textarea{resize:vertical;min-height:72px}
         </div>
         <button class="btn btn-primary" onclick="generateReport()"><i class="ti ti-file-report"></i> Gerar Relatório</button>
       </div>
+      <div id="reportToolbar" style="display:none;justify-content:flex-end;gap:8px;margin-bottom:10px">
+        <button class="btn btn-outline btn-sm" onclick="imprimirRelatorio()"><i class="ti ti-printer"></i> Imprimir</button>
+        <button class="btn btn-primary btn-sm" onclick="imprimirRelatorio()"><i class="ti ti-file-type-pdf"></i> Baixar PDF</button>
+      </div>
       <div id="reportResult" style="display:none"></div>
     </div>
 
@@ -1186,6 +1190,44 @@ function onRptTipoChange(){
   }
 }
 
+// Exibe o resultado do relatório e a barra de ações (imprimir / PDF).
+function mostrarRelatorio(){
+  document.getElementById('reportResult').style.display='block';
+  document.getElementById('reportToolbar').style.display='flex';
+  showToast('Relatório gerado!');
+}
+
+// Abre uma janela de impressão com o relatório (o usuário escolhe "Salvar
+// como PDF" no diálogo de impressão do navegador). Sem dependências externas.
+function imprimirRelatorio(){
+  const conteudo=document.getElementById('reportResult');
+  if(!conteudo||conteudo.style.display==='none'){showToast('Gere um relatório primeiro.','warn');return;}
+  const w=window.open('','_blank','width=900,height=700');
+  if(!w){showToast('Permita pop-ups para imprimir/baixar.','warn');return;}
+  w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+    <title>Relatório iTS Gerencial CASAN</title>
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      body{font-family:'Segoe UI',system-ui,Arial,sans-serif;color:#1e293b;padding:24px;background:#fff}
+      .card{border:1px solid #e2e8f0;border-radius:10px;padding:18px}
+      table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+      th{background:#183c5a;color:#fff;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+      td{padding:7px 10px;border-bottom:1px solid #e2e8f0}
+      .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+      .stat-card{border-radius:8px;padding:12px;text-align:center}
+      .stat-value{font-size:1.4rem;font-weight:800}
+      .stat-label{font-size:.7rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em}
+      .section-title{font-weight:700;color:#183c5a;border-left:3px solid #E85928;padding-left:8px;margin:14px 0 8px;text-transform:uppercase;font-size:.7rem;letter-spacing:.05em}
+      .divider,hr{border:none;border-top:1px solid #e2e8f0;margin:12px 0}
+      .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid #e2e8f0}
+      .logo-icon{background:#E85928;color:#fff;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-weight:900}
+      @media print{body{padding:0}.card{border:none}}
+    </style></head><body>${conteudo.innerHTML}</body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>{ w.print(); }, 350);
+}
+
 function generateReport(){
   const tipo=document.getElementById('rptTipo').value;
   if(tipo==='ponto-ind06'){gerarRelatorioPonto();return;}
@@ -1231,8 +1273,7 @@ function generateReport(){
         <tbody>${rowsHtml}</tbody>
       </table>
     </div>`;
-  document.getElementById('reportResult').style.display='block';
-  showToast('Relatório gerado!');
+  mostrarRelatorio();
 }
 
 function gerarRelatorioPonto(){
@@ -1304,8 +1345,7 @@ function gerarRelatorioPonto(){
         </div>
       </div>
     </div>`;
-  document.getElementById('reportResult').style.display='block';
-  showToast('Relatório gerado!');
+  mostrarRelatorio();
 }
 function gerarRelatorioInd09(){
   if(!EMERGS.length){showToast('Nenhuma emergência cadastrada.','warn');return;}
@@ -1359,8 +1399,7 @@ function gerarRelatorioInd09(){
         </div>
       </div>
     </div>`;
-  document.getElementById('reportResult').style.display='block';
-  showToast('Relatório gerado!');
+  mostrarRelatorio();
 }
 
 function gerarRelatorioInd12(){
@@ -1441,8 +1480,7 @@ function gerarRelatorioInd12(){
         <tbody>${linhas}</tbody>
       </table>
     </div>`;
-  document.getElementById('reportResult').style.display='block';
-  showToast('Relatório gerado!');
+  mostrarRelatorio();
 }
 
 function gerarRelatorioInd11(){
@@ -1527,8 +1565,7 @@ function gerarRelatorioInd11(){
         <tbody>${breakdownRows}</tbody>
       </table>
     </div>`;
-  document.getElementById('reportResult').style.display='block';
-  showToast('Relatório gerado!');
+  mostrarRelatorio();
 }
 
 function exportCSV(){
