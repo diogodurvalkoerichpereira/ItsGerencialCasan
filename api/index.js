@@ -390,15 +390,20 @@ crud('chamados');
 // ---------------------------------------------------------------------------
 // Config (chave/valor)
 // ---------------------------------------------------------------------------
+// Chaves de configuracao sensiveis: escrita restrita a perfis de gestao.
+const CONFIG_SENSIVEL = new Set(['its_users', 'its_admin_hash', 'its_cfg']);
+// Chaves que guardam segredos (tokens): nunca acessiveis pelo /config generico.
+// Sao manipuladas apenas pelas rotas dedicadas /integracoes/*.
+const CONFIG_BLOQUEADA = new Set(['its_zapi']);
+
 app.get('/config/:chave', asyncH(async (req, res) => {
+  if (CONFIG_BLOQUEADA.has(req.params.chave)) return res.status(403).json({ error: 'chave protegida' });
   const { rows } = await pool.query('SELECT valor FROM casan_config WHERE chave = $1', [req.params.chave]);
   res.json(rows[0] ? rows[0].valor : null);
 }));
 
-// Chaves de configuracao sensiveis: escrita restrita a perfis de gestao.
-const CONFIG_SENSIVEL = new Set(['its_users', 'its_admin_hash', 'its_cfg']);
-
 app.put('/config/:chave', asyncH(async (req, res) => {
+  if (CONFIG_BLOQUEADA.has(req.params.chave)) return res.status(403).json({ error: 'chave protegida' });
   if (CONFIG_SENSIVEL.has(req.params.chave) && !PERFIS_GESTAO.includes(req.user.perfil)) {
     return res.status(403).json({ error: 'acesso negado: permissao insuficiente' });
   }
@@ -408,6 +413,81 @@ app.put('/config/:chave', asyncH(async (req, res) => {
     [req.params.chave, JSON.stringify(req.body ?? null)]
   );
   res.json({ ok: true });
+}));
+
+// ---------------------------------------------------------------------------
+// Integracao Z-API (WhatsApp). Credenciais guardadas em casan_config
+// (chave its_zapi) e usadas SOMENTE no servidor. O navegador nunca recebe os
+// tokens — apenas flags de "configurado". Envio/teste feitos daqui.
+// ---------------------------------------------------------------------------
+async function getZapi() {
+  const { rows } = await pool.query('SELECT valor FROM casan_config WHERE chave = $1', ['its_zapi']);
+  return (rows[0] && rows[0].valor) || {};
+}
+function zapiBase(cfg) {
+  return `https://api.z-api.io/instances/${cfg.instance}/token/${cfg.token}`;
+}
+
+// Retorna apenas flags, nunca os tokens.
+app.get('/integracoes/zapi/config', requirePerfil(...PERFIS_GESTAO), asyncH(async (_req, res) => {
+  const c = await getZapi();
+  res.json({ instance: c.instance || '', ativo: !!c.ativo, tokenSet: !!c.token, clientTokenSet: !!c.clientToken });
+}));
+
+// Salva/atualiza. Tokens vazios mantem os ja gravados (merge).
+app.put('/integracoes/zapi/config', requirePerfil(...PERFIS_GESTAO), asyncH(async (req, res) => {
+  const atual = await getZapi();
+  const { instance, token, clientToken, ativo } = req.body || {};
+  const novo = {
+    instance: (instance != null ? String(instance).trim() : atual.instance) || '',
+    token: token ? String(token).trim() : (atual.token || ''),
+    clientToken: clientToken ? String(clientToken).trim() : (atual.clientToken || ''),
+    ativo: !!ativo,
+  };
+  await pool.query(
+    `INSERT INTO casan_config (chave, valor, updated_at) VALUES ('its_zapi', $1, now())
+     ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor, updated_at = now()`,
+    [JSON.stringify(novo)]
+  );
+  res.json({ ok: true });
+}));
+
+// Testa a conexao consultando o status da instancia na Z-API.
+app.post('/integracoes/zapi/test', requirePerfil(...PERFIS_GESTAO), asyncH(async (_req, res) => {
+  const c = await getZapi();
+  if (!c.instance || !c.token) return res.status(400).json({ error: 'configure Instance ID e Token primeiro' });
+  try {
+    const r = await fetch(`${zapiBase(c)}/status`, {
+      headers: c.clientToken ? { 'Client-Token': c.clientToken } : {},
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) return res.status(502).json({ error: d.error || `Z-API respondeu HTTP ${r.status}` });
+    // Z-API status: { connected: true/false, ... }
+    res.json({ connected: !!d.connected, status: d.connected ? 'connected' : (d.error || 'desconectado') });
+  } catch (e) {
+    res.status(502).json({ error: 'nao foi possivel contatar a Z-API: ' + e.message });
+  }
+}));
+
+// Envia mensagem de texto via Z-API.
+app.post('/integracoes/zapi/send', asyncH(async (req, res) => {
+  const { phone, message } = req.body || {};
+  if (!phone || !message) return res.status(400).json({ error: 'phone e message obrigatorios' });
+  const c = await getZapi();
+  if (!c.ativo) return res.status(400).json({ error: 'integracao WhatsApp desativada' });
+  if (!c.instance || !c.token) return res.status(400).json({ error: 'Z-API nao configurada' });
+  try {
+    const r = await fetch(`${zapiBase(c)}/send-text`, {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, c.clientToken ? { 'Client-Token': c.clientToken } : {}),
+      body: JSON.stringify({ phone: String(phone).replace(/\D/g, ''), message: String(message) }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) return res.status(502).json({ error: d.error || `Z-API respondeu HTTP ${r.status}` });
+    res.json({ ok: true, id: d.messageId || d.id || null });
+  } catch (e) {
+    res.status(502).json({ error: 'falha ao enviar: ' + e.message });
+  }
 }));
 
 const PORT = process.env.PORT || 3002;

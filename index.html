@@ -797,6 +797,44 @@ textarea{resize:vertical;min-height:72px}
           </div>
           <div id="cfgStatus" style="margin-top:10px"></div>
         </div>
+
+        <!-- ===== INTEGRAÇÃO WHATSAPP (Z-API) ===== -->
+        <div class="card">
+          <div class="section-title"><i class="ti ti-brand-whatsapp"></i> Integração WhatsApp (Z-API)</div>
+          <div style="font-size:.78rem;color:var(--its-muted);margin-bottom:14px">
+            As credenciais ficam armazenadas no servidor e o envio é feito pela API (o token não fica exposto no navegador).
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Instance ID</label>
+              <input type="text" id="zapiInstance" placeholder="Ex: 3C1A...">
+            </div>
+            <div class="form-group">
+              <label>Token da Instância</label>
+              <input type="password" id="zapiToken" placeholder="••••••••" autocomplete="new-password">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Client-Token (Token de Segurança da Conta)</label>
+            <input type="password" id="zapiClientToken" placeholder="••••••••" autocomplete="new-password">
+          </div>
+          <hr class="divider">
+          <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px">
+              <label style="margin:0;font-size:.82rem;font-weight:600">Ativar envio por WhatsApp</label>
+              <input type="checkbox" id="zapiAtivo" style="width:auto;accent-color:var(--its-orange)">
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-outline btn-sm" onclick="testarZapi()"><i class="ti ti-plug-connected"></i> Testar conexão</button>
+              <button class="btn btn-primary btn-sm" onclick="saveZapi()"><i class="ti ti-device-floppy"></i> Salvar Z-API</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <input type="text" id="zapiTestPhone" placeholder="Número p/ teste (ex: 5548999998888)" style="flex:1">
+            <button class="btn btn-ghost btn-sm" onclick="enviarTesteZapi()"><i class="ti ti-send"></i> Enviar msg de teste</button>
+          </div>
+          <div id="zapiStatus" style="margin-top:10px"></div>
+        </div>
       </div>
     </div>
 
@@ -2447,6 +2485,7 @@ function loadConfig(){
   document.getElementById('cfgSeguranca').value  = CFG.smtpSeg||'SSL';
   document.getElementById('cfgAtivo').checked    = !!CFG.ativo;
   renderRecipients();
+  try{ loadZapi(); }catch(_){}
 }
 
 function saveConfig(){
@@ -2463,6 +2502,73 @@ function saveConfig(){
   const st = document.getElementById('cfgStatus');
   st.innerHTML='<div class="its-alert alert-success"><i class="ti ti-check"></i> Configurações salvas com sucesso!</div>';
   setTimeout(()=>st.innerHTML='',3000);
+}
+
+// ── INTEGRAÇÃO Z-API (WhatsApp) ───────────────────────────────────────
+// As credenciais ficam só no servidor (chave sensível its_zapi em casan_config),
+// nunca no localStorage. O envio/teste é feito pela API its-api.
+function zapiMsg(html){ const el=document.getElementById('zapiStatus'); el.innerHTML=html; setTimeout(()=>{el.innerHTML='';},5000); }
+
+async function loadZapi(){
+  if(!sessionStorage.getItem('its_token')) return; // só no modo online
+  try{
+    const r=await fetch(`${ITS_API}/integracoes/zapi/config`,{headers:authHeaders()});
+    if(!r.ok) return;
+    const cfg=await r.json(); // só flags, nunca os tokens
+    document.getElementById('zapiInstance').value = cfg.instance||'';
+    document.getElementById('zapiAtivo').checked = !!cfg.ativo;
+    if(cfg.tokenSet){ document.getElementById('zapiToken').placeholder='•••••••• (salvo)'; }
+    if(cfg.clientTokenSet){ document.getElementById('zapiClientToken').placeholder='•••••••• (salvo)'; }
+  }catch(_){}
+}
+
+async function saveZapi(){
+  if(!sessionStorage.getItem('its_token')){ zapiMsg('<div class="its-alert alert-error"><i class="ti ti-alert-triangle"></i> Faça login para salvar a integração.</div>'); return; }
+  const instance=document.getElementById('zapiInstance').value.trim();
+  const token=document.getElementById('zapiToken').value.trim();
+  const clientToken=document.getElementById('zapiClientToken').value.trim();
+  const ativo=document.getElementById('zapiAtivo').checked;
+  try{
+    const r=await fetch(`${ITS_API}/integracoes/zapi/config`,{
+      method:'PUT',
+      headers:authHeaders({'Content-Type':'application/json'}),
+      // tokens vazios = manter os já salvos no servidor
+      body:JSON.stringify({instance,token,clientToken,ativo})
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok){ zapiMsg(`<div class="its-alert alert-error"><i class="ti ti-x"></i> ${esc(d.error||'Falha ao salvar.')}</div>`); return; }
+    document.getElementById('zapiToken').value=''; document.getElementById('zapiClientToken').value='';
+    zapiMsg('<div class="its-alert alert-success"><i class="ti ti-check"></i> Integração Z-API salva!</div>');
+    loadZapi();
+  }catch(_){ zapiMsg('<div class="its-alert alert-error"><i class="ti ti-x"></i> Serviço indisponível.</div>'); }
+}
+
+async function testarZapi(){
+  if(!sessionStorage.getItem('its_token')){ zapiMsg('<div class="its-alert alert-error">Faça login primeiro.</div>'); return; }
+  zapiMsg('<div class="its-alert alert-info"><i class="ti ti-loader"></i> Testando conexão...</div>');
+  try{
+    const r=await fetch(`${ITS_API}/integracoes/zapi/test`,{method:'POST',headers:authHeaders()});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok && d.connected){ zapiMsg('<div class="its-alert alert-success"><i class="ti ti-check"></i> Conectado! WhatsApp pareado e pronto.</div>'); }
+    else if(r.ok){ zapiMsg(`<div class="its-alert alert-warning"><i class="ti ti-alert-triangle"></i> Instância respondeu, mas não está conectada (${esc(d.status||'desconhecido')}). Verifique o QR Code no painel Z-API.</div>`); }
+    else { zapiMsg(`<div class="its-alert alert-error"><i class="ti ti-x"></i> ${esc(d.error||'Falha na conexão.')}</div>`); }
+  }catch(_){ zapiMsg('<div class="its-alert alert-error"><i class="ti ti-x"></i> Serviço indisponível.</div>'); }
+}
+
+async function enviarTesteZapi(){
+  if(!sessionStorage.getItem('its_token')){ zapiMsg('<div class="its-alert alert-error">Faça login primeiro.</div>'); return; }
+  const phone=document.getElementById('zapiTestPhone').value.trim();
+  if(!phone){ zapiMsg('<div class="its-alert alert-warning">Informe o número (com DDI+DDD).</div>'); return; }
+  zapiMsg('<div class="its-alert alert-info"><i class="ti ti-loader"></i> Enviando...</div>');
+  try{
+    const r=await fetch(`${ITS_API}/integracoes/zapi/send`,{
+      method:'POST',headers:authHeaders({'Content-Type':'application/json'}),
+      body:JSON.stringify({phone,message:'✅ Teste de integração — iTS Gerencial CASAN. Z-API conectada com sucesso!'})
+    });
+    const d=await r.json().catch(()=>({}));
+    if(r.ok){ zapiMsg('<div class="its-alert alert-success"><i class="ti ti-check"></i> Mensagem enviada!</div>'); }
+    else { zapiMsg(`<div class="its-alert alert-error"><i class="ti ti-x"></i> ${esc(d.error||'Falha ao enviar.')}</div>`); }
+  }catch(_){ zapiMsg('<div class="its-alert alert-error"><i class="ti ti-x"></i> Serviço indisponível.</div>'); }
 }
 
 function renderRecipients(){
