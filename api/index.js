@@ -428,21 +428,24 @@ function zapiBase(cfg) {
   return `https://api.z-api.io/instances/${cfg.instance}/token/${cfg.token}`;
 }
 
-// Retorna apenas flags, nunca os tokens.
+// Retorna apenas flags, nunca os tokens. groupId nao e segredo, pode ir.
 app.get('/integracoes/zapi/config', requirePerfil(...PERFIS_GESTAO), asyncH(async (_req, res) => {
   const c = await getZapi();
-  res.json({ instance: c.instance || '', ativo: !!c.ativo, tokenSet: !!c.token, clientTokenSet: !!c.clientToken });
+  res.json({ instance: c.instance || '', ativo: !!c.ativo, tokenSet: !!c.token, clientTokenSet: !!c.clientToken,
+    groupId: c.groupId || '', groupAtivo: !!c.groupAtivo });
 }));
 
 // Salva/atualiza. Tokens vazios mantem os ja gravados (merge).
 app.put('/integracoes/zapi/config', requirePerfil(...PERFIS_GESTAO), asyncH(async (req, res) => {
   const atual = await getZapi();
-  const { instance, token, clientToken, ativo } = req.body || {};
+  const { instance, token, clientToken, ativo, groupId, groupAtivo } = req.body || {};
   const novo = {
     instance: (instance != null ? String(instance).trim() : atual.instance) || '',
     token: token ? String(token).trim() : (atual.token || ''),
     clientToken: clientToken ? String(clientToken).trim() : (atual.clientToken || ''),
     ativo: !!ativo,
+    groupId: (groupId != null ? String(groupId).trim() : atual.groupId) || '',
+    groupAtivo: !!groupAtivo,
   };
   await pool.query(
     `INSERT INTO casan_config (chave, valor, updated_at) VALUES ('its_zapi', $1, now())
@@ -488,6 +491,42 @@ app.post('/integracoes/zapi/send', asyncH(async (req, res) => {
   } catch (e) {
     res.status(502).json({ error: 'falha ao enviar: ' + e.message });
   }
+}));
+
+// Envia mensagem para o GRUPO predefinido (groupId fica no servidor).
+// Disponivel para qualquer usuario autenticado (eventos disparam isso).
+// allowDisabled=true permite testar mesmo com o grupo desligado.
+async function enviarGrupo(message, { ignorarFlag = false } = {}) {
+  const c = await getZapi();
+  if (!c.ativo) return { ok: false, error: 'integracao WhatsApp desativada' };
+  if (!ignorarFlag && !c.groupAtivo) return { ok: false, error: 'envio para grupo desativado' };
+  if (!c.instance || !c.token) return { ok: false, error: 'Z-API nao configurada' };
+  if (!c.groupId) return { ok: false, error: 'ID do grupo nao configurado' };
+  const r = await fetch(`${zapiBase(c)}/send-text`, {
+    method: 'POST',
+    headers: Object.assign({ 'Content-Type': 'application/json' }, c.clientToken ? { 'Client-Token': c.clientToken } : {}),
+    // Para grupos, a Z-API usa o ID do grupo no campo phone (sem normalizar).
+    body: JSON.stringify({ phone: String(c.groupId), message: String(message) }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) return { ok: false, error: d.error || `Z-API respondeu HTTP ${r.status}` };
+  return { ok: true, id: d.messageId || d.id || null };
+}
+
+app.post('/integracoes/zapi/send-group', asyncH(async (req, res) => {
+  const { message } = req.body || {};
+  if (!message) return res.status(400).json({ error: 'message obrigatoria' });
+  const out = await enviarGrupo(message).catch((e) => ({ ok: false, error: e.message }));
+  if (!out.ok) return res.status(502).json(out);
+  res.json(out);
+}));
+
+// Teste manual do grupo (gestao), ignora a flag groupAtivo.
+app.post('/integracoes/zapi/test-group', requirePerfil(...PERFIS_GESTAO), asyncH(async (_req, res) => {
+  const out = await enviarGrupo('✅ Teste de grupo — iTS Gerencial CASAN. Notificações chegarão aqui!', { ignorarFlag: true })
+    .catch((e) => ({ ok: false, error: e.message }));
+  if (!out.ok) return res.status(502).json(out);
+  res.json(out);
 }));
 
 const PORT = process.env.PORT || 3002;

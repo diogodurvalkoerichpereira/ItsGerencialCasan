@@ -835,6 +835,23 @@ textarea{resize:vertical;min-height:72px}
             <input type="text" id="zapiTestPhone" placeholder="Número p/ teste (ex: 5548999998888)" style="flex:1">
             <button class="btn btn-ghost btn-sm" onclick="enviarTesteZapi()"><i class="ti ti-send"></i> Enviar msg de teste</button>
           </div>
+
+          <hr class="divider">
+          <div class="section-title" style="font-size:.8rem;margin-bottom:10px"><i class="ti ti-users-group"></i> Envio para Grupo do WhatsApp</div>
+          <div style="font-size:.72rem;color:var(--its-muted);margin-bottom:10px">
+            As notificações também podem ir para um grupo. Isto <strong>não substitui</strong> os destinatários acima — funciona em conjunto. Informe o ID do grupo (ex: <code>120363012345678901-group</code> ou <code>...@g.us</code>).
+          </div>
+          <div class="form-group">
+            <label>ID do Grupo</label>
+            <input type="text" id="zapiGroupId" placeholder="120363012345678901-group">
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px">
+              <label style="margin:0;font-size:.82rem;font-weight:600">Enviar notificações para o grupo</label>
+              <input type="checkbox" id="zapiGroupAtivo" style="width:auto;accent-color:var(--its-orange)">
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="testarGrupoZapi()"><i class="ti ti-send"></i> Testar grupo</button>
+          </div>
           <div id="zapiStatus" style="margin-top:10px"></div>
         </div>
       </div>
@@ -2549,6 +2566,8 @@ async function loadZapi(){
     document.getElementById('zapiAtivo').checked = !!cfg.ativo;
     if(cfg.tokenSet){ document.getElementById('zapiToken').placeholder='•••••••• (salvo)'; }
     if(cfg.clientTokenSet){ document.getElementById('zapiClientToken').placeholder='•••••••• (salvo)'; }
+    document.getElementById('zapiGroupId').value = cfg.groupId||'';
+    document.getElementById('zapiGroupAtivo').checked = !!cfg.groupAtivo;
   }catch(_){}
 }
 
@@ -2558,12 +2577,14 @@ async function saveZapi(){
   const token=document.getElementById('zapiToken').value.trim();
   const clientToken=document.getElementById('zapiClientToken').value.trim();
   const ativo=document.getElementById('zapiAtivo').checked;
+  const groupId=document.getElementById('zapiGroupId').value.trim();
+  const groupAtivo=document.getElementById('zapiGroupAtivo').checked;
   try{
     const r=await fetch(`${ITS_API}/integracoes/zapi/config`,{
       method:'PUT',
       headers:authHeaders({'Content-Type':'application/json'}),
       // tokens vazios = manter os já salvos no servidor
-      body:JSON.stringify({instance,token,clientToken,ativo})
+      body:JSON.stringify({instance,token,clientToken,ativo,groupId,groupAtivo})
     });
     const d=await r.json().catch(()=>({}));
     if(!r.ok){ zapiMsg(`<div class="its-alert alert-error"><i class="ti ti-x"></i> ${esc(d.error||'Falha ao salvar.')}</div>`); return; }
@@ -2582,6 +2603,18 @@ async function testarZapi(){
     if(r.ok && d.connected){ zapiMsg('<div class="its-alert alert-success"><i class="ti ti-check"></i> Conectado! WhatsApp pareado e pronto.</div>'); }
     else if(r.ok){ zapiMsg(`<div class="its-alert alert-warning"><i class="ti ti-alert-triangle"></i> Instância respondeu, mas não está conectada (${esc(d.status||'desconhecido')}). Verifique o QR Code no painel Z-API.</div>`); }
     else { zapiMsg(`<div class="its-alert alert-error"><i class="ti ti-x"></i> ${esc(d.error||'Falha na conexão.')}</div>`); }
+  }catch(_){ zapiMsg('<div class="its-alert alert-error"><i class="ti ti-x"></i> Serviço indisponível.</div>'); }
+}
+
+async function testarGrupoZapi(){
+  if(!sessionStorage.getItem('its_token')){ zapiMsg('<div class="its-alert alert-error">Faça login primeiro.</div>'); return; }
+  if(!document.getElementById('zapiGroupId').value.trim()){ zapiMsg('<div class="its-alert alert-warning">Informe o ID do grupo e salve antes.</div>'); return; }
+  zapiMsg('<div class="its-alert alert-info"><i class="ti ti-loader"></i> Enviando ao grupo...</div>');
+  try{
+    const r=await fetch(`${ITS_API}/integracoes/zapi/test-group`,{method:'POST',headers:authHeaders()});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok){ zapiMsg('<div class="its-alert alert-success"><i class="ti ti-check"></i> Mensagem enviada ao grupo!</div>'); }
+    else { zapiMsg(`<div class="its-alert alert-error"><i class="ti ti-x"></i> ${esc(d.error||'Falha ao enviar ao grupo.')}</div>`); }
   }catch(_){ zapiMsg('<div class="its-alert alert-error"><i class="ti ti-x"></i> Serviço indisponível.</div>'); }
 }
 
@@ -2641,9 +2674,8 @@ function removeRecipient(i){
 // no servidor). Silencioso: não atrapalha o fluxo se a integração estiver off.
 function notifyWhatsApp(message){
   if(!sessionStorage.getItem('its_token')) return;          // só modo online
-  if(!CFG.recipients||!CFG.recipients.length) return;
-  const fones=CFG.recipients.map(r=>(r.phone||'').replace(/\D/g,'')).filter(p=>p.length>=10);
-  if(!fones.length) return;
+  // 1) Destinatários individuais com telefone cadastrado.
+  const fones=(CFG.recipients||[]).map(r=>(r.phone||'').replace(/\D/g,'')).filter(p=>p.length>=10);
   fones.forEach(phone=>{
     fetch(`${ITS_API}/integracoes/zapi/send`,{
       method:'POST',
@@ -2651,6 +2683,12 @@ function notifyWhatsApp(message){
       body:JSON.stringify({phone,message})
     }).catch(()=>{});
   });
+  // 2) Grupo predefinido (o servidor decide se está ativo/configurado).
+  fetch(`${ITS_API}/integracoes/zapi/send-group`,{
+    method:'POST',
+    headers:authHeaders({'Content-Type':'application/json'}),
+    body:JSON.stringify({message})
+  }).catch(()=>{});
 }
 
 function sendNotification(task){
