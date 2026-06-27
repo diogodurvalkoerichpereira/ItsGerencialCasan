@@ -22,8 +22,8 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
-const asyncH = (fn) => (req, res) =>
-  Promise.resolve(fn(req, res)).catch((err) => {
+const asyncH = (fn) => (req, res, next) =>
+  Promise.resolve(fn(req, res, next)).catch((err) => {
     console.error(err.message);
     res.status(500).json({ error: 'Erro interno' });
   });
@@ -254,7 +254,8 @@ app.get('/ponto', asyncH(async (_req, res) => {
   res.json(out);
 }));
 
-app.put('/ponto/:mesKey', asyncH(async (req, res) => {
+// mes_key e' "MM/YYYY" (contem barra), por isso o parametro curinga (*).
+app.put('/ponto/:mesKey(*)', asyncH(async (req, res) => {
   const { registros = [], sups = [] } = req.body || {};
   await pool.query(
     `INSERT INTO casan_ponto (mes_key, registros, sups, updated_at)
