@@ -2625,10 +2625,30 @@ async function buscarGruposZapi(){
   }catch(_){ zapiMsg('<div class="its-alert alert-error"><i class="ti ti-x"></i> Serviço indisponível.</div>'); }
 }
 
+// Persiste a config atual do Z-API no servidor (sem mensagens de UI). Retorna ok.
+async function putZapiConfig(){
+  const instance=document.getElementById('zapiInstance').value.trim();
+  const token=document.getElementById('zapiToken').value.trim();
+  const clientToken=document.getElementById('zapiClientToken').value.trim();
+  const ativo=document.getElementById('zapiAtivo').checked;
+  const groupId=document.getElementById('zapiGroupId').value.trim() || document.getElementById('zapiGroupSelect').value || '';
+  const groupAtivo=document.getElementById('zapiGroupAtivo').checked;
+  try{
+    const r=await fetch(`${ITS_API}/integracoes/zapi/config`,{
+      method:'PUT', headers:authHeaders({'Content-Type':'application/json'}),
+      body:JSON.stringify({instance,token,clientToken,ativo,groupId,groupAtivo})
+    });
+    return r.ok;
+  }catch(_){ return false; }
+}
+
 async function testarGrupoZapi(){
   if(!sessionStorage.getItem('its_token')){ zapiMsg('<div class="its-alert alert-error">Faça login primeiro.</div>'); return; }
-  if(!document.getElementById('zapiGroupId').value.trim()){ zapiMsg('<div class="its-alert alert-warning">Informe o ID do grupo e salve antes.</div>'); return; }
-  zapiMsg('<div class="its-alert alert-info"><i class="ti ti-loader"></i> Enviando ao grupo...</div>');
+  const gid=document.getElementById('zapiGroupId').value.trim() || document.getElementById('zapiGroupSelect').value;
+  if(!gid){ zapiMsg('<div class="its-alert alert-warning">Selecione ou informe o ID do grupo primeiro.</div>'); return; }
+  document.getElementById('zapiGroupId').value=gid;
+  zapiMsg('<div class="its-alert alert-info"><i class="ti ti-loader"></i> Salvando e enviando ao grupo...</div>');
+  await putZapiConfig(); // garante que o grupo selecionado está salvo no servidor
   try{
     const r=await fetch(`${ITS_API}/integracoes/zapi/test-group`,{method:'POST',headers:authHeaders()});
     const d=await r.json().catch(()=>({}));
