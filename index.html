@@ -1199,6 +1199,7 @@ function editTask(id){
   document.getElementById('modalContent').innerHTML=buildForm(t);
   document.getElementById('modalOverlay').classList.add('open');
   updatePrazoPreview(t.criado||null);
+  initAnexoWidget();
 }
 function updatePrazoPreview(base){
   const prio=document.getElementById('fPrio').value;
@@ -1230,7 +1231,7 @@ function buildForm(t={}){
       </div>
     </div>
     <div class="form-group"><label>Descrição</label><textarea id="fDesc" placeholder="Detalhes adicionais...">${esc(t.desc||'')}</textarea></div>
-    ${t.id?'':anexoWidgetHTML('Anexos na abertura (documentos / áudios) — opcional')}
+    ${anexoWidgetHTML(t.id?'Adicionar anexos (documentos / mídias) — opcional':'Anexos na abertura (documentos / áudios) — opcional')}
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="saveTask(${t.id||0})"><i class="ti ti-device-floppy"></i> Salvar</button>
@@ -1249,6 +1250,15 @@ function saveTask(id){
       Object.assign(TASKS[i],{titulo,area:document.getElementById('fArea').value,resp:document.getElementById('fResp').value,
         prio,status:newStatus,desc:document.getElementById('fDesc').value,
         prazo:calcPrazo(prio,base)});
+      // Anexos adicionados na edição → registra no histórico com o autor.
+      const novosAnexos=(typeof _anexosResp!=='undefined')?_anexosResp.slice():[];
+      if(novosAnexos.length){
+        TASKS[i].historico=TASKS[i].historico||[];
+        TASKS[i].historico.push(novaInteracao('nota','Anexos adicionados na edição',novosAnexos));
+        const a=autorAtual();
+        logEvento('Anexos na tarefa', titulo+' — '+novosAnexos.length+' arquivo(s)');
+        notifyWhatsApp(`📎 *Anexos adicionados na tarefa* — iTS Gerencial CASAN\n\n*${titulo}*\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})\n${novosAnexos.map(x=>x.name).join(', ')}`);
+      }
       if(newStatus==='Concluído'&&prevStatus!=='Concluído'&&TASKS[i].criadoPorCliente) sendNotificacaoConclusao(TASKS[i]);
     }
   }else{
