@@ -207,7 +207,7 @@ textarea{resize:vertical;min-height:72px}
   <div class="nav-item" onclick="setNav(this,'ponto')"><i class="ti ti-clock"></i> Ponto</div>
   <div class="nav-section">Administração</div>
   <div class="nav-item" id="navUsuarios" onclick="setNav(this,'usuarios')"><i class="ti ti-users"></i> Usuários</div>
-  <div class="nav-item" onclick="setNav(this,'config')"><i class="ti ti-settings"></i> Configurações</div>
+  <div class="nav-item" id="navConfig" onclick="setNav(this,'config')"><i class="ti ti-settings"></i> Configurações</div>
   <div class="nav-item" id="navLogs" onclick="setNav(this,'logs')"><i class="ti ti-history"></i> Logs de Atividade</div>
   <div class="sidebar-bottom">
     <div class="nav-item" id="meuPerfil" onclick="openProfile()"><i class="ti ti-user"></i> Meu Perfil</div>
@@ -2922,9 +2922,9 @@ function switchTab(name,el){
 }
 function setNav(el,tab){
   // Bloqueio de telas restritas (Usuários e Logs) — mensagem tratada.
-  if((tab==='usuarios'||tab==='logs') && !isAdminGestao()){
-    showToast('Acesso restrito ao Administrador/Gerente.');
-    logEvento('Acesso negado','Tentativa de abrir '+(tab==='usuarios'?'Usuários':'Logs'));
+  if((tab==='usuarios'||tab==='logs'||tab==='config') && !isAdminGestao()){
+    showToast('Acesso restrito ao Administrador.');
+    logEvento('Acesso negado','Tentativa de abrir '+(tab==='usuarios'?'Usuários':tab==='logs'?'Logs':'Configurações'));
     return;
   }
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -3716,6 +3716,8 @@ function applyNavPermissions(cargo){
   if(navLogs) navLogs.style.display=gestao?'':'none';
   const navUsuarios=document.getElementById('navUsuarios');
   if(navUsuarios) navUsuarios.style.display=gestao?'':'none';
+  const navConfig=document.getElementById('navConfig');
+  if(navConfig) navConfig.style.display=gestao?'':'none';
   // Oculta seções do nav que ficam sem itens visíveis
   document.querySelectorAll('.nav-section').forEach(sec=>{
     if(!allowed){sec.style.display='';return;}
