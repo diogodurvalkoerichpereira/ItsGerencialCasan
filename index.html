@@ -1511,6 +1511,31 @@ function gerarRelatorioInd09(){
           <strong style="color:var(--its-text)">Exemplo:</strong> 38 ÷ 40 = 95,00%
         </div>
       </div>
+
+      <hr class="divider">
+      <div class="section-title" style="font-size:.78rem">Emergências no período</div>
+      <table class="task-table">
+        <thead><tr>
+          <th>Data</th><th>Cidade</th><th>Recebido</th><th>Enviado</th>
+          <th>Serviço</th><th>Canal</th><th style="text-align:center">Tempo</th>
+          <th style="text-align:center">No prazo</th><th>Status</th>
+        </tr></thead>
+        <tbody>${EMERGS.map(e=>{
+          const[h,m]=(e.prazo||'99:99').split(':').map(Number);
+          const ok=(h*60+m)<=5;
+          return `<tr>
+            <td style="font-size:.8rem">${esc(e.data)||'—'}</td>
+            <td style="font-size:.82rem;font-weight:600">${esc(e.cidade)||'—'}</td>
+            <td style="font-size:.8rem">${esc(e.recebido)||'—'}</td>
+            <td style="font-size:.8rem">${esc(e.enviado)||'—'}</td>
+            <td style="font-size:.8rem">${esc(e.servico)||'—'}</td>
+            <td style="font-size:.8rem">${esc(e.canal)||'—'}</td>
+            <td style="text-align:center;font-size:.8rem">${esc(e.prazo)||'—'}</td>
+            <td style="text-align:center;font-weight:600;color:${ok?'var(--its-success)':'var(--its-danger)'}">${ok?'✓':'✗'}</td>
+            <td>${emergStatusBadge(e.status)}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
     </div>`;
   mostrarRelatorio();
 }
