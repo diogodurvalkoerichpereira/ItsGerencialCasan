@@ -208,6 +208,7 @@ textarea{resize:vertical;min-height:72px}
   <div class="nav-section">Administração</div>
   <div class="nav-item" onclick="setNav(this,'usuarios')"><i class="ti ti-users"></i> Usuários</div>
   <div class="nav-item" onclick="setNav(this,'config')"><i class="ti ti-settings"></i> Configurações</div>
+  <div class="nav-item" id="navLogs" onclick="setNav(this,'logs')"><i class="ti ti-history"></i> Logs de Atividade</div>
   <div class="sidebar-bottom">
     <div class="nav-item" id="meuPerfil" onclick="openProfile()"><i class="ti ti-user"></i> Meu Perfil</div>
     <div class="nav-item" onclick="logout()"><i class="ti ti-logout"></i> Sair</div>
@@ -905,6 +906,39 @@ textarea{resize:vertical;min-height:72px}
       </div>
     </div>
 
+    <!-- ===== LOGS DE ATIVIDADE ===== -->
+    <div class="panel" id="panel-logs">
+      <div class="filter-row">
+        <div class="form-group">
+          <label>Buscar no log</label>
+          <input type="text" id="logSearch" placeholder="Usuário, ação, detalhe..." oninput="renderLogs()" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Tipo de ação</label>
+          <select id="logFilterAcao" onchange="renderLogs()"><option value="">Todas</option></select>
+        </div>
+        <div class="form-group" style="flex:0 0 auto;min-width:auto">
+          <label>&nbsp;</label>
+          <button class="btn btn-ghost btn-sm" onclick="exportLogsCSV()"><i class="ti ti-table-export"></i> Exportar CSV</button>
+        </div>
+        <div class="form-group" style="flex:0 0 auto;min-width:auto">
+          <label>&nbsp;</label>
+          <button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="limparLogs()"><i class="ti ti-trash"></i> Limpar</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table class="task-table">
+          <thead>
+            <tr><th>Data/Hora</th><th>Usuário</th><th>Perfil</th><th>Ação</th><th>Detalhe</th></tr>
+          </thead>
+          <tbody id="logBody"></tbody>
+        </table>
+      </div>
+      <div id="logEmpty" class="empty-state" style="display:none">
+        <i class="ti ti-history-off"></i>Nenhum registro de atividade
+      </div>
+    </div>
+
     <!-- ===== QUADRO DE AVISOS ===== -->
     <div class="panel" id="panel-avisos">
 
@@ -1226,6 +1260,7 @@ function saveTask(id){
   }
   saveTasks();
   closeModal();applyFilters();updateDashboard();
+  logEvento(id?'Tarefa editada':'Tarefa criada', titulo);
   showToast(id?'Tarefa atualizada com sucesso!':'Tarefa criada com sucesso!');
 }
 function cycleStatus(id){
@@ -1242,6 +1277,7 @@ function deleteTask(id){
   if(!confirm('Excluir esta tarefa?'))return;
   const i=TASKS.findIndex(x=>x.id===id);if(i>-1)TASKS.splice(i,1);
   saveTasks();
+  logEvento('Tarefa excluída', (TASKS.find(x=>x.id===id)||{}).titulo||('#'+id));
   applyFilters();updateDashboard();showToast('Tarefa excluída.');
 }
 // Responder + concluir uma tarefa (com texto e anexos).
@@ -1254,6 +1290,7 @@ function responderTarefa(id){
     notifyWhatsApp(`✅ *Tarefa Concluída* — iTS Gerencial CASAN\n\n*${t.titulo}*\nResposta: ${texto}\nConcluída em: ${em}${anexos.length?`\n📎 ${anexos.length} anexo(s)`:''}`);
     notifyEmail(`✅ Tarefa Concluída: ${t.titulo}`, t.titulo, 'Tarefa concluída', 'Notificação de Tarefa',
       [{label:'Resposta',valor:texto},{label:'Área',valor:t.area},{label:'Responsável',valor:t.resp},{label:'Concluída em',valor:em},{label:'Anexos',valor:anexos.length?anexos.map(a=>a.name).join(', '):'—'}]);
+    logEvento('Tarefa concluída', t.titulo);
     showToast('Tarefa respondida e concluída!');
   });
 }
@@ -1356,6 +1393,7 @@ function arquivarTarefa(id){
     }
     t.arquivada=true; t.arquivoInfo=info;
     saveTasks(); closeModal(); applyFilters(); updateDashboard();
+    logEvento('Tarefa arquivada', t.titulo+' — '+info.motivo);
     showToast('Tarefa arquivada.');
   };
 }
@@ -1959,6 +1997,7 @@ function salvarChamado(criadoIso){
   );
   notifyEmail(`🆘 Novo Chamado: ${titulo}`, titulo, 'Um novo chamado foi aberto', 'Notificação de Chamado',
     [{label:'Descrição',valor:descCh},{label:'Aberto em',valor:criadoIso},{label:'Status',valor:'Em Atendimento'}]);
+  logEvento('Chamado aberto', titulo);
   closeModal();filterChamados();showToast('Chamado registrado com sucesso!');
 }
 // ── ANEXOS DE RESPOSTA (base64, com limite de tamanho) ────────────────
@@ -2089,7 +2128,7 @@ function comentarChamado(id){
     notifyWhatsApp(`💬 *Comentário no chamado* — iTS Gerencial CASAN\n\n*${c.titulo}*\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})\n${texto||'(anexo)'}`);
     notifyEmail(`💬 Comentário no chamado: ${c.titulo}`, c.titulo, 'Novo comentário', 'Notificação de Chamado',
       [{label:'Autor',valor:`${a.por} (${a.ehCliente?'Cliente':'Equipe'})`},{label:'Comentário',valor:texto||'—'},{label:'Anexos',valor:anexos.length?anexos.map(x=>x.name).join(', '):'—'}]);
-    showToast('Comentário adicionado.'); verChamado(id);
+    logEvento('Comentário em chamado', c.titulo); showToast('Comentário adicionado.'); verChamado(id);
   },{btnLabel:'Adicionar comentário',btnIcon:'ti-message-plus',label:'Comentário'});
 }
 
@@ -2103,7 +2142,7 @@ function comentarTarefa(id){
     notifyWhatsApp(`💬 *Comentário na tarefa* — iTS Gerencial CASAN\n\n*${t.titulo}*\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})\n${texto||'(anexo)'}`);
     notifyEmail(`💬 Comentário na tarefa: ${t.titulo}`, t.titulo, 'Novo comentário', 'Notificação de Tarefa',
       [{label:'Autor',valor:`${a.por} (${a.ehCliente?'Cliente':'Equipe'})`},{label:'Comentário',valor:texto||'—'},{label:'Anexos',valor:anexos.length?anexos.map(x=>x.name).join(', '):'—'}]);
-    showToast('Comentário adicionado.'); verTarefa(id);
+    logEvento('Comentário em tarefa', t.titulo); showToast('Comentário adicionado.'); verTarefa(id);
   },{btnLabel:'Adicionar comentário',btnIcon:'ti-message-plus',label:'Comentário'});
 }
 function agoraISO(){ const d=new Date();const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
@@ -2170,6 +2209,7 @@ function responderChamado(id){
     notifyWhatsApp(`✅ *Chamado Resolvido* — iTS Gerencial CASAN\n\n*${c.titulo}*\nResposta: ${texto}\nResolvido em: ${em}${anexos.length?`\n📎 ${anexos.length} anexo(s)`:''}`);
     notifyEmail(`✅ Chamado Resolvido: ${c.titulo}`, c.titulo, 'Chamado resolvido', 'Notificação de Chamado',
       [{label:'Resposta',valor:texto},{label:'Resolvido em',valor:em},{label:'Anexos',valor:anexos.length?anexos.map(a=>a.name).join(', '):'—'}]);
+    logEvento('Chamado resolvido', c.titulo);
     showToast('Chamado respondido e resolvido!');
   });
 }
@@ -2215,6 +2255,7 @@ function deleteChamado(id){
   if(!confirm('Excluir este chamado?'))return;
   const i=CHAMADOS.findIndex(x=>x.id===id);if(i>-1)CHAMADOS.splice(i,1);
   saveChamados();
+  logEvento('Chamado excluído', (CHAMADOS.find(x=>x.id===id)||{}).titulo||('#'+id));
   filterChamados();showToast('Chamado excluído.');
 }
 
@@ -2323,6 +2364,7 @@ function registrarEmerg(){
   const firstTab=document.querySelector('#emergTabs .tab');
   switchEmergTab('lista',firstTab);
   filterEmerg();
+  logEvento('Emergência registrada', cidade);
   showToast('Emergência registrada com sucesso!');
 }
 
@@ -2819,6 +2861,7 @@ function registrarAviso(){
   const firstTab=document.querySelector('#avisosTabs .tab');
   switchAvisosTab('lista',firstTab);
   filterAvisos();
+  logEvento('Aviso registrado', cidade);
   showToast('Aviso registrado com sucesso!');
 }
 
@@ -2886,7 +2929,7 @@ function setNav(el,tab){
   const isUsuarios=tab==='usuarios';
   const isRelatorio=tab==='relatorio';
   const isChamados=tab==='chamados';
-  const titulos={tarefas:'Gestão de Tarefas',chamados:'Chamados',relatorio:'Relatórios',dashboard:'Dashboard',emergencias:'Emergências',avisos:'Quadro de Avisos',ponto:'Controle de Ponto',usuarios:'Gestão de Usuários',config:'Configurações'};
+  const titulos={tarefas:'Gestão de Tarefas',chamados:'Chamados',relatorio:'Relatórios',dashboard:'Dashboard',emergencias:'Emergências',avisos:'Quadro de Avisos',ponto:'Controle de Ponto',usuarios:'Gestão de Usuários',config:'Configurações',logs:'Logs de Atividade'};
   if(titulos[tab])document.getElementById('pageTitle').textContent=titulos[tab];
   document.getElementById('mainTabs').style.display='none';
   document.getElementById('emergTabs').style.display=isEmerg?'flex':'none';
@@ -2895,6 +2938,7 @@ function setNav(el,tab){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+tab).classList.add('active');
   const btn=document.getElementById('topbarBtn');
+  btn.style.display='';
   if(isChamados){
     btn.innerHTML='<i class="ti ti-headset"></i> Novo Chamado';
     btn.style.display='';
@@ -2925,6 +2969,9 @@ function setNav(el,tab){
     btn.innerHTML='<i class="ti ti-user-plus"></i> Novo Usuário';
     btn.onclick=openNewUser;
     renderUsers();
+  } else if(tab==='logs'){
+    btn.style.display='none';
+    renderLogs();
   } else {
     btn.innerHTML='<i class="ti ti-plus"></i> Nova Tarefa';
     btn.onclick=openNewTask;
@@ -2966,6 +3013,7 @@ function saveConfig(){
   delete CFG.smtpSenha;
   localStorage.setItem('its_cfg', JSON.stringify(CFG)); remoteSet('its_cfg', CFG);
   const st = document.getElementById('cfgStatus');
+  logEvento('Configurações salvas','E-mail/notificações');
   st.innerHTML='<div class="its-alert alert-success"><i class="ti ti-check"></i> Configurações salvas com sucesso!</div>';
   setTimeout(()=>st.innerHTML='',3000);
 }
@@ -3370,6 +3418,7 @@ async function saveUser(id){
     if(online) await apiCreateUser({nome,email,cargo,status,senha:'123456'});
   }
   saveUsers();closeModal();filterUsers();
+  logEvento(id?'Usuário editado':'Usuário criado', nome+' <'+email+'>');
   showToast(id?'Usuário atualizado com sucesso!':'Usuário criado (senha padrão 123456).');
 }
 async function resetUserPass(id){
@@ -3402,6 +3451,7 @@ async function deleteUser(id){
     const idc=await apiUserId(email);
     if(idc){ try{ await fetch(`${ITS_API}/usuarios/${idc}`,{method:'DELETE',headers:authHeaders()}); }catch(_){} }
   }
+  logEvento('Usuário excluído', (u&&u.nome)||('#'+id));
   showToast('Usuário excluído.');
 }
 
@@ -3491,6 +3541,7 @@ function entrarComToken(token, user){
   _login2fa=null; show2faField(false);
   document.getElementById('loginError').style.display='none';
   applySession();
+  logEvento('Login','Acesso ao sistema');
 }
 
 async function doLogin(ev){
@@ -3551,6 +3602,7 @@ function doLoginOffline(email,pass,showErr){
     sessionStorage.setItem('its_session',JSON.stringify({id:acc.id||null,email:acc.email,nome:acc.nome,cargo:acc.cargo,isAdmin:acc.isAdmin}));
     document.getElementById('loginError').style.display='none';
     applySession();
+    logEvento('Login','Acesso ao sistema (offline)');
   }else{
     showErr('E-mail ou senha inválidos.');
     document.getElementById('loginPass').value='';
@@ -3573,6 +3625,57 @@ function applySession(){
 }
 function getSession(){return JSON.parse(sessionStorage.getItem('its_session')||'null');}
 function isCliente(){const s=getSession();return s&&s.cargo==='Cliente';}
+function isAdminGestao(){const s=getSession();return !!(s&&(s.isAdmin||s.cargo==='Gerente'));}
+
+// ── LOGS DE ATIVIDADE (auditoria) ─────────────────────────────────────
+const LOG_MAX=800; // mantém os últimos N registros
+let LOGS = JSON.parse(localStorage.getItem('its_logs')||'null') || [];
+function saveLogs(){ localStorage.setItem('its_logs', JSON.stringify(LOGS)); remoteSet('its_logs', LOGS); }
+// Registra uma interação do usuário logado.
+function logEvento(acao, detalhe){
+  try{
+    const s=getSession();
+    LOGS.unshift({ em:agoraISO(), usuario:(s&&s.nome)||'—', perfil:(s&&s.cargo)||'', acao, detalhe:detalhe||'' });
+    if(LOGS.length>LOG_MAX) LOGS.length=LOG_MAX;
+    saveLogs();
+  }catch(_){}
+}
+function renderLogs(){
+  const body=document.getElementById('logBody'); const empty=document.getElementById('logEmpty');
+  if(!body) return;
+  // popula filtro de ações
+  const selAcao=document.getElementById('logFilterAcao');
+  const acoes=[...new Set(LOGS.map(l=>l.acao))].sort();
+  const cur=selAcao.value;
+  selAcao.innerHTML='<option value="">Todas</option>'+acoes.map(a=>`<option${a===cur?' selected':''}>${esc(a)}</option>`).join('');
+  const q=(document.getElementById('logSearch').value||'').toLowerCase();
+  const fa=selAcao.value;
+  const list=LOGS.filter(l=>
+    (!fa||l.acao===fa)&&
+    (!q||(l.usuario+' '+l.acao+' '+l.detalhe+' '+l.perfil).toLowerCase().includes(q))
+  );
+  if(!list.length){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  body.innerHTML=list.map(l=>`<tr>
+    <td style="font-size:.78rem;color:var(--its-muted);white-space:nowrap">${esc(l.em)}</td>
+    <td style="font-size:.82rem;font-weight:600">${esc(l.usuario)}</td>
+    <td style="font-size:.78rem">${esc(l.perfil)||'—'}</td>
+    <td style="font-size:.8rem"><span class="badge badge-blue">${esc(l.acao)}</span></td>
+    <td style="font-size:.8rem">${esc(l.detalhe)||'—'}</td>
+  </tr>`).join('');
+}
+function exportLogsCSV(){
+  const linhas=[['Data/Hora','Usuário','Perfil','Ação','Detalhe'],
+    ...LOGS.map(l=>[l.em,l.usuario,l.perfil,l.acao,l.detalhe])];
+  const csv=linhas.map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(';')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download='logs-atividade.csv'; a.click();
+}
+function limparLogs(){
+  if(!confirm('Limpar TODOS os registros de log? Esta ação não pode ser desfeita.'))return;
+  LOGS=[]; saveLogs(); renderLogs(); logEvento('Logs','Logs limpos pelo administrador');
+}
 // Mapa de permissões: cargo → seções visíveis (null = acesso total)
 const NAV_PERMISSIONS={
   Operador:['chamados','emergencias','avisos'],
@@ -3584,6 +3687,9 @@ function applyNavPermissions(cargo){
     const m=el.getAttribute('onclick').match(/setNav\(this,'(\w+)'\)/);
     if(m)el.style.display=(!allowed||allowed.includes(m[1]))?'':'none';
   });
+  // Logs de Atividade: somente administrador/gestão
+  const navLogs=document.getElementById('navLogs');
+  if(navLogs) navLogs.style.display=isAdminGestao()?'':'none';
   // Oculta seções do nav que ficam sem itens visíveis
   document.querySelectorAll('.nav-section').forEach(sec=>{
     if(!allowed){sec.style.display='';return;}
@@ -3611,6 +3717,7 @@ function applyNavPermissions(cargo){
   }
 }
 function logout(){
+  logEvento('Logout','Saiu do sistema');
   const t=sessionStorage.getItem('its_token');
   if(t){ try{ fetch(`${ITS_API}/auth/logout`,{method:'POST',headers:authHeaders()}).catch(()=>{}); }catch(_){} }
   sessionStorage.removeItem('its_session');
@@ -3784,7 +3891,7 @@ async function remoteGet(chave){
 
 // Puxa os dados do servidor; reatribui as variáveis em memória e re-renderiza.
 async function hydrateFromAPI(){
-  const [ponto, cfg, users, adminHash, tasks, chamados, emergs, avisos] = await Promise.all([
+  const [ponto, cfg, users, adminHash, tasks, chamados, emergs, avisos, logs] = await Promise.all([
     remoteGet('its_ponto_db'),
     remoteGet('its_cfg'),
     remoteGet('its_users'),
@@ -3793,6 +3900,7 @@ async function hydrateFromAPI(){
     remoteGet('its_chamados'),
     remoteGet('its_emergs'),
     remoteGet('its_avisos'),
+    remoteGet('its_logs'),
   ]);
   if(ponto && typeof ponto==='object'){ PONTO_DB = ponto; localStorage.setItem('its_ponto_db', JSON.stringify(ponto)); }
   if(cfg && typeof cfg==='object'){ CFG = cfg; localStorage.setItem('its_cfg', JSON.stringify(cfg)); }
@@ -3806,6 +3914,7 @@ async function hydrateFromAPI(){
   if(Array.isArray(chamados)){ CHAMADOS = chamados; nextChamadoId = Math.max(0,...CHAMADOS.map(c=>c.id))+1; localStorage.setItem('its_chamados', JSON.stringify(chamados)); }
   if(Array.isArray(emergs)){ EMERGS = emergs; nextEmergId = Math.max(0,...EMERGS.map(e=>e.id))+1; localStorage.setItem('its_emergs', JSON.stringify(emergs)); }
   if(Array.isArray(avisos)){ AVISOS = avisos; nextAvisoId = Math.max(0,...AVISOS.map(a=>a.id))+1; localStorage.setItem('its_avisos', JSON.stringify(avisos)); }
+  if(Array.isArray(logs)){ LOGS = logs; localStorage.setItem('its_logs', JSON.stringify(logs)); try{renderLogs();}catch(_){} }
 
   // Re-renderiza com os dados do servidor.
   try{ if(typeof renderUsers==='function') renderUsers(); }catch(_){}
@@ -3824,6 +3933,7 @@ async function hydrateFromAPI(){
   if(chamados===null) remoteSet('its_chamados', CHAMADOS);
   if(emergs===null) remoteSet('its_emergs', EMERGS);
   if(avisos===null) remoteSet('its_avisos', AVISOS);
+  if(logs===null) remoteSet('its_logs', LOGS);
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────
