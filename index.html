@@ -2241,6 +2241,7 @@ function resolverChamado(id){
   c.resolvidoEm=`${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
   c.status='Resolvido';
   saveChamados();
+  logEvento('Chamado resolvido', c.titulo);
   notifyWhatsApp(
     `✅ *Chamado Resolvido* — iTS Gerencial CASAN\n\n`+
     `*${c.titulo}*\n`+
@@ -3056,6 +3057,7 @@ async function saveZapi(){
     const d=await r.json().catch(()=>({}));
     if(!r.ok){ zapiMsg(`<div class="its-alert alert-error"><i class="ti ti-x"></i> ${esc(d.error||'Falha ao salvar.')}</div>`); return; }
     document.getElementById('zapiToken').value=''; document.getElementById('zapiClientToken').value='';
+    logEvento('Integração Z-API','Configuração salva');
     zapiMsg('<div class="its-alert alert-success"><i class="ti ti-check"></i> Integração Z-API salva!</div>');
     loadZapi();
   }catch(_){ zapiMsg('<div class="its-alert alert-error"><i class="ti ti-x"></i> Serviço indisponível.</div>'); }
@@ -3424,7 +3426,7 @@ async function saveUser(id){
 async function resetUserPass(id){
   const u=USERS.find(x=>x.id===id);if(!u)return;
   if(!confirm(`Redefinir a senha de "${u.nome}" para o padrão (123456)?`))return;
-  u.hash=HASH_PADRAO;saveUsers();
+  u.hash=HASH_PADRAO;saveUsers();logEvento('Senha redefinida', u.nome);
   if(sessionStorage.getItem('its_token')){
     const idc=await apiUserId(u.email);
     if(idc){ try{ await fetch(`${ITS_API}/usuarios/${idc}`,{method:'PUT',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify({senha:'123456'})}); }catch(_){} }
@@ -3439,6 +3441,7 @@ async function toggleUser(id){
     const idc=await apiUserId(u.email);
     if(idc){ try{ await fetch(`${ITS_API}/usuarios/${idc}`,{method:'PUT',headers:authHeaders({'Content-Type':'application/json'}),body:JSON.stringify({ativo:u.status==='Ativo'})}); }catch(_){} }
   }
+  logEvento('Usuário '+(u.status==='Ativo'?'ativado':'inativado'), u.nome);
   showToast(`Usuário ${u.status==='Ativo'?'ativado':'inativado'}.`);
 }
 async function deleteUser(id){
@@ -3561,7 +3564,7 @@ async function doLogin(ev){
       });
       const d=await r.json();
       if(r.ok&&d.token){ entrarComToken(d.token,d.user); }
-      else{ showErr(d.error||'Código inválido.'); document.getElementById('login2faCode').value=''; }
+      else{ showErr(d.error||'Código inválido.'); logEvento('Login 2FA falhou','Código inválido'); document.getElementById('login2faCode').value=''; }
     }catch(_){ showErr('Falha de conexão com o servidor.'); }
     return false;
   }
@@ -3581,6 +3584,7 @@ async function doLogin(ev){
     }
     if(r.ok&&d.token){ entrarComToken(d.token,d.user); return false; }
     showErr(d.error||'E-mail ou senha inválidos.');
+    logEvento('Login falhou','E-mail: '+email);
     document.getElementById('loginPass').value='';
     return false;
   }catch(_){
@@ -3605,6 +3609,7 @@ function doLoginOffline(email,pass,showErr){
     logEvento('Login','Acesso ao sistema (offline)');
   }else{
     showErr('E-mail ou senha inválidos.');
+    logEvento('Login falhou','E-mail: '+email+' (offline)');
     document.getElementById('loginPass').value='';
   }
   return false;
