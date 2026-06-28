@@ -1400,6 +1400,10 @@ function arquivarTarefa(id){
     t.arquivada=true; t.arquivoInfo=info;
     saveTasks(); closeModal(); applyFilters(); updateDashboard();
     logEvento('Tarefa arquivada', t.titulo+' — '+info.motivo);
+    const pc=info.pedidoCliente;
+    notifyWhatsApp(`🗄️ *Tarefa Arquivada/Cancelada* — iTS Gerencial CASAN\n\n*${t.titulo}*\nMotivo: ${info.motivo}${info.obs?`\nObs: ${info.obs}`:''}\nPor: ${info.por} (${info.perfil||'—'})${pc?`\nSolicitado por (cliente): ${pc.solicitante}`:''}`);
+    notifyEmail(`🗄️ Tarefa Arquivada: ${t.titulo}`, t.titulo, 'Tarefa arquivada/cancelada', 'Notificação de Tarefa',
+      [{label:'Motivo',valor:info.motivo},{label:'Observação',valor:info.obs||'—'},{label:'Arquivada por',valor:`${info.por} (${info.perfil||'—'})`},{label:'Solicitante (cliente)',valor:pc?pc.solicitante:'—'},{label:'Em',valor:info.em}]);
     showToast('Tarefa arquivada.');
   };
 }
@@ -1475,6 +1479,10 @@ function arquivarChamado(id){
     c.historico=c.historico||[]; c.historico.push(novaInteracao('nota','Arquivado/cancelado — '+info.motivo+(info.obs?(' · '+info.obs):''),[]));
     saveChamados(); closeModal(); filterChamados();
     logEvento('Chamado arquivado', c.titulo+' — '+info.motivo);
+    const pc=info.pedidoCliente;
+    notifyWhatsApp(`🗄️ *Chamado Cancelado* — iTS Gerencial CASAN\n\n*${c.titulo}*\nMotivo: ${info.motivo}${info.obs?`\nObs: ${info.obs}`:''}\nPor: ${info.por} (${info.perfil||'—'})${pc?`\nSolicitado por (cliente): ${pc.solicitante}`:''}`);
+    notifyEmail(`🗄️ Chamado Cancelado: ${c.titulo}`, c.titulo, 'Chamado cancelado/arquivado', 'Notificação de Chamado',
+      [{label:'Motivo',valor:info.motivo},{label:'Observação',valor:info.obs||'—'},{label:'Cancelado por',valor:`${info.por} (${info.perfil||'—'})`},{label:'Solicitante (cliente)',valor:pc?pc.solicitante:'—'},{label:'Em',valor:info.em}]);
     showToast('Chamado arquivado/cancelado.');
   };
 }
