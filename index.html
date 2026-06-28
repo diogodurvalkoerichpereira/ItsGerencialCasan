@@ -319,6 +319,12 @@ textarea{resize:vertical;min-height:72px}
             <option value="fora_prazo">Fora do Prazo</option>
           </select>
         </div>
+        <div class="form-group" style="flex:0 0 auto;min-width:auto">
+          <label>&nbsp;</label>
+          <label style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:.8rem;cursor:pointer;white-space:nowrap">
+            <input type="checkbox" id="chamadoFilterArquivados" onchange="filterChamados()" style="width:auto;accent-color:var(--its-orange)"> Ver arquivados
+          </label>
+        </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table class="task-table">
@@ -1406,6 +1412,80 @@ function desarquivarTarefa(id){
   showToast('Tarefa desarquivada.');
 }
 
+// Markup reutilizável do formulário de arquivamento/cancelamento.
+function arquivoFormHTML(textoTopo){
+  const motivos = isCliente() ? MOTIVOS_CLIENTE : MOTIVOS_EQUIPE;
+  return `
+    <div style="font-size:.82rem;color:var(--its-muted);margin-bottom:14px">${textoTopo}</div>
+    <div class="form-group">
+      <label>Motivo do arquivamento/cancelamento *</label>
+      <select id="arqMotivo" onchange="onArqMotivoChange()">
+        <option value="">Selecione...</option>
+        ${motivos.map(m=>`<option>${m}</option>`).join('')}
+      </select>
+    </div>
+    <div id="arqPedidoBox" style="display:none;border:1px solid var(--its-border);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px;background:#f8fafc">
+      <div style="font-size:.78rem;font-weight:700;color:var(--its-sidebar);margin-bottom:10px">Dados do pedido (parte do cliente)</div>
+      <div class="form-row">
+        <div class="form-group"><label>Solicitante (cliente) *</label><input type="text" id="arqSolicitante" placeholder="Nome de quem pediu"></div>
+        <div class="form-group"><label>Cargo/Setor</label><input type="text" id="arqSolicitanteCargo" placeholder="Ex: Gerência CASAN"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Contato (e-mail/telefone)</label><input type="text" id="arqSolicitanteContato" placeholder="Opcional"></div>
+        <div class="form-group"><label>Data do pedido</label><input type="date" id="arqSolicitanteData"></div>
+      </div>
+    </div>
+    <div class="form-group"><label>Observação (opcional)</label><textarea id="arqObs" placeholder="Detalhe se necessário..." style="min-height:70px"></textarea></div>
+    <div id="arqErro" class="its-alert alert-error" style="display:none;margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="arqBtn"><i class="ti ti-archive"></i> Arquivar</button>
+    </div>`;
+}
+// Coleta e valida os dados do formulário de arquivamento. Retorna info ou null.
+function colherArquivoInfo(){
+  const s=getSession();
+  const motivo=document.getElementById('arqMotivo').value;
+  const erro=document.getElementById('arqErro');
+  if(!motivo){ erro.textContent='Selecione o motivo.'; erro.style.display='flex'; return null; }
+  const info={ motivo, obs:document.getElementById('arqObs').value.trim(), por:(s&&s.nome)||'—', perfil:(s&&s.cargo)||'', em:agoraISO() };
+  if(motivo===MOTIVO_PEDIDO_CLIENTE){
+    const solic=document.getElementById('arqSolicitante').value.trim();
+    if(!solic){ erro.textContent='Informe quem do cliente solicitou o cancelamento.'; erro.style.display='flex'; return null; }
+    info.pedidoCliente={
+      solicitante:solic,
+      cargo:document.getElementById('arqSolicitanteCargo').value.trim(),
+      contato:document.getElementById('arqSolicitanteContato').value.trim(),
+      dataPedido:document.getElementById('arqSolicitanteData').value,
+      registradoPor:(s&&s.nome)||'—'
+    };
+  }
+  return info;
+}
+
+// Arquiva/cancela um chamado (mesmos motivos das tarefas).
+function arquivarChamado(id){
+  const c=CHAMADOS.find(x=>x.id===id);if(!c)return;
+  document.getElementById('modalTitle').textContent='Arquivar/Cancelar Chamado — '+c.titulo;
+  document.getElementById('modalContent').innerHTML=arquivoFormHTML('O chamado sairá da lista ativa. O registro fica salvo (quem, quando e o motivo).');
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('arqBtn').onclick=()=>{
+    const info=colherArquivoInfo(); if(!info) return;
+    c.arquivado=true; c.arquivoInfo=info; c.status='Cancelado';
+    c.historico=c.historico||[]; c.historico.push(novaInteracao('nota','Arquivado/cancelado — '+info.motivo+(info.obs?(' · '+info.obs):''),[]));
+    saveChamados(); closeModal(); filterChamados();
+    logEvento('Chamado arquivado', c.titulo+' — '+info.motivo);
+    showToast('Chamado arquivado/cancelado.');
+  };
+}
+function desarquivarChamado(id){
+  const c=CHAMADOS.find(x=>x.id===id);if(!c)return;
+  if(!confirm(`Desarquivar o chamado "${c.titulo}"?`))return;
+  c.arquivado=false; if(c.status==='Cancelado') c.status=c.resolvidoEm?'Resolvido':'Em Atendimento';
+  saveChamados(); filterChamados();
+  showToast('Chamado desarquivado.');
+}
+
 function closeModal(){document.getElementById('modalOverlay').classList.remove('open')}
 document.getElementById('modalOverlay').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal()});
 
@@ -1942,8 +2022,11 @@ function renderChamados(list){
       <td style="font-size:.82rem">${prazoHtml}</td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-ghost btn-sm" onclick="verChamado(${c.id})" title="Ver detalhes/resposta"><i class="ti ti-eye"></i></button>
-        ${c.status==='Em Atendimento'?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="responderChamado(${c.id})" title="Responder e resolver"><i class="ti ti-message-reply"></i></button>`:''}
-        <button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteChamado(${c.id})" title="Excluir"><i class="ti ti-trash"></i></button>
+        ${c.arquivado
+          ? `<button class="btn btn-ghost btn-sm" onclick="desarquivarChamado(${c.id})" title="Desarquivar"><i class="ti ti-archive-off"></i></button>`
+          : `<button class="btn btn-ghost btn-sm" onclick="arquivarChamado(${c.id})" title="Arquivar/Cancelar"><i class="ti ti-archive"></i></button>`}
+        ${(c.status==='Em Atendimento'&&!c.arquivado)?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="responderChamado(${c.id})" title="Responder e resolver"><i class="ti ti-message-reply"></i></button>`:''}
+        ${c.arquivado?'':`<button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteChamado(${c.id})" title="Excluir"><i class="ti ti-trash"></i></button>`}
       </div></td>
     </tr>`;
   }).join('');
@@ -1952,7 +2035,9 @@ function filterChamados(){
   const q=document.getElementById('chamadoSearch').value.toLowerCase();
   const st=document.getElementById('chamadoFilterStatus').value;
   const pr=document.getElementById('chamadoFilterPrazo').value;
+  const verArq=document.getElementById('chamadoFilterArquivados')?.checked;
   renderChamados(CHAMADOS.filter(c=>{
+    if(verArq?!c.arquivado:c.arquivado)return false;
     if(q&&!c.titulo.toLowerCase().includes(q)&&!(c.desc||'').toLowerCase().includes(q))return false;
     if(st&&c.status!==st)return false;
     if(pr){
@@ -2227,8 +2312,18 @@ function verChamado(id){
       <div class="form-group"><label>Resolvido em</label><div style="font-size:.85rem">${esc(c.resolvidoEm)||'—'}</div></div>
     </div>
     ${c.historico&&c.historico.length?renderHistorico(c.historico):(c.resposta?`<hr class="divider"><div class="form-group"><label>Resposta</label><div style="font-size:.85rem;background:#f8fafc;padding:10px;border-radius:6px">${esc(c.resposta)}</div></div>${renderAnexos(c.anexos)}`:'')}
+    ${c.arquivado&&c.arquivoInfo?`<hr class="divider"><div class="its-alert alert-warning" style="display:block"><i class="ti ti-archive"></i> <strong>Arquivado/Cancelado</strong><div style="font-size:.8rem;margin-top:4px;line-height:1.6">
+      Motivo: <strong>${esc(c.arquivoInfo.motivo)}</strong><br>
+      ${c.arquivoInfo.obs?`Observação: ${esc(c.arquivoInfo.obs)}<br>`:''}
+      Por: ${esc(c.arquivoInfo.por)}${c.arquivoInfo.perfil?` (${esc(c.arquivoInfo.perfil)})`:''} · em ${esc(c.arquivoInfo.em)}
+      ${c.arquivoInfo.pedidoCliente?`<br><br><strong>Pedido do cliente:</strong><br>
+        Solicitante: ${esc(c.arquivoInfo.pedidoCliente.solicitante)}${c.arquivoInfo.pedidoCliente.cargo?` (${esc(c.arquivoInfo.pedidoCliente.cargo)})`:''}<br>
+        ${c.arquivoInfo.pedidoCliente.contato?`Contato: ${esc(c.arquivoInfo.pedidoCliente.contato)}<br>`:''}
+        ${c.arquivoInfo.pedidoCliente.dataPedido?`Data do pedido: ${esc(c.arquivoInfo.pedidoCliente.dataPedido)}<br>`:''}
+        Registrado por: ${esc(c.arquivoInfo.pedidoCliente.registradoPor)}`:''}
+    </div></div>`:''}
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-      <button class="btn btn-outline" onclick="comentarChamado(${c.id})"><i class="ti ti-message-plus"></i> Comentar</button>
+      ${c.arquivado?'':`<button class="btn btn-outline" onclick="comentarChamado(${c.id})"><i class="ti ti-message-plus"></i> Comentar</button>`}
       ${c.status==='Em Atendimento'?`<button class="btn btn-primary" onclick="responderChamado(${c.id})"><i class="ti ti-message-reply"></i> Responder e Resolver</button>`:''}
       <button class="btn btn-ghost" onclick="closeModal()">Fechar</button>
     </div>`;
