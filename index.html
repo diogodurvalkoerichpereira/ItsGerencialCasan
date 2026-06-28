@@ -1275,6 +1275,11 @@ function verTarefa(id){
       Motivo: <strong>${esc(t.arquivoInfo.motivo)}</strong><br>
       ${t.arquivoInfo.obs?`Observação: ${esc(t.arquivoInfo.obs)}<br>`:''}
       Por: ${esc(t.arquivoInfo.por)}${t.arquivoInfo.perfil?` (${esc(t.arquivoInfo.perfil)})`:''} · em ${esc(t.arquivoInfo.em)}
+      ${t.arquivoInfo.pedidoCliente?`<br><br><strong>Pedido do cliente:</strong><br>
+        Solicitante: ${esc(t.arquivoInfo.pedidoCliente.solicitante)}${t.arquivoInfo.pedidoCliente.cargo?` (${esc(t.arquivoInfo.pedidoCliente.cargo)})`:''}<br>
+        ${t.arquivoInfo.pedidoCliente.contato?`Contato: ${esc(t.arquivoInfo.pedidoCliente.contato)}<br>`:''}
+        ${t.arquivoInfo.pedidoCliente.dataPedido?`Data do pedido: ${esc(t.arquivoInfo.pedidoCliente.dataPedido)}<br>`:''}
+        Registrado por: ${esc(t.arquivoInfo.pedidoCliente.registradoPor)}`:''}
     </div></div>`:''}
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
       ${!t.arquivada?`<button class="btn btn-outline" onclick="comentarTarefa(${t.id})"><i class="ti ti-message-plus"></i> Comentar</button>`:''}
@@ -1284,30 +1289,47 @@ function verTarefa(id){
   document.getElementById('modalOverlay').classList.add('open');
 }
 
-// Motivos disponíveis para arquivar uma tarefa.
-const MOTIVOS_ARQUIVO=[
+// Motivos visíveis ao Cliente (apenas estes 2).
+const MOTIVOS_CLIENTE=[
   'Erro de preenchimento',
   'Erro de competências',
-  'Concluída e validada',
-  'Cancelada pelo cliente',
-  'Duplicada',
-  'Fora de escopo',
-  'Sem retorno do cliente',
 ];
+// "A pedido do cliente" só aparece para a Equipe e exige dados do solicitante.
+const MOTIVO_PEDIDO_CLIENTE='A pedido do cliente';
+const MOTIVOS_EQUIPE=[...MOTIVOS_CLIENTE, MOTIVO_PEDIDO_CLIENTE];
+
+// Mostra/oculta os campos do solicitante conforme o motivo escolhido.
+function onArqMotivoChange(){
+  const motivo=document.getElementById('arqMotivo').value;
+  const box=document.getElementById('arqPedidoBox');
+  if(box) box.style.display = (motivo===MOTIVO_PEDIDO_CLIENTE)?'block':'none';
+}
 
 // Arquiva uma tarefa registrando quem arquivou, quando e o motivo.
 function arquivarTarefa(id){
   const t=TASKS.find(x=>x.id===id);if(!t)return;
   const s=getSession();
+  const motivos = isCliente() ? MOTIVOS_CLIENTE : MOTIVOS_EQUIPE;
   document.getElementById('modalTitle').textContent='Arquivar Tarefa — '+t.titulo;
   document.getElementById('modalContent').innerHTML=`
     <div style="font-size:.82rem;color:var(--its-muted);margin-bottom:14px">A tarefa sairá da lista ativa. O registro de arquivamento fica salvo (quem, quando e o motivo).</div>
     <div class="form-group">
       <label>Motivo do arquivamento *</label>
-      <select id="arqMotivo">
+      <select id="arqMotivo" onchange="onArqMotivoChange()">
         <option value="">Selecione...</option>
-        ${MOTIVOS_ARQUIVO.map(m=>`<option>${m}</option>`).join('')}
+        ${motivos.map(m=>`<option>${m}</option>`).join('')}
       </select>
+    </div>
+    <div id="arqPedidoBox" style="display:none;border:1px solid var(--its-border);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px;background:#f8fafc">
+      <div style="font-size:.78rem;font-weight:700;color:var(--its-sidebar);margin-bottom:10px">Dados do pedido (parte do cliente)</div>
+      <div class="form-row">
+        <div class="form-group"><label>Solicitante (cliente) *</label><input type="text" id="arqSolicitante" placeholder="Nome de quem pediu"></div>
+        <div class="form-group"><label>Cargo/Setor</label><input type="text" id="arqSolicitanteCargo" placeholder="Ex: Gerência CASAN"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Contato (e-mail/telefone)</label><input type="text" id="arqSolicitanteContato" placeholder="Opcional"></div>
+        <div class="form-group"><label>Data do pedido</label><input type="date" id="arqSolicitanteData"></div>
+      </div>
     </div>
     <div class="form-group"><label>Observação (opcional)</label><textarea id="arqObs" placeholder="Detalhe se necessário..." style="min-height:70px"></textarea></div>
     <div id="arqErro" class="its-alert alert-error" style="display:none;margin-bottom:10px"></div>
@@ -1320,8 +1342,19 @@ function arquivarTarefa(id){
     const motivo=document.getElementById('arqMotivo').value;
     const erro=document.getElementById('arqErro');
     if(!motivo){ erro.textContent='Selecione o motivo do arquivamento.'; erro.style.display='flex'; return; }
-    t.arquivada=true;
-    t.arquivoInfo={ motivo, obs:document.getElementById('arqObs').value.trim(), por:(s&&s.nome)||'—', perfil:(s&&s.cargo)||'', em:agoraISO() };
+    const info={ motivo, obs:document.getElementById('arqObs').value.trim(), por:(s&&s.nome)||'—', perfil:(s&&s.cargo)||'', em:agoraISO() };
+    if(motivo===MOTIVO_PEDIDO_CLIENTE){
+      const solic=document.getElementById('arqSolicitante').value.trim();
+      if(!solic){ erro.textContent='Informe quem do cliente solicitou o cancelamento.'; erro.style.display='flex'; return; }
+      info.pedidoCliente={
+        solicitante:solic,
+        cargo:document.getElementById('arqSolicitanteCargo').value.trim(),
+        contato:document.getElementById('arqSolicitanteContato').value.trim(),
+        dataPedido:document.getElementById('arqSolicitanteData').value,
+        registradoPor:(s&&s.nome)||'—'
+      };
+    }
+    t.arquivada=true; t.arquivoInfo=info;
     saveTasks(); closeModal(); applyFilters(); updateDashboard();
     showToast('Tarefa arquivada.');
   };
