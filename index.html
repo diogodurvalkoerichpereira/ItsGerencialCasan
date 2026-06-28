@@ -1151,6 +1151,7 @@ function openNewTask(){
   document.getElementById('modalContent').innerHTML=buildForm();
   document.getElementById('modalOverlay').classList.add('open');
   updatePrazoPreview(null);
+  initAnexoWidget();
 }
 function editTask(id){
   const t=TASKS.find(x=>x.id===id);if(!t)return;
@@ -1189,6 +1190,7 @@ function buildForm(t={}){
       </div>
     </div>
     <div class="form-group"><label>Descrição</label><textarea id="fDesc" placeholder="Detalhes adicionais...">${esc(t.desc||'')}</textarea></div>
+    ${t.id?'':anexoWidgetHTML('Anexos na abertura (documentos / áudios) — opcional')}
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="saveTask(${t.id||0})"><i class="ti ti-device-floppy"></i> Salvar</button>
@@ -1213,10 +1215,13 @@ function saveTask(id){
     const d=new Date();const p=n=>String(n).padStart(2,'0');
     const criadoIso=`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
     const s=getSession();
+    const descTask=document.getElementById('fDesc').value;
+    const anexosAbertura=(typeof _anexosResp!=='undefined')?_anexosResp.slice():[];
     const obj={titulo,area:document.getElementById('fArea').value,resp:document.getElementById('fResp').value,
-      prio,status:'Aguardando',desc:document.getElementById('fDesc').value,
+      prio,status:'Aguardando',desc:descTask,
       criado:criadoIso,prazo:calcPrazo(prio,criadoIso),
-      criadoPorCliente:s&&s.cargo==='Cliente',criadoPor:s?s.nome:''};
+      criadoPorCliente:s&&s.cargo==='Cliente',criadoPor:s?s.nome:'',
+      historico:[novaInteracao('abertura',descTask,anexosAbertura)]};
     obj.id=nextId++;TASKS.push(obj);sendNotification(obj);
   }
   saveTasks();
@@ -1244,6 +1249,7 @@ function responderTarefa(id){
   const t=TASKS.find(x=>x.id===id);if(!t)return;
   abrirResposta('Responder Tarefa — '+t.titulo, ({texto,anexos,em})=>{
     t.resposta=texto; t.anexos=anexos; t.resolvidoEm=em; t.status='Concluído';
+    t.historico=t.historico||[]; t.historico.push(novaInteracao('resposta',texto,anexos));
     saveTasks(); closeModal(); applyFilters(); updateDashboard();
     notifyWhatsApp(`✅ *Tarefa Concluída* — iTS Gerencial CASAN\n\n*${t.titulo}*\nResposta: ${texto}\nConcluída em: ${em}${anexos.length?`\n📎 ${anexos.length} anexo(s)`:''}`);
     notifyEmail(`✅ Tarefa Concluída: ${t.titulo}`, t.titulo, 'Tarefa concluída', 'Notificação de Tarefa',
@@ -1264,7 +1270,7 @@ function verTarefa(id){
       <div class="form-group"><label>Responsável</label><div style="font-size:.85rem">${esc(t.resp)||'—'}</div></div>
     </div>
     <div class="form-group"><label>Descrição</label><div style="font-size:.85rem">${esc(t.desc)||'—'}</div></div>
-    ${t.resposta?`<hr class="divider"><div class="form-group"><label>Resposta</label><div style="font-size:.85rem;background:#f8fafc;padding:10px;border-radius:6px">${esc(t.resposta)}</div></div>${renderAnexos(t.anexos)}`:''}
+    ${t.historico&&t.historico.length?renderHistorico(t.historico):(t.resposta?`<hr class="divider"><div class="form-group"><label>Resposta</label><div style="font-size:.85rem;background:#f8fafc;padding:10px;border-radius:6px">${esc(t.resposta)}</div></div>${renderAnexos(t.anexos)}`:'')}
     ${t.arquivada&&t.arquivoInfo?`<hr class="divider"><div class="its-alert alert-warning" style="display:block"><i class="ti ti-archive"></i> <strong>Arquivada</strong><div style="font-size:.8rem;margin-top:4px;line-height:1.6">
       Motivo: <strong>${esc(t.arquivoInfo.motivo)}</strong><br>
       ${t.arquivoInfo.obs?`Observação: ${esc(t.arquivoInfo.obs)}<br>`:''}
@@ -1891,6 +1897,7 @@ function abrirNovoChamado(){
   document.getElementById('modalContent').innerHTML=`
     <div class="form-group"><label>Título *</label><input type="text" id="cTitulo" placeholder="Descreva o problema..."></div>
     <div class="form-group"><label>Descrição</label><textarea id="cDesc" placeholder="Detalhes do chamado..."></textarea></div>
+    ${anexoWidgetHTML('Anexos na abertura (documentos / áudios) — opcional')}
     <div class="form-group"><label>Data/Hora Abertura <span style="font-weight:400;color:var(--its-muted)">(automático)</span></label>
       <input type="text" value="${criadoIso}" disabled style="background:#f8fafc;color:var(--its-sidebar);font-weight:600;cursor:not-allowed"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
@@ -1898,12 +1905,15 @@ function abrirNovoChamado(){
       <button class="btn btn-primary" onclick="salvarChamado('${criadoIso}')"><i class="ti ti-device-floppy"></i> Salvar</button>
     </div>`;
   document.getElementById('modalOverlay').classList.add('open');
+  initAnexoWidget();
 }
 function salvarChamado(criadoIso){
   const titulo=document.getElementById('cTitulo').value.trim();
   if(!titulo){alert('Informe o título do chamado.');return;}
   const descCh=document.getElementById('cDesc').value;
-  CHAMADOS.unshift({id:nextChamadoId++,titulo,desc:descCh,criado:criadoIso,status:'Em Atendimento',resolvidoEm:null});
+  const anexosAbertura=(typeof _anexosResp!=='undefined')?_anexosResp.slice():[];
+  CHAMADOS.unshift({id:nextChamadoId++,titulo,desc:descCh,criado:criadoIso,status:'Em Atendimento',resolvidoEm:null,
+    historico:[novaInteracao('abertura',descCh,anexosAbertura)]});
   saveChamados();
   notifyWhatsApp(
     `🆘 *Novo Chamado* — iTS Gerencial CASAN\n\n`+
@@ -2032,11 +2042,64 @@ function abrirResposta(titulo, onSalvar){
 }
 function agoraISO(){ const d=new Date();const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
 
+// ── Widget de anexos reutilizável (usa _anexosResp e os IDs respAnexos/...) ──
+function anexoWidgetHTML(label){
+  return `
+    <div class="form-group">
+      <label>${label||'Anexos (documentos / áudios) — opcional'}</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="file" id="respAnexos" multiple accept="${ANEXO_ACCEPT}" style="flex:1">
+        <button type="button" class="btn btn-outline btn-sm" onclick="adicionarAnexos()"><i class="ti ti-plus"></i> Adicionar</button>
+      </div>
+      <div style="font-size:.72rem;color:var(--its-muted);margin:4px 0 8px">Selecione e clique em Adicionar (pode repetir). Até ${ANEXO_MAX_MB} MB por arquivo, ${ANEXO_MAX_TOTAL_MB} MB no total.</div>
+      <div id="respLista" style="display:flex;flex-direction:column;gap:5px"></div>
+      <div id="respErro" class="its-alert alert-error" style="display:none;margin-top:8px"></div>
+    </div>`;
+}
+function initAnexoWidget(){
+  _anexosResp=[];
+  renderListaAnexos();
+  const inp=document.getElementById('respAnexos');
+  if(inp) inp.addEventListener('change',adicionarAnexos);
+}
+
+// Identidade de quem está agindo agora (para o histórico).
+function autorAtual(){
+  const s=getSession();
+  return { por:(s&&s.nome)||'—', perfil:(s&&s.cargo)||'', ehCliente:!!(s&&s.cargo==='Cliente'), em:agoraISO() };
+}
+// Cria uma entrada de histórico (interação).
+function novaInteracao(tipo, texto, anexos){
+  const a=autorAtual();
+  return { tipo, texto:texto||'', anexos:anexos||[], por:a.por, perfil:a.perfil, ehCliente:a.ehCliente, em:a.em };
+}
+// Renderiza o histórico (thread) distinguindo Cliente x Equipe, com data/hora.
+function renderHistorico(hist){
+  if(!hist||!hist.length) return '';
+  const rotuloTipo={abertura:'Abertura', resposta:'Resposta', nota:'Nota'};
+  return `<hr class="divider"><div class="section-title" style="font-size:.78rem;margin-bottom:10px">Histórico de Interações</div>
+    <div style="display:flex;flex-direction:column;gap:10px">`+hist.map(h=>{
+      const cor=h.ehCliente?'#0284c7':'#16a34a';
+      const tag=h.ehCliente?'CLIENTE':'EQUIPE';
+      return `<div style="border:1px solid var(--its-border);border-left:3px solid ${cor};border-radius:var(--radius-sm);padding:10px 12px;background:#fff">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+          <span style="background:${cor};color:#fff;font-size:.62rem;font-weight:800;padding:2px 7px;border-radius:4px;letter-spacing:.04em">${tag}</span>
+          <span style="font-size:.8rem;font-weight:600;color:var(--its-sidebar)">${esc(h.por)}</span>
+          ${h.perfil?`<span style="font-size:.72rem;color:var(--its-muted)">(${esc(h.perfil)})</span>`:''}
+          <span style="font-size:.72rem;color:var(--its-muted)">· ${rotuloTipo[h.tipo]||h.tipo} · ${esc(h.em)}</span>
+        </div>
+        ${h.texto?`<div style="font-size:.85rem;color:var(--its-text);white-space:pre-wrap">${esc(h.texto)}</div>`:''}
+        ${renderAnexos(h.anexos)}
+      </div>`;
+    }).join('')+`</div>`;
+}
+
 // Responder + resolver um chamado.
 function responderChamado(id){
   const c=CHAMADOS.find(x=>x.id===id);if(!c)return;
   abrirResposta('Responder Chamado — '+c.titulo, ({texto,anexos,em})=>{
     c.resposta=texto; c.anexos=anexos; c.resolvidoEm=em; c.status='Resolvido';
+    c.historico=c.historico||[]; c.historico.push(novaInteracao('resposta',texto,anexos));
     saveChamados(); closeModal(); filterChamados();
     notifyWhatsApp(`✅ *Chamado Resolvido* — iTS Gerencial CASAN\n\n*${c.titulo}*\nResposta: ${texto}\nResolvido em: ${em}${anexos.length?`\n📎 ${anexos.length} anexo(s)`:''}`);
     notifyEmail(`✅ Chamado Resolvido: ${c.titulo}`, c.titulo, 'Chamado resolvido', 'Notificação de Chamado',
@@ -2057,7 +2120,7 @@ function verChamado(id){
       <div class="form-group"><label>Aberto em</label><div style="font-size:.85rem">${esc(c.criado)||'—'}</div></div>
       <div class="form-group"><label>Resolvido em</label><div style="font-size:.85rem">${esc(c.resolvidoEm)||'—'}</div></div>
     </div>
-    ${c.resposta?`<hr class="divider"><div class="form-group"><label>Resposta</label><div style="font-size:.85rem;background:#f8fafc;padding:10px;border-radius:6px">${esc(c.resposta)}</div></div>${renderAnexos(c.anexos)}`:''}
+    ${c.historico&&c.historico.length?renderHistorico(c.historico):(c.resposta?`<hr class="divider"><div class="form-group"><label>Resposta</label><div style="font-size:.85rem;background:#f8fafc;padding:10px;border-radius:6px">${esc(c.resposta)}</div></div>${renderAnexos(c.anexos)}`:'')}
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
       ${c.status==='Em Atendimento'?`<button class="btn btn-primary" onclick="responderChamado(${c.id})"><i class="ti ti-message-reply"></i> Responder e Resolver</button>`:''}
       <button class="btn btn-ghost" onclick="closeModal()">Fechar</button>
