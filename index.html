@@ -206,7 +206,7 @@ textarea{resize:vertical;min-height:72px}
   <div class="nav-item" onclick="setNav(this,'avisos')"><i class="ti ti-speakerphone"></i> Quadro de Avisos</div>
   <div class="nav-item" onclick="setNav(this,'ponto')"><i class="ti ti-clock"></i> Ponto</div>
   <div class="nav-section">Administração</div>
-  <div class="nav-item" onclick="setNav(this,'usuarios')"><i class="ti ti-users"></i> Usuários</div>
+  <div class="nav-item" id="navUsuarios" onclick="setNav(this,'usuarios')"><i class="ti ti-users"></i> Usuários</div>
   <div class="nav-item" onclick="setNav(this,'config')"><i class="ti ti-settings"></i> Configurações</div>
   <div class="nav-item" id="navLogs" onclick="setNav(this,'logs')"><i class="ti ti-history"></i> Logs de Atividade</div>
   <div class="sidebar-bottom">
@@ -2921,6 +2921,12 @@ function switchTab(name,el){
   if(name==='dashboard')updateDashboard();
 }
 function setNav(el,tab){
+  // Bloqueio de telas restritas (Usuários e Logs) — mensagem tratada.
+  if((tab==='usuarios'||tab==='logs') && !isAdminGestao()){
+    showToast('Acesso restrito ao Administrador/Gerente.');
+    logEvento('Acesso negado','Tentativa de abrir '+(tab==='usuarios'?'Usuários':'Logs'));
+    return;
+  }
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   el.classList.add('active');
   const isEmerg=tab==='emergencias';
@@ -3393,7 +3399,15 @@ function buildUserForm(u={}){
     </div>`;
 }
 
+// Bloqueio central: só Admin/Gerente gerenciam usuários. Mensagem tratada.
+function exigeGestaoUsuarios(){
+  if(isAdminGestao()) return true;
+  showToast('Acesso negado: apenas Administrador/Gerente podem gerenciar usuários.');
+  logEvento('Acesso negado','Tentativa de gerenciar usuários');
+  return false;
+}
 function openNewUser(){
+  if(!exigeGestaoUsuarios()) return;
   document.getElementById('modalTitle').textContent='Novo Usuário';
   document.getElementById('modalContent').innerHTML=buildUserForm();
   document.getElementById('modalOverlay').classList.add('open');
@@ -3405,6 +3419,7 @@ function editUser(id){
   document.getElementById('modalOverlay').classList.add('open');
 }
 async function saveUser(id){
+  if(!exigeGestaoUsuarios()) return;
   const nome=document.getElementById('uNome').value.trim();
   const email=document.getElementById('uEmail').value.trim();
   if(!nome){alert('Informe o nome do usuário.');return}
@@ -3424,6 +3439,7 @@ async function saveUser(id){
   showToast(id?'Usuário atualizado com sucesso!':'Usuário criado (senha padrão 123456).');
 }
 async function resetUserPass(id){
+  if(!exigeGestaoUsuarios()) return;
   const u=USERS.find(x=>x.id===id);if(!u)return;
   if(!confirm(`Redefinir a senha de "${u.nome}" para o padrão (123456)?`))return;
   u.hash=HASH_PADRAO;saveUsers();logEvento('Senha redefinida', u.nome);
@@ -3434,6 +3450,7 @@ async function resetUserPass(id){
   showToast('Senha redefinida para 123456.');
 }
 async function toggleUser(id){
+  if(!exigeGestaoUsuarios()) return;
   const u=USERS.find(x=>x.id===id);if(!u)return;
   u.status=u.status==='Ativo'?'Inativo':'Ativo';
   saveUsers();filterUsers();
@@ -3445,6 +3462,7 @@ async function toggleUser(id){
   showToast(`Usuário ${u.status==='Ativo'?'ativado':'inativado'}.`);
 }
 async function deleteUser(id){
+  if(!exigeGestaoUsuarios()) return;
   const u=USERS.find(x=>x.id===id);if(!u)return;
   if(!confirm(`Excluir o usuário "${u.nome}"?`))return;
   const email=u.email;
@@ -3692,9 +3710,12 @@ function applyNavPermissions(cargo){
     const m=el.getAttribute('onclick').match(/setNav\(this,'(\w+)'\)/);
     if(m)el.style.display=(!allowed||allowed.includes(m[1]))?'':'none';
   });
-  // Logs de Atividade: somente administrador/gestão
+  // Gestão de Usuários e Logs: somente administrador/gestão (Admin/Gerente)
+  const gestao=isAdminGestao();
   const navLogs=document.getElementById('navLogs');
-  if(navLogs) navLogs.style.display=isAdminGestao()?'':'none';
+  if(navLogs) navLogs.style.display=gestao?'':'none';
+  const navUsuarios=document.getElementById('navUsuarios');
+  if(navUsuarios) navUsuarios.style.display=gestao?'':'none';
   // Oculta seções do nav que ficam sem itens visíveis
   document.querySelectorAll('.nav-section').forEach(sec=>{
     if(!allowed){sec.style.display='';return;}
