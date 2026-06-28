@@ -271,6 +271,12 @@ textarea{resize:vertical;min-height:72px}
             <option>Carlos Souza</option><option>Mariana R.</option>
           </select>
         </div>
+        <div class="form-group" style="flex:0 0 auto;min-width:auto">
+          <label>&nbsp;</label>
+          <label style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:.8rem;cursor:pointer;white-space:nowrap">
+            <input type="checkbox" id="filterArquivadas" onchange="applyFilters()" style="width:auto;accent-color:var(--its-orange)"> Ver arquivadas
+          </label>
+        </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table class="task-table">
@@ -1113,7 +1119,10 @@ function renderTasks(list){
       <td>
         <div style="display:flex;gap:4px">
           <button class="btn btn-ghost btn-sm" onclick="verTarefa(${t.id})" title="Ver detalhes/resposta"><i class="ti ti-eye"></i></button>
-          ${isCliente()?'':`
+          ${t.arquivada
+            ? `<button class="btn btn-ghost btn-sm" onclick="desarquivarTarefa(${t.id})" title="Desarquivar"><i class="ti ti-archive-off"></i></button>`
+            : `<button class="btn btn-ghost btn-sm" onclick="arquivarTarefa(${t.id})" title="Arquivar"><i class="ti ti-archive"></i></button>`}
+          ${(isCliente()||t.arquivada)?'':`
           ${t.status!=='Concluído'?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="responderTarefa(${t.id})" title="Responder e concluir"><i class="ti ti-message-reply"></i></button>`:''}
           <button class="btn btn-ghost btn-sm" onclick="editTask(${t.id})" title="Editar"><i class="ti ti-edit"></i></button>
           <button class="btn btn-ghost btn-sm" onclick="cycleStatus(${t.id})" title="Próximo status"><i class="ti ti-refresh"></i></button>
@@ -1128,7 +1137,9 @@ function applyFilters(){
   const st=document.getElementById('filterStatus').value;
   const pr=document.getElementById('filterPrio').value;
   const rs=document.getElementById('filterResp').value;
+  const verArq=document.getElementById('filterArquivadas')?.checked;
   renderTasks(TASKS.filter(t=>
+    (verArq?t.arquivada:!t.arquivada)&&
     (!q||t.titulo.toLowerCase().includes(q)||t.area.toLowerCase().includes(q)||t.resp.toLowerCase().includes(q))&&
     (!st||t.status===st)&&(!pr||t.prio===pr)&&(!rs||t.resp===rs)
   ));
@@ -1254,11 +1265,65 @@ function verTarefa(id){
     </div>
     <div class="form-group"><label>Descrição</label><div style="font-size:.85rem">${esc(t.desc)||'—'}</div></div>
     ${t.resposta?`<hr class="divider"><div class="form-group"><label>Resposta</label><div style="font-size:.85rem;background:#f8fafc;padding:10px;border-radius:6px">${esc(t.resposta)}</div></div>${renderAnexos(t.anexos)}`:''}
+    ${t.arquivada&&t.arquivoInfo?`<hr class="divider"><div class="its-alert alert-warning" style="display:block"><i class="ti ti-archive"></i> <strong>Arquivada</strong><div style="font-size:.8rem;margin-top:4px;line-height:1.6">
+      Motivo: <strong>${esc(t.arquivoInfo.motivo)}</strong><br>
+      ${t.arquivoInfo.obs?`Observação: ${esc(t.arquivoInfo.obs)}<br>`:''}
+      Por: ${esc(t.arquivoInfo.por)}${t.arquivoInfo.perfil?` (${esc(t.arquivoInfo.perfil)})`:''} · em ${esc(t.arquivoInfo.em)}
+    </div></div>`:''}
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-      ${(!isCliente()&&t.status!=='Concluído')?`<button class="btn btn-primary" onclick="responderTarefa(${t.id})"><i class="ti ti-message-reply"></i> Responder e Concluir</button>`:''}
+      ${(!isCliente()&&t.status!=='Concluído'&&!t.arquivada)?`<button class="btn btn-primary" onclick="responderTarefa(${t.id})"><i class="ti ti-message-reply"></i> Responder e Concluir</button>`:''}
       <button class="btn btn-ghost" onclick="closeModal()">Fechar</button>
     </div>`;
   document.getElementById('modalOverlay').classList.add('open');
+}
+
+// Motivos disponíveis para arquivar uma tarefa.
+const MOTIVOS_ARQUIVO=[
+  'Concluída e validada',
+  'Cancelada pelo cliente',
+  'Duplicada',
+  'Fora de escopo',
+  'Sem retorno do cliente',
+];
+
+// Arquiva uma tarefa registrando quem arquivou, quando e o motivo.
+function arquivarTarefa(id){
+  const t=TASKS.find(x=>x.id===id);if(!t)return;
+  const s=getSession();
+  document.getElementById('modalTitle').textContent='Arquivar Tarefa — '+t.titulo;
+  document.getElementById('modalContent').innerHTML=`
+    <div style="font-size:.82rem;color:var(--its-muted);margin-bottom:14px">A tarefa sairá da lista ativa. O registro de arquivamento fica salvo (quem, quando e o motivo).</div>
+    <div class="form-group">
+      <label>Motivo do arquivamento *</label>
+      <select id="arqMotivo">
+        <option value="">Selecione...</option>
+        ${MOTIVOS_ARQUIVO.map(m=>`<option>${m}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group"><label>Observação (opcional)</label><textarea id="arqObs" placeholder="Detalhe se necessário..." style="min-height:70px"></textarea></div>
+    <div id="arqErro" class="its-alert alert-error" style="display:none;margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="arqBtn"><i class="ti ti-archive"></i> Arquivar</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('open');
+  document.getElementById('arqBtn').onclick=()=>{
+    const motivo=document.getElementById('arqMotivo').value;
+    const erro=document.getElementById('arqErro');
+    if(!motivo){ erro.textContent='Selecione o motivo do arquivamento.'; erro.style.display='flex'; return; }
+    t.arquivada=true;
+    t.arquivoInfo={ motivo, obs:document.getElementById('arqObs').value.trim(), por:(s&&s.nome)||'—', perfil:(s&&s.cargo)||'', em:agoraISO() };
+    saveTasks(); closeModal(); applyFilters(); updateDashboard();
+    showToast('Tarefa arquivada.');
+  };
+}
+
+function desarquivarTarefa(id){
+  const t=TASKS.find(x=>x.id===id);if(!t)return;
+  if(!confirm(`Desarquivar a tarefa "${t.titulo}"?`))return;
+  t.arquivada=false;
+  saveTasks(); applyFilters(); updateDashboard();
+  showToast('Tarefa desarquivada.');
 }
 
 function closeModal(){document.getElementById('modalOverlay').classList.remove('open')}
