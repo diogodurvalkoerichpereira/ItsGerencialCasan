@@ -1643,7 +1643,8 @@ function gerarRelatorioPonto(){
   const map={};
   data.forEach(r=>{
     const key=r.mat||r.nome;
-    if(!map[key])map[key]={mat:r.mat,nome:r.nome,sup:r.sup,minutos:0};
+    if(!map[key])map[key]={mat:r.mat,nome:r.nome,sup:r.sup,funcao:r.funcao||'',minutos:0};
+    if(r.funcao&&!map[key].funcao)map[key].funcao=r.funcao;
     const sit=(r.sit||'').toLowerCase();
     if(sit.includes('falt')||sit==='folga')return;
     if(typeof r.durMin==='number'){ if(r.durMin>0)map[key].minutos+=r.durMin; return; }
@@ -1658,7 +1659,9 @@ function gerarRelatorioPonto(){
   });
   const rows=Object.values(map).sort((a,b)=>a.nome.localeCompare(b.nome));
   const totalMin=rows.reduce((s,r)=>s+r.minutos,0);
-  const supMin=rows.filter(r=>r.sup&&r.sup.trim()!==''&&r.sup!=='—').reduce((s,r)=>s+r.minutos,0);
+  const temFuncao=rows.some(r=>r.funcao&&r.funcao.trim()!=='');
+  const ehSup=r=>temFuncao?String(r.funcao||'').toLowerCase().includes('supervis'):(r.sup&&r.sup.trim()!==''&&r.sup!=='—');
+  const supMin=rows.filter(ehSup).reduce((s,r)=>s+r.minutos,0);
   const pct=totalMin>0?((supMin/totalMin)*100).toFixed(2):null;
   const cor=pct===null?'var(--its-muted)':parseFloat(pct)>=100?'var(--its-success)':parseFloat(pct)>=90?'var(--its-warning)':'var(--its-danger)';
   const mLabel=fmtMesLabel(mes);
@@ -2699,7 +2702,8 @@ function calcularResumoMensal(){
   const map={};
   PONTO_DATA.forEach(r=>{
     const key=r.mat||r.nome;
-    if(!map[key])map[key]={mat:r.mat,nome:r.nome,sup:r.sup,dias:0,minutos:0,faltas:0,folgas:0,inc:0,diasSemRegistro:0};
+    if(!map[key])map[key]={mat:r.mat,nome:r.nome,sup:r.sup,funcao:r.funcao||'',dias:0,minutos:0,faltas:0,folgas:0,inc:0,diasSemRegistro:0};
+    if(r.funcao&&!map[key].funcao)map[key].funcao=r.funcao;
     const sit=(r.sit||'').toLowerCase();
     if(sit.includes('falt')){ map[key].faltas++; return; }
     if(sit==='folga'){ map[key].folgas++; return; }
@@ -2735,9 +2739,13 @@ function calcularResumoMensal(){
   document.getElementById('resumoTotal').textContent=`${rows.length} operador(es) · ${totalDias} dia(s) com horas · Total: ${fmtHM(totMinGeral)}`;
 
   // ── INDICADOR 06 – Presença do Supervisor ─────────────────────────────
+  // Total de Horas do Mês = soma da Duração de todos (operadores + supervisor).
   const totalMin=rows.reduce((s,r)=>s+r.minutos,0);
-  // Horas com supervisão = funcionários que possuem Superior preenchido
-  const supMin=rows.filter(r=>r.sup&&r.sup.trim()!==''&&r.sup!=='—').reduce((s,r)=>s+r.minutos,0);
+  // Tempo com supervisão = horas de quem tem Função = Supervisor.
+  // (fallback legado: se nenhuma linha tiver Função, usa a coluna Superior)
+  const temFuncao=rows.some(r=>r.funcao&&r.funcao.trim()!=='');
+  const ehSup=r=>temFuncao?String(r.funcao||'').toLowerCase().includes('supervis'):(r.sup&&r.sup.trim()!==''&&r.sup!=='—');
+  const supMin=rows.filter(ehSup).reduce((s,r)=>s+r.minutos,0);
   const pct=totalMin>0?((supMin/totalMin)*100).toFixed(2):null;
   const cor=pct===null?'var(--its-muted)':parseFloat(pct)>=100?'var(--its-success)':parseFloat(pct)>=90?'var(--its-warning)':'var(--its-danger)';
   document.getElementById('ind06-sup').textContent=fmtHM(supMin);
@@ -2799,6 +2807,7 @@ function importarPonto(file){
           ret: lower.findIndex(h=>h.includes('retorno')),
           saida: lower.findIndex(h=>h.includes('saída')||h.includes('saida')),
           dur: lower.findIndex(h=>h.includes('dura')),
+          funcao: lower.findIndex(h=>h.includes('função')||h.includes('funcao')||h.includes('cargo')),
         };
         const dataR09=(s)=>{ const m=String(s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if(!m)return ''; let y=m[3]; if(y.length===2)y='20'+y; return `${m[1].padStart(2,'0')}/${m[2].padStart(2,'0')}/${y}`; };
         newData = rows.slice(1).filter(r=>(ci.nome>=0?String(r[ci.nome]||'').trim():'')!=='').map((r,i)=>{
@@ -2813,6 +2822,7 @@ function importarPonto(file){
             fimIntervalo: ci.ret>=0?r[ci.ret]:'',
             fimJornada: ci.saida>=0?r[ci.saida]:'',
             tipo:'', sit:'', inc:'',
+            funcao: ci.funcao>=0 ? String(r[ci.funcao]||'').trim() : '',
             durMin: (dm!=null?dm:0), durStr  // horas totais já vêm da coluna Duração
           };
         });
@@ -2829,8 +2839,10 @@ function importarPonto(file){
         tipo: header.findIndex(h=>h.toString().toLowerCase().includes('tipo')),
         sit: header.findIndex(h=>h.toString().toLowerCase()==='situação'||h.toString().toLowerCase()==='situacao'),
         inc: header.findIndex(h=>h.toString().toLowerCase().includes('inconsist')),
+        funcao: header.findIndex(h=>h.toString().toLowerCase().includes('função')||h.toString().toLowerCase().includes('funcao')||h.toString().toLowerCase().includes('cargo')),
       };
       newData = rows.slice(1).filter(r=>r.some(c=>c!=='')).map((r,i)=>({
+        funcao: idx.funcao>=0 ? r[idx.funcao] : '',
         id: i,
         mat: idx.mat>=0 ? r[idx.mat] : '',
         nome: idx.nome>=0 ? r[idx.nome] : '',
