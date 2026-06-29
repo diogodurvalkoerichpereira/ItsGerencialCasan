@@ -956,7 +956,7 @@ textarea{resize:vertical;min-height:72px}
           <div class="stat-card">
             <div class="stat-icon" style="background:#f0fdf4;color:var(--its-success)"><i class="ti ti-circle-check"></i></div>
             <div class="stat-value" id="a-encerrado">0</div>
-            <div class="stat-label">Encerrados</div>
+            <div class="stat-label">Concluídos</div>
           </div>
           <div class="stat-card">
             <div class="stat-icon" style="background:#fff3ee;color:var(--its-orange)"><i class="ti ti-clock-pause"></i></div>
@@ -986,7 +986,7 @@ textarea{resize:vertical;min-height:72px}
             <label>Situação</label>
             <select id="aFilterSit" onchange="filterAvisos()">
               <option value="">Todas</option>
-              <option>Encerrado</option><option>Prorrogado</option><option>Em aberto</option>
+              <option>Concluído</option><option>Prorrogado</option><option>Cancelado</option><option>Em aberto</option>
             </select>
           </div>
         </div>
@@ -997,7 +997,7 @@ textarea{resize:vertical;min-height:72px}
               <tr>
                 <th>Data</th><th>Cidade</th><th>Bairro</th><th>Serviço</th><th>Recebido</th><th>Inserido</th>
                 <th>Prev. Normalização</th><th>Canal</th>
-                <th>Encerrado/Prorrogado</th><th>Ações</th>
+                <th>Situação</th><th>Ações</th>
               </tr>
             </thead>
             <tbody id="avisosBody"></tbody>
@@ -1056,12 +1056,18 @@ textarea{resize:vertical;min-height:72px}
               </select>
             </div>
           </div>
-          <div class="form-group">
-            <label>Encerrado / Prorrogado</label>
-            <select id="aSituacao">
-              <option value="">Em aberto</option>
-              <option>Encerrado</option><option>Prorrogado</option>
-            </select>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Situação</label>
+              <select id="aSituacao">
+                <option value="">Em aberto</option>
+                <option>Concluído</option><option>Prorrogado</option><option>Cancelado</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Observações</label>
+              <input type="text" id="aObs" placeholder="Ex.: Cancelado por ITS / Cancelado por CASAN">
+            </div>
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -3040,7 +3046,7 @@ function filterPonto(){
 let nextAvisoId = 4;
 let AVISOS = JSON.parse(localStorage.getItem('its_avisos')||'null') || [
   {id:1,data:'25/06',cidade:'Florianópolis',bairro:'Centro',servico:'Água',recebido:'16:01',inserido:'16:07',supervisor:'Bruno',prevNorm:'21:00',canal:'WhatsApp',situacao:''},
-  {id:2,data:'25/06',cidade:'Florianópolis',bairro:'Trindade',servico:'Esgoto',recebido:'17:08',inserido:'17:16',supervisor:'Bruno',prevNorm:'02:00',canal:'WhatsApp',situacao:'Encerrado'},
+  {id:2,data:'25/06',cidade:'Florianópolis',bairro:'Trindade',servico:'Esgoto',recebido:'17:08',inserido:'17:16',supervisor:'Bruno',prevNorm:'02:00',canal:'WhatsApp',situacao:'Concluído'},
   {id:3,data:'25/06',cidade:'Laguna',bairro:'Mar Grosso',servico:'Água',recebido:'17:08',inserido:'17:20',supervisor:'Bruno',prevNorm:'00:00',canal:'E-mail',situacao:''},
   {id:4,data:'25/06',cidade:'Ascurra',bairro:'Centro',servico:'Água e Esgoto',recebido:'19:29',inserido:'19:33',supervisor:'Wilson',prevNorm:'15:00',canal:'WhatsApp',situacao:''},
   {id:5,data:'25/06',cidade:'Angelina',bairro:'Sede',servico:'Água',recebido:'19:35',inserido:'20:08',supervisor:'Wilson',prevNorm:'00:00',canal:'E-mail',situacao:''},
@@ -3049,9 +3055,13 @@ let AVISOS = JSON.parse(localStorage.getItem('its_avisos')||'null') || [
 function saveAvisos(){localStorage.setItem('its_avisos',JSON.stringify(AVISOS));remoteSet('its_avisos',AVISOS);}
 nextAvisoId = Math.max(0,...AVISOS.map(a=>a.id))+1;
 
+// Normaliza situação legada: "Encerrado" passou a se chamar "Concluído" (nomenclatura CASAN).
+function normSit(s){ return s==='Encerrado'?'Concluído':(s||''); }
 function situacaoBadge(s){
-  if(s==='Encerrado') return `<span class="badge badge-green"><span class="badge-dot"></span>Encerrado</span>`;
+  s=normSit(s);
+  if(s==='Concluído') return `<span class="badge badge-green"><span class="badge-dot"></span>Concluído</span>`;
   if(s==='Prorrogado') return `<span class="badge badge-orange"><span class="badge-dot"></span>Prorrogado</span>`;
+  if(s==='Cancelado') return `<span class="badge badge-gray"><span class="badge-dot"></span>Cancelado</span>`;
   return `<span class="badge badge-blue"><span class="badge-dot"></span>Em aberto</span>`;
 }
 
@@ -3070,7 +3080,7 @@ function renderAvisos(list){
       <td style="font-size:.8rem">${esc(a.inserido)}</td>
       <td style="font-size:.8rem;font-weight:600;color:var(--its-sidebar)">${esc(a.prevNorm)||'—'}</td>
       <td style="font-size:.8rem">${esc(a.canal)}</td>
-      <td>${situacaoBadge(a.situacao)}</td>
+      <td>${situacaoBadge(a.situacao)}${a.obs?`<div style="font-size:.7rem;color:var(--its-muted);margin-top:3px">${esc(a.obs)}</div>`:''}</td>
       <td>
         <div style="display:flex;gap:4px">
           <button class="btn btn-ghost btn-sm" onclick="editarSituacao(${a.id})" title="Alterar situação"><i class="ti ti-edit"></i></button>
@@ -3088,13 +3098,13 @@ function filterAvisos(){
   renderAvisos(AVISOS.filter(a=>
     (!q||a.cidade.toLowerCase().includes(q))&&
     (!canal||a.canal===canal)&&
-    (!sit||(sit==='Em aberto'?!a.situacao:a.situacao===sit))
+    (!sit||(sit==='Em aberto'?!a.situacao:normSit(a.situacao)===sit))
   ));
 }
 
 function updateAvisosStats(){
   document.getElementById('a-total').textContent=AVISOS.length;
-  document.getElementById('a-encerrado').textContent=AVISOS.filter(a=>a.situacao==='Encerrado').length;
+  document.getElementById('a-encerrado').textContent=AVISOS.filter(a=>normSit(a.situacao)==='Concluído').length;
   document.getElementById('a-prorrogado').textContent=AVISOS.filter(a=>a.situacao==='Prorrogado').length;
   document.getElementById('a-aberto').textContent=AVISOS.filter(a=>!a.situacao).length;
 }
@@ -3127,7 +3137,8 @@ function registrarAviso(){
     data:`${dd}/${dm}`,cidade,bairro,servico,recebido,inserido,supervisor,
     prevNorm:document.getElementById('aPrevNorm').value||'—',
     canal,
-    situacao:document.getElementById('aSituacao').value
+    situacao:document.getElementById('aSituacao').value,
+    obs:document.getElementById('aObs').value.trim()
   });
   saveAvisos();
   notificarInterno({icone:'ti-speakerphone',titulo:'Novo aviso',texto:cidade,audiencia:'operador'});
@@ -3141,7 +3152,7 @@ function registrarAviso(){
   );
   notifyEmail(`📢 Novo Aviso: ${cidade}`, `Aviso — ${cidade}`, 'Novo aviso registrado', 'Notificação de Aviso',
     [{label:'Cidade',valor:cidade},{label:'Bairro',valor:bairro},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Canal',valor:canal}]);
-  ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aInserido','aInseridoData'].forEach(id=>document.getElementById(id).value='');
+  ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aInserido','aInseridoData','aObs'].forEach(id=>document.getElementById(id).value='');
   ['aServico','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
   const firstTab=document.querySelector('#avisosTabs .tab');
   switchAvisosTab('lista',firstTab);
@@ -3163,9 +3174,14 @@ function editarSituacao(id){
       <label>Nova situação</label>
       <select id="mSituacao">
         <option value="" ${!a.situacao?'selected':''}>Em aberto</option>
-        <option ${a.situacao==='Encerrado'?'selected':''}>Encerrado</option>
+        <option ${normSit(a.situacao)==='Concluído'?'selected':''}>Concluído</option>
         <option ${a.situacao==='Prorrogado'?'selected':''}>Prorrogado</option>
+        <option ${a.situacao==='Cancelado'?'selected':''}>Cancelado</option>
       </select>
+    </div>
+    <div class="form-group">
+      <label>Observações</label>
+      <input type="text" id="mObs" value="${esc(a.obs||'')}" placeholder="Ex.: Cancelado por ITS / Cancelado por CASAN">
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
@@ -3177,6 +3193,7 @@ function editarSituacao(id){
 function salvarSituacao(id){
   const a=AVISOS.find(x=>x.id===id);if(!a)return;
   a.situacao=document.getElementById('mSituacao').value;
+  a.obs=document.getElementById('mObs').value.trim();
   saveAvisos();
   closeModal();filterAvisos();showToast('Situação atualizada!');
 }
