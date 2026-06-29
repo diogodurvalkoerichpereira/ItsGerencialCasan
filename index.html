@@ -322,12 +322,6 @@ textarea{resize:vertical;min-height:72px}
             <option value="fora_prazo">Fora do Prazo</option>
           </select>
         </div>
-        <div class="form-group" style="flex:0 0 auto;min-width:auto">
-          <label>&nbsp;</label>
-          <label style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:.8rem;cursor:pointer;white-space:nowrap">
-            <input type="checkbox" id="chamadoFilterArquivados" onchange="filterChamados()" style="width:auto;accent-color:var(--its-orange)"> Ver arquivados
-          </label>
-        </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table class="task-table">
@@ -2047,11 +2041,8 @@ function renderChamados(list){
       <td style="font-size:.82rem">${prazoHtml}</td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-ghost btn-sm" onclick="verChamado(${c.id})" title="Ver detalhes/resposta"><i class="ti ti-eye"></i></button>
-        ${c.arquivado
-          ? `<button class="btn btn-ghost btn-sm" onclick="desarquivarChamado(${c.id})" title="Desarquivar"><i class="ti ti-archive-off"></i></button>`
-          : ''}
-        ${(c.status==='Em Atendimento'&&!c.arquivado)?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="responderChamado(${c.id})" title="Concluir chamado"><i class="ti ti-message-reply"></i></button>`:''}
-        ${c.arquivado?'':`<button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteChamado(${c.id})" title="Excluir"><i class="ti ti-trash"></i></button>`}
+        ${c.status==='Em Atendimento'?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="responderChamado(${c.id})" title="Concluir chamado"><i class="ti ti-message-reply"></i></button>`:''}
+        <button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteChamado(${c.id})" title="Excluir"><i class="ti ti-trash"></i></button>
       </div></td>
     </tr>`;
   }).join('');
@@ -2060,9 +2051,7 @@ function filterChamados(){
   const q=document.getElementById('chamadoSearch').value.toLowerCase();
   const st=document.getElementById('chamadoFilterStatus').value;
   const pr=document.getElementById('chamadoFilterPrazo').value;
-  const verArq=document.getElementById('chamadoFilterArquivados')?.checked;
   renderChamados(CHAMADOS.filter(c=>{
-    if(verArq?!c.arquivado:c.arquivado)return false;
     if(q&&!c.titulo.toLowerCase().includes(q)&&!(c.desc||'').toLowerCase().includes(q))return false;
     if(st&&c.status!==st)return false;
     if(pr){
@@ -2368,19 +2357,9 @@ function verChamado(id){
       <div class="form-group"><label>Resolvido em</label><div style="font-size:.85rem">${esc(c.resolvidoEm)||'—'}</div></div>
     </div>
     ${c.historico&&c.historico.length?renderHistorico(c.historico):(c.resposta?`<hr class="divider"><div class="form-group"><label>Resposta</label><div style="font-size:.85rem;background:#f8fafc;padding:10px;border-radius:6px">${esc(c.resposta)}</div></div>${renderAnexos(c.anexos)}`:'')}
-    ${c.arquivado&&c.arquivoInfo?`<hr class="divider"><div class="its-alert alert-warning" style="display:block"><i class="ti ti-archive"></i> <strong>Arquivado/Cancelado</strong><div style="font-size:.8rem;margin-top:4px;line-height:1.6">
-      Motivo: <strong>${esc(c.arquivoInfo.motivo)}</strong><br>
-      ${c.arquivoInfo.obs?`Observação: ${esc(c.arquivoInfo.obs)}<br>`:''}
-      Por: ${esc(c.arquivoInfo.por)}${c.arquivoInfo.perfil?` (${esc(c.arquivoInfo.perfil)})`:''} · em ${esc(c.arquivoInfo.em)}
-      ${c.arquivoInfo.pedidoCliente?`<br><br><strong>Pedido do cliente:</strong><br>
-        Solicitante: ${esc(c.arquivoInfo.pedidoCliente.solicitante)}${c.arquivoInfo.pedidoCliente.cargo?` (${esc(c.arquivoInfo.pedidoCliente.cargo)})`:''}<br>
-        ${c.arquivoInfo.pedidoCliente.contato?`Contato: ${esc(c.arquivoInfo.pedidoCliente.contato)}<br>`:''}
-        ${c.arquivoInfo.pedidoCliente.dataPedido?`Data do pedido: ${esc(c.arquivoInfo.pedidoCliente.dataPedido)}<br>`:''}
-        Registrado por: ${esc(c.arquivoInfo.pedidoCliente.registradoPor)}`:''}
-    </div></div>`:''}
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-      ${c.arquivado?'':`<button class="btn btn-outline" onclick="comentarChamado(${c.id})"><i class="ti ti-message-plus"></i> Comentar</button>`}
-      ${c.status==='Em Atendimento'?`<button class="btn btn-primary" onclick="responderChamado(${c.id})"><i class="ti ti-message-reply"></i> Responder e Resolver</button>`:''}
+      <button class="btn btn-outline" onclick="comentarChamado(${c.id})"><i class="ti ti-message-plus"></i> Comentar</button>
+      ${c.status==='Em Atendimento'?`<button class="btn btn-primary" onclick="responderChamado(${c.id})"><i class="ti ti-message-reply"></i> Concluir Chamado</button>`:''}
       <button class="btn btn-ghost" onclick="closeModal()">Fechar</button>
     </div>`;
   document.getElementById('modalOverlay').classList.add('open');
