@@ -2440,6 +2440,13 @@ function updateEmergStats(){
   }).length;
 }
 
+// Prazo da emergência = tempo decorrido de "Recebido" até "Enviado" (HH:MM).
+function calcPrazoEmerg(recebido, enviado){
+  const r=parseMinutes(recebido), e=parseMinutes(enviado);
+  if(r==null||e==null) return '00:00';
+  let diff=e-r; if(diff<0)diff+=1440;
+  return String(Math.floor(diff/60)).padStart(2,'0')+':'+String(diff%60).padStart(2,'0');
+}
 function registrarEmerg(){
   const data=document.getElementById('eData').value;
   if(!data){alert('Informe a data.');return}
@@ -2452,11 +2459,7 @@ function registrarEmerg(){
   if(!servico){alert('Selecione o serviço.');return}
   const now=new Date();
   const enviado=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-  const [rh,rm]=recebido.split(':').map(Number);
-  const [eh,em]=enviado.split(':').map(Number);
-  let diff=(eh*60+em)-(rh*60+rm);
-  if(diff<0)diff+=1440;
-  const prazo=String(Math.floor(diff/60)).padStart(2,'0')+':'+String(diff%60).padStart(2,'0');
+  const prazo=calcPrazoEmerg(recebido, enviado);
   const [dy,dm,dd]=data.split('-');
   EMERGS.unshift({
     id:nextEmergId++,
@@ -2549,6 +2552,7 @@ function editarEmerg(id){
     e.servico=document.getElementById('edEmServico').value;
     e.recebido=document.getElementById('edEmRecebido').value||e.recebido;
     e.enviado=document.getElementById('edEmEnviado').value||e.enviado;
+    e.prazo=calcPrazoEmerg(e.recebido, e.enviado);
     e.canal=document.getElementById('edEmCanal').value.trim();
     e.protocolo=document.getElementById('edEmProtocolo').value.trim();
     e.status=document.getElementById('edEmStatus').value;
