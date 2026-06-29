@@ -3815,7 +3815,7 @@ function applySession(){
     const mp=document.getElementById('meuPerfil');
     if(mp)mp.innerHTML=`<i class="ti ti-user"></i> ${s.nome}`;
     applyNavPermissions(s.cargo);
-    try{ renderNotifBadge(); }catch(_){}
+    try{ renderNotifBadge(); startNotifPolling(); }catch(_){}
     if(sessionStorage.getItem('its_token')) hydrateFromAPI();
   }else{
     document.getElementById('loginScreen').style.display='flex';
@@ -3853,6 +3853,49 @@ function notificarInterno({icone='ti-bell', titulo, texto, audiencia='equipe', p
   if(NOTIFS.length>NOTIF_MAX) NOTIFS.length=NOTIF_MAX;
   saveNotifs();
   try{ renderNotifBadge(); }catch(_){}
+  // Pop-up imediato se a nova notificação for destinada ao usuário atual.
+  try{ const nova=NOTIFS[0]; if(notifParaMim(nova)&&!_notifVistos.has(nova.id)){ _notifVistos.add(nova.id); popupNotif(nova); } }catch(_){}
+}
+
+// ── POP-UP de notificação (toast clicável, canto superior direito) ────
+let _notifVistos = new Set();
+function popupNotif(n){
+  let wrap=document.getElementById('notifPopups');
+  if(!wrap){ wrap=document.createElement('div'); wrap.id='notifPopups'; wrap.style.cssText='position:fixed;top:58px;right:16px;z-index:3000;display:flex;flex-direction:column;gap:8px;max-width:340px'; document.body.appendChild(wrap); }
+  const temRef=n.ref&&n.ref.tipo;
+  const card=document.createElement('div');
+  card.style.cssText=`width:330px;max-width:88vw;background:#fff;border:1px solid var(--its-border);border-left:4px solid var(--its-orange);border-radius:10px;box-shadow:var(--shadow-md);padding:12px 14px;display:flex;gap:10px;align-items:flex-start;${temRef?'cursor:pointer':''}`;
+  card.innerHTML=`<i class="ti ${esc(n.icone||'ti-bell')}" style="font-size:20px;color:var(--its-orange);margin-top:1px"></i>
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:700;font-size:.85rem;color:var(--its-sidebar)">${esc(n.titulo)}</div>
+      ${n.texto?`<div style="font-size:.78rem;color:var(--its-text);white-space:pre-wrap">${esc(n.texto)}</div>`:''}
+    </div>
+    <i class="ti ti-x ppx-close" style="color:var(--its-muted);cursor:pointer;font-size:16px"></i>`;
+  const fechar=()=>{ if(card.parentNode) card.remove(); };
+  card.querySelector('.ppx-close').onclick=(e)=>{ e.stopPropagation(); fechar(); };
+  if(temRef) card.onclick=()=>{ fechar(); abrirNotif(n.ref.tipo, n.ref.id); };
+  wrap.appendChild(card);
+  setTimeout(fechar, 8000);
+}
+
+// Verifica o servidor periodicamente e dispara pop-up das novas notificações.
+let _notifPollTimer=null;
+async function pollNotifs(){
+  if(!sessionStorage.getItem('its_token')) return;
+  const remote=await remoteGet('its_notifs');
+  if(!Array.isArray(remote)) return;
+  NOTIFS=remote; localStorage.setItem('its_notifs', JSON.stringify(remote));
+  _nextNotifId = NOTIFS.length?Math.max(0,...NOTIFS.map(n=>n.id||0))+1:1;
+  renderNotifBadge();
+  const s=getSession(); const id=s?s.nome:'';
+  notifsDoUsuario().filter(n=>!(n.lidoPor||[]).includes(id) && !_notifVistos.has(n.id))
+    .slice(0,3).forEach(n=>{ _notifVistos.add(n.id); popupNotif(n); });
+}
+function startNotifPolling(){
+  // Marca as já existentes como "vistas" (não estoura pop-up retroativo).
+  notifsDoUsuario().forEach(n=>_notifVistos.add(n.id));
+  if(_notifPollTimer) clearInterval(_notifPollTimer);
+  _notifPollTimer=setInterval(pollNotifs, 45000);
 }
 // A notificação é destinada ao usuário atual?
 function notifParaMim(n){
@@ -4210,7 +4253,7 @@ async function hydrateFromAPI(){
   if(Array.isArray(emergs)){ EMERGS = emergs; nextEmergId = Math.max(0,...EMERGS.map(e=>e.id))+1; localStorage.setItem('its_emergs', JSON.stringify(emergs)); }
   if(Array.isArray(avisos)){ AVISOS = avisos; nextAvisoId = Math.max(0,...AVISOS.map(a=>a.id))+1; localStorage.setItem('its_avisos', JSON.stringify(avisos)); }
   if(Array.isArray(logs)){ LOGS = logs; localStorage.setItem('its_logs', JSON.stringify(logs)); try{renderLogs();}catch(_){} }
-  if(Array.isArray(notifs)){ NOTIFS = notifs; _nextNotifId = NOTIFS.length?Math.max(0,...NOTIFS.map(n=>n.id||0))+1:1; localStorage.setItem('its_notifs', JSON.stringify(notifs)); try{renderNotifBadge();}catch(_){} }
+  if(Array.isArray(notifs)){ NOTIFS = notifs; _nextNotifId = NOTIFS.length?Math.max(0,...NOTIFS.map(n=>n.id||0))+1:1; localStorage.setItem('its_notifs', JSON.stringify(notifs)); try{renderNotifBadge(); notifsDoUsuario().forEach(n=>_notifVistos.add(n.id));}catch(_){} }
 
   // Re-renderiza com os dados do servidor.
   try{ if(typeof renderUsers==='function') renderUsers(); }catch(_){}
