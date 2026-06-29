@@ -281,6 +281,12 @@ textarea{resize:vertical;min-height:72px}
             <input type="checkbox" id="filterArquivadas" onchange="applyFilters()" style="width:auto;accent-color:var(--its-orange)"> Ver arquivadas
           </label>
         </div>
+        <div class="form-group" style="flex:0 0 auto;min-width:auto">
+          <label>&nbsp;</label>
+          <label style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:.8rem;cursor:pointer;white-space:nowrap">
+            <input type="checkbox" id="filterEncMim" onchange="applyFilters()" style="width:auto;accent-color:var(--its-orange)"> Encaminhadas para mim
+          </label>
+        </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table class="task-table">
@@ -1147,7 +1153,7 @@ function renderTasks(list){
   list=list.slice().sort((a,b)=>b.id-a.id);
   tb.innerHTML=list.map(t=>`
     <tr>
-      <td><span class="priority-dot ${prioClass(t.prio)}"></span><strong style="font-size:.83rem">${esc(t.titulo)}</strong></td>
+      <td><span class="priority-dot ${prioClass(t.prio)}"></span><strong style="font-size:.83rem">${esc(t.titulo)}</strong>${t.encaminhadoPara?`<span title="Encaminhada para ${esc(t.encaminhadoPara.nome)}" style="font-size:.68rem;color:var(--its-sidebar);background:#eef4fb;border-radius:4px;padding:1px 6px;margin-left:6px;white-space:nowrap"><i class="ti ti-send"></i> ${esc(t.encaminhadoPara.nome)}</span>`:''}</td>
       <td style="color:var(--its-muted);font-size:.8rem">${esc(t.area)}</td>
       <td style="font-size:.8rem">${fmtPrazo(t.prazo)}</td>
       <td>${prioBadge(t.prio)}</td>
@@ -1174,8 +1180,11 @@ function applyFilters(){
   const st=document.getElementById('filterStatus').value;
   const pr=document.getElementById('filterPrio').value;
   const verArq=document.getElementById('filterArquivadas')?.checked;
+  const encMim=document.getElementById('filterEncMim')?.checked;
+  const meuNome=(getSession()||{}).nome||'';
   renderTasks(TASKS.filter(t=>
     (verArq?t.arquivada:!t.arquivada)&&
+    (!encMim||(t.encaminhadoPara&&t.encaminhadoPara.nome===meuNome))&&
     (!q||t.titulo.toLowerCase().includes(q)||t.area.toLowerCase().includes(q))&&
     (!st||t.status===st)&&(!pr||t.prio===pr)
   ));
@@ -1343,6 +1352,7 @@ function confirmarEncaminhar(id){
   const obs=document.getElementById('encObs').value.trim();
   const a=autorAtual();
   t.encaminhadoPara={nome,cargo,por:a.por,perfil:a.perfil,em:a.em,obs};
+  if(t.status!=='Concluído') t.status='Em andamento'; // entra no fluxo ativo
   t.historico=t.historico||[];
   t.historico.push(novaInteracao('encaminhamento', `Encaminhado para ${nome} (${cargo})`+(obs?` — ${obs}`:'')));
   saveTasks(); closeModal(); applyFilters();
