@@ -2080,7 +2080,7 @@ function abrirNovoChamado(){
   const criadoIso=`${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
   document.getElementById('modalContent').innerHTML=`
     <div class="form-group"><label>Título *</label><input type="text" id="cTitulo" placeholder="Descreva o problema..."></div>
-    <div class="form-group"><label>Descrição</label><textarea id="cDesc" placeholder="Detalhes do chamado..."></textarea></div>
+    <div class="form-group"><label>Descrição</label><textarea id="cDesc" placeholder="Detalhes do chamado... (cole um print com Ctrl+V para anexar)" onpaste="anexarColando(event)"></textarea></div>
     ${anexoWidgetHTML('Anexos na abertura (documentos / áudios) — opcional')}
     <div class="form-group"><label>Data/Hora Abertura <span style="font-weight:400;color:var(--its-muted)">(automático)</span></label>
       <input type="text" value="${criadoIso}" disabled style="background:#f8fafc;color:var(--its-sidebar);font-weight:600;cursor:not-allowed"></div>
@@ -2181,6 +2181,32 @@ async function adicionarAnexos(){
   renderListaAnexos();
 }
 
+// Colar (Ctrl+V) um print na descrição/resposta: a imagem da área de
+// transferência é adicionada automaticamente como anexo (Opção A).
+async function anexarColando(e){
+  const items=Array.from((e.clipboardData||{}).items||[]);
+  const imgs=items.filter(it=>it.kind==='file' && (it.type||'').startsWith('image/'));
+  if(!imgs.length) return; // sem imagem: deixa o texto colar normalmente
+  e.preventDefault();
+  const erro=document.getElementById('respErro');
+  const setErro=m=>{ if(erro){erro.textContent=m;erro.style.display='flex';} else showToast(m,'warn'); };
+  const p=n=>String(n).padStart(2,'0');
+  let add=0;
+  for(let k=0;k<imgs.length;k++){
+    const f=imgs[k].getAsFile(); if(!f) continue;
+    if(f.size > ANEXO_MAX_MB*1048576){ setErro(`Imagem colada passa de ${ANEXO_MAX_MB} MB.`); continue; }
+    const total=_anexosResp.reduce((s,a)=>s+a.size,0)+f.size;
+    if(total > ANEXO_MAX_TOTAL_MB*1048576){ setErro(`Total de anexos passa de ${ANEXO_MAX_TOTAL_MB} MB.`); continue; }
+    const d=new Date();
+    const ext=((f.type.split('/')[1])||'png').replace('jpeg','jpg');
+    const nome=`print-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}${imgs.length>1?'-'+(k+1):''}.${ext}`;
+    try{ const obj=await lerArquivo(f); obj.name=nome; _anexosResp.push(obj); if(erro)erro.style.display='none'; add++; }
+    catch(err){ setErro(err.message); }
+  }
+  renderListaAnexos();
+  if(add) showToast(add>1?`${add} prints anexados!`:'Print anexado!');
+}
+
 function removerAnexoResp(i){ _anexosResp.splice(i,1); renderListaAnexos(); }
 
 function renderListaAnexos(){
@@ -2203,7 +2229,7 @@ function abrirResposta(titulo, onSalvar, opts){
   _anexosResp=[];
   document.getElementById('modalTitle').textContent=titulo;
   document.getElementById('modalContent').innerHTML=`
-    <div class="form-group"><label>${opts.label||'Resposta'} *</label><textarea id="respTexto" placeholder="Escreva aqui..." style="min-height:90px"></textarea></div>
+    <div class="form-group"><label>${opts.label||'Resposta'} *</label><textarea id="respTexto" placeholder="Escreva aqui... (cole um print com Ctrl+V para anexar)" style="min-height:90px" onpaste="anexarColando(event)"></textarea></div>
     <div class="form-group">
       <label>Anexos (documentos / áudios) — opcional</label>
       <div style="display:flex;gap:8px;align-items:center">
@@ -2267,7 +2293,7 @@ function anexoWidgetHTML(label){
         <input type="file" id="respAnexos" multiple accept="${ANEXO_ACCEPT}" style="flex:1">
         <button type="button" class="btn btn-outline btn-sm" onclick="adicionarAnexos()"><i class="ti ti-plus"></i> Adicionar</button>
       </div>
-      <div style="font-size:.72rem;color:var(--its-muted);margin:4px 0 8px">Selecione e clique em Adicionar (pode repetir). Até ${ANEXO_MAX_MB} MB por arquivo, ${ANEXO_MAX_TOTAL_MB} MB no total.</div>
+      <div style="font-size:.72rem;color:var(--its-muted);margin:4px 0 8px">Selecione e clique em Adicionar (pode repetir) ou cole um print (Ctrl+V) na descrição. Até ${ANEXO_MAX_MB} MB por arquivo, ${ANEXO_MAX_TOTAL_MB} MB no total.</div>
       <div id="respLista" style="display:flex;flex-direction:column;gap:5px"></div>
       <div id="respErro" class="its-alert alert-error" style="display:none;margin-top:8px"></div>
     </div>`;
