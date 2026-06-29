@@ -76,7 +76,6 @@ function buildHtml(task) {
 
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 ${linha('Área', task.area)}
-                ${linha('Responsável', task.resp)}
                 ${linha('Prazo', task.prazo)}
                 ${linha('Status', task.status)}
                 ${linha('Descrição', task.desc)}
@@ -104,7 +103,6 @@ function buildText(task) {
   return `Nova tarefa criada no iTS Gerencial CASAN:\n\n` +
     `Título: ${task.titulo}\n` +
     `Área: ${task.area}\n` +
-    `Responsável: ${task.resp}\n` +
     `Prazo: ${task.prazo || '—'}\n` +
     `Prioridade: ${task.prio}\n` +
     `Status: ${task.status || '—'}\n` +
