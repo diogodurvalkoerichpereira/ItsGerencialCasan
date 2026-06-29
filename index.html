@@ -1671,10 +1671,9 @@ function gerarRelatorioPonto(){
         <div class="logo-icon" style="width:40px;height:40px;font-size:13px">iTS</div>
       </div>
       <table class="task-table">
-        <thead><tr><th>Nome</th><th>Superior</th><th style="text-align:center">Total Horas</th></tr></thead>
+        <thead><tr><th>Nome</th><th style="text-align:center">Total Horas</th></tr></thead>
         <tbody>${rows.map(r=>`<tr>
           <td style="font-size:.83rem;font-weight:600">${r.nome}</td>
-          <td style="font-size:.78rem;color:var(--its-muted)">${r.sup||'—'}</td>
           <td style="text-align:center;font-weight:700;color:var(--its-sidebar)">${fmtHM(r.minutos)}</td>
         </tr>`).join('')}</tbody>
       </table>
