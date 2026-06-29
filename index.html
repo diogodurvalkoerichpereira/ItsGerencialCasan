@@ -3386,7 +3386,7 @@ function notifyEmail(assunto, titulo, subtitulo, cabecalho, linhas){
   fetch(`${location.origin}/email/send`,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({to:dest, assunto, notificacao:{titulo, subtitulo, cabecalho, linhas}})
+    body:JSON.stringify({bcc:dest, assunto, notificacao:{titulo, subtitulo, cabecalho, linhas}})
   }).catch(()=>{});
 }
 
@@ -3411,7 +3411,7 @@ function sendNotification(task){
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({
-      to: destinatarios,
+      bcc: destinatarios,
       task: {
         titulo: task.titulo,
         area: task.area,
@@ -3446,7 +3446,7 @@ function sendNotificacaoConclusao(task){
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
-      to:destinatarios,
+      bcc:destinatarios,
       assunto:`✅ Tarefa concluída: ${task.titulo}`,
       task:{
         titulo:task.titulo,

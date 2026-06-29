@@ -164,14 +164,16 @@ function buildTextGeneric(n) {
 }
 
 app.post('/send', async (req, res) => {
-  const { to, task, notificacao, assunto } = req.body;
+  const { to, bcc, task, notificacao, assunto } = req.body;
+  const remetente = `"iTS Gerencial CASAN" <${process.env.SMTP_USER}>`;
   // Caminho generico: qualquer evento (chamado, emergencia, aviso, etc.)
   if (notificacao && notificacao.titulo) {
-    if (!to) return res.status(400).json({ error: 'Campo obrigatório: to' });
+    if (!to && !bcc) return res.status(400).json({ error: 'Campo obrigatório: to ou bcc' });
     try {
       await transporter.sendMail({
-        from: `"iTS Gerencial CASAN" <${process.env.SMTP_USER}>`,
-        to,
+        from: remetente,
+        to: to || process.env.SMTP_USER,   // destino visível (remetente se for só BCC)
+        bcc: bcc || undefined,             // todos os destinatários, ocultos
         subject: assunto || `🔔 ${notificacao.titulo}`,
         text: buildTextGeneric(notificacao),
         html: buildHtmlGeneric(notificacao),
@@ -183,13 +185,14 @@ app.post('/send', async (req, res) => {
     }
   }
   // Caminho legado: tarefa.
-  if (!to || !task || !task.titulo) {
-    return res.status(400).json({ error: 'Campos obrigatórios: to, task.titulo' });
+  if ((!to && !bcc) || !task || !task.titulo) {
+    return res.status(400).json({ error: 'Campos obrigatórios: (to ou bcc), task.titulo' });
   }
   try {
     await transporter.sendMail({
-      from: `"iTS Gerencial CASAN" <${process.env.SMTP_USER}>`,
-      to,
+      from: remetente,
+      to: to || process.env.SMTP_USER,
+      bcc: bcc || undefined,
       subject: assunto || `🔔 Nova Tarefa: ${task.titulo}`,
       text: buildText(task),
       html: buildHtml(task),
