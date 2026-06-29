@@ -721,7 +721,7 @@ textarea{resize:vertical;min-height:72px}
                 <div id="ind06-sup" style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar);font-variant-numeric:tabular-nums">—</div>
               </div>
               <div style="padding:14px 18px;border-right:1px solid var(--its-border)">
-                <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Total Horas do Mês</div>
+                <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Total do Mês (24h × dias)</div>
                 <div id="ind06-total" style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar);font-variant-numeric:tabular-nums">—</div>
               </div>
               <div style="padding:14px 18px">
@@ -730,9 +730,9 @@ textarea{resize:vertical;min-height:72px}
               </div>
             </div>
             <div style="background:#f8fafc;padding:8px 16px;font-size:.74rem;color:var(--its-muted);border-top:1px solid var(--its-border)">
-              <strong style="color:var(--its-text)">Cálculo:</strong> Tempo total com supervisão ÷ Total de horas do mês × 100 &nbsp;·&nbsp;
+              <strong style="color:var(--its-text)">Cálculo:</strong> Horas com supervisor presente ÷ (24h × dias do mês) × 100 &nbsp;·&nbsp;
               <strong style="color:var(--its-text)">Instrumento:</strong> Folhas ponto importadas &nbsp;·&nbsp;
-              <strong style="color:var(--its-text)">Exemplo:</strong> 710h ÷ 720h = 98,61%
+              <strong style="color:var(--its-text)">Exemplo:</strong> 710h ÷ 720h (24×30) = 98,61%
             </div>
           </div>
         </div>
@@ -1661,10 +1661,11 @@ function gerarRelatorioPonto(){
     }
   });
   const rows=Object.values(map).sort((a,b)=>a.nome.localeCompare(b.nome));
-  const totalMin=rows.reduce((s,r)=>s+r.minutos,0);
-  // Usa a classificação Supervisor/Operador definida na aba Resumo (PONTO_DB[mes].funcoes).
-  const ehSup=r=>ehSupervisorPonto(mes, r.nome, r.funcao);
-  const supMin=rows.filter(ehSup).reduce((s,r)=>s+r.minutos,0);
+  // Indicador 06: cobertura de supervisão sobre 24h × dias do mês.
+  // Classificação Supervisor/Operador vem da aba Resumo (PONTO_DB[mes].funcoes).
+  const cov=coberturaSupervisao(data, (nome,funcao)=>ehSupervisorPonto(mes,nome,funcao));
+  const totalMin=cov.totalMin;
+  const supMin=cov.coberto;
   const pct=totalMin>0?((supMin/totalMin)*100).toFixed(2):null;
   const cor=pct===null?'var(--its-muted)':parseFloat(pct)>=100?'var(--its-success)':parseFloat(pct)>=90?'var(--its-warning)':'var(--its-danger)';
   const mLabel=fmtMesLabel(mes);
@@ -1696,7 +1697,7 @@ function gerarRelatorioPonto(){
             <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar);font-variant-numeric:tabular-nums">${fmtHM(supMin)}</div>
           </div>
           <div style="padding:14px 18px;border-right:1px solid var(--its-border)">
-            <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Total Horas do Mês</div>
+            <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Total do Mês (24h × dias)</div>
             <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar);font-variant-numeric:tabular-nums">${fmtHM(totalMin)}</div>
           </div>
           <div style="padding:14px 18px">
@@ -1705,7 +1706,7 @@ function gerarRelatorioPonto(){
           </div>
         </div>
         <div style="background:#f8fafc;padding:8px 16px;font-size:.74rem;color:var(--its-muted);border-top:1px solid var(--its-border)">
-          <strong style="color:var(--its-text)">Cálculo:</strong> Tempo total com supervisão ÷ Total de horas do mês × 100 &nbsp;·&nbsp;
+          <strong style="color:var(--its-text)">Cálculo:</strong> Horas com supervisor presente ÷ (24h × dias do mês) × 100 &nbsp;·&nbsp;
           <strong style="color:var(--its-text)">Instrumento:</strong> Folhas ponto importadas
         </div>
       </div>
@@ -2672,6 +2673,41 @@ function setFuncaoPonto(el){
   calcularResumoMensal();
 }
 
+// ── Indicador 06 – cobertura de supervisão ───────────────────────────────
+// Total do mês = 24h × nº de dias (ex.: 24 × 30 = 720h). Meta 100% = supervisor
+// presente o tempo todo. "Horas c/ supervisão" = união dos intervalos de
+// presença real (Entrada–Saída) dos supervisores, na linha do tempo (trata
+// turnos que viram a meia-noite e sobreposição entre supervisores sem dupla
+// contagem).
+function dayIndexPonto(d){
+  const m=String(d||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  return m ? Date.UTC(+m[3], +m[2]-1, +m[1])/86400000 : null;
+}
+function coberturaSupervisao(registros, isSupFn){
+  const dias=new Set();
+  const intervals=[];
+  (registros||[]).forEach(r=>{
+    if((r.data||'').trim()) dias.add(r.data.trim());
+    if(!isSupFn(r.nome, r.funcao)) return;
+    const di=dayIndexPonto(r.data); if(di==null) return;
+    const ini=parseMinutes(r.iniJornada), fim=parseMinutes(r.fimJornada);
+    if(ini==null||fim==null) return;
+    const start=di*1440+ini;
+    let end=di*1440+fim;
+    if(end<=start) end+=1440; // turno que vira a meia-noite
+    intervals.push([start,end]);
+  });
+  intervals.sort((a,b)=>a[0]-b[0]);
+  let coberto=0, curS=null, curE=null;
+  for(const [s,e] of intervals){
+    if(curE==null){ curS=s; curE=e; continue; }
+    if(s<=curE){ if(e>curE) curE=e; }
+    else { coberto+=curE-curS; curS=s; curE=e; }
+  }
+  if(curE!=null) coberto+=curE-curS;
+  return { coberto, dias:dias.size, totalMin:dias.size*24*60 };
+}
+
 function switchPontoTab(name, el){
   document.querySelectorAll('#pontoTabs .tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
@@ -2778,11 +2814,11 @@ function calcularResumoMensal(){
   document.getElementById('resumoTotal').textContent=`${rows.length} pessoa(s) · ${nSup} supervisor(es) · ${totalDias} dia(s) com horas · Total: ${fmtHM(totMinGeral)}`+(operadorDia>0?` · Operadores atendidos (operador-dia): ${operadorDia}`:'');
 
   // ── INDICADOR 06 – Presença do Supervisor ─────────────────────────────
-  // Total de Horas do Mês = soma da Duração de todos (operadores + supervisor).
-  const totalMin=rows.reduce((s,r)=>s+r.minutos,0);
-  // Tempo com supervisão = horas de quem está marcado como Supervisor (coluna Função).
-  const ehSup=r=>ehSupervisorPonto(mesResumo, r.nome, r.funcao);
-  const supMin=rows.filter(ehSup).reduce((s,r)=>s+r.minutos,0);
+  // Total de Horas do Mês = 24h × dias do mês (ex.: 24 × 30 = 720h).
+  // Horas c/ supervisão = união dos turnos dos supervisores (cobertura real).
+  const cov=coberturaSupervisao(PONTO_DATA, (nome,funcao)=>ehSupervisorPonto(mesResumo,nome,funcao));
+  const totalMin=cov.totalMin;
+  const supMin=cov.coberto;
   const pct=totalMin>0?((supMin/totalMin)*100).toFixed(2):null;
   const cor=pct===null?'var(--its-muted)':parseFloat(pct)>=100?'var(--its-success)':parseFloat(pct)>=90?'var(--its-warning)':'var(--its-danger)';
   document.getElementById('ind06-sup').textContent=fmtHM(supMin);
