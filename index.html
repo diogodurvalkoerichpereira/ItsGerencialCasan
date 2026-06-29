@@ -1159,7 +1159,8 @@ function renderTasks(list){
             ? `<button class="btn btn-ghost btn-sm" onclick="desarquivarTarefa(${t.id})" title="Desarquivar"><i class="ti ti-archive-off"></i></button>`
             : `<button class="btn btn-ghost btn-sm" onclick="arquivarTarefa(${t.id})" title="Arquivar"><i class="ti ti-archive"></i></button>`}
           ${(isCliente()||t.arquivada)?'':`
-          ${t.status!=='Concluído'?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="responderTarefa(${t.id})" title="Responder e concluir"><i class="ti ti-message-reply"></i></button>`:''}
+          ${(podeEncaminhar()&&t.status!=='Concluído')?`<button class="btn btn-ghost btn-sm" style="color:var(--its-sidebar)" onclick="encaminharTarefa(${t.id})" title="Encaminhar para supervisão/monitoria"><i class="ti ti-send"></i></button>`:''}
+          ${(podeResponderCliente()&&t.status!=='Concluído')?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="responderTarefa(${t.id})" title="Responder e concluir"><i class="ti ti-message-reply"></i></button>`:''}
           <button class="btn btn-ghost btn-sm" onclick="editTask(${t.id})" title="Editar"><i class="ti ti-edit"></i></button>
           <button class="btn btn-ghost btn-sm" onclick="cycleStatus(${t.id})" title="Próximo status"><i class="ti ti-refresh"></i></button>
           <button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteTask(${t.id})" title="Excluir"><i class="ti ti-trash"></i></button>`}
@@ -1309,6 +1310,48 @@ function responderTarefa(id){
   });
 }
 
+// Encaminhar tarefa para a supervisão / monitoria (somente Gerência e Supervisão).
+function encaminharTarefa(id){
+  const t=TASKS.find(x=>x.id===id);if(!t)return;
+  if(!podeEncaminhar()){ showToast('Apenas Gerência e Supervisão podem encaminhar.','warn'); return; }
+  const destinos=USERS.filter(u=>u.status==='Ativo' && (u.cargo==='Supervisor'||u.cargo==='Monitor'));
+  document.getElementById('modalTitle').textContent='Encaminhar Tarefa — '+t.titulo;
+  document.getElementById('modalContent').innerHTML=`
+    <div style="font-size:.82rem;color:var(--its-muted);margin-bottom:12px">Encaminhe para a <strong>supervisão</strong> ou <strong>monitoria</strong> tratar. A resposta ao cliente continua sendo dada pela supervisão/gerência.</div>
+    <div class="form-group">
+      <label>Encaminhar para *</label>
+      <select id="encDest">
+        <option value="">Selecione...</option>
+        ${destinos.map(u=>`<option value="${esc(u.nome)}" data-cargo="${esc(u.cargo)}">${esc(u.nome)} — ${esc(u.cargo)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group"><label>Observação (opcional)</label><textarea id="encObs" placeholder="Instruções para quem vai tratar..." style="min-height:70px"></textarea></div>
+    <div id="encErro" class="its-alert alert-error" style="display:${destinos.length?'none':'flex'};margin-bottom:10px">${destinos.length?'':'Nenhum usuário de Supervisão/Monitoria ativo cadastrado.'}</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarEncaminhar(${t.id})"><i class="ti ti-send"></i> Encaminhar</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function confirmarEncaminhar(id){
+  const t=TASKS.find(x=>x.id===id);if(!t)return;
+  const sel=document.getElementById('encDest');
+  const erro=document.getElementById('encErro');
+  const nome=sel.value;
+  if(!nome){ erro.textContent='Selecione para quem encaminhar.'; erro.style.display='flex'; return; }
+  const cargo=sel.options[sel.selectedIndex].dataset.cargo||'';
+  const obs=document.getElementById('encObs').value.trim();
+  const a=autorAtual();
+  t.encaminhadoPara={nome,cargo,por:a.por,perfil:a.perfil,em:a.em,obs};
+  t.historico=t.historico||[];
+  t.historico.push(novaInteracao('encaminhamento', `Encaminhado para ${nome} (${cargo})`+(obs?` — ${obs}`:'')));
+  saveTasks(); closeModal(); applyFilters();
+  notificarInterno({icone:'ti-send',titulo:'Tarefa encaminhada para você',texto:t.titulo,audiencia:'equipe',paraNome:nome,ref:{tipo:'tarefa',id:t.id}});
+  notifyWhatsApp(`➡️ *Tarefa Encaminhada* — iTS Gerencial CASAN\n\n*${t.titulo}*\nPara: ${nome} (${cargo})${obs?`\nObs: ${obs}`:''}\nPor: ${a.por}`);
+  logEvento('Tarefa encaminhada', t.titulo+' → '+nome);
+  showToast('Tarefa encaminhada para '+nome+'.');
+}
+
 // Ver detalhes + resposta + anexos de uma tarefa.
 function verTarefa(id){
   const t=TASKS.find(x=>x.id===id);if(!t)return;
@@ -1320,6 +1363,7 @@ function verTarefa(id){
       <div class="form-group"><label>Área</label><div style="font-size:.85rem">${esc(t.area)||'—'}</div></div>
     </div>
     <div class="form-group"><label>Descrição</label><div style="font-size:.85rem">${esc(t.desc)||'—'}</div></div>
+    ${t.encaminhadoPara?`<div class="its-alert alert-info" style="display:block"><i class="ti ti-send"></i> <strong>Encaminhada para ${esc(t.encaminhadoPara.nome)}${t.encaminhadoPara.cargo?` (${esc(t.encaminhadoPara.cargo)})`:''}</strong><div style="font-size:.78rem;color:var(--its-muted);margin-top:3px">Por ${esc(t.encaminhadoPara.por)} · ${esc(t.encaminhadoPara.em)}${t.encaminhadoPara.obs?`<br>Obs: ${esc(t.encaminhadoPara.obs)}`:''}</div></div>`:''}
     ${t.historico&&t.historico.length?renderHistorico(t.historico):(t.resposta?`<hr class="divider"><div class="form-group"><label>Resposta</label><div style="font-size:.85rem;background:#f8fafc;padding:10px;border-radius:6px">${esc(t.resposta)}</div></div>${renderAnexos(t.anexos)}`:'')}
     ${t.arquivada&&t.arquivoInfo?`<hr class="divider"><div class="its-alert alert-warning" style="display:block"><i class="ti ti-archive"></i> <strong>Arquivada</strong><div style="font-size:.8rem;margin-top:4px;line-height:1.6">
       Motivo: <strong>${esc(t.arquivoInfo.motivo)}</strong><br>
@@ -1333,7 +1377,8 @@ function verTarefa(id){
     </div></div>`:''}
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
       ${!t.arquivada?`<button class="btn btn-outline" onclick="comentarTarefa(${t.id})"><i class="ti ti-message-plus"></i> Comentar</button>`:''}
-      ${(!isCliente()&&t.status!=='Concluído'&&!t.arquivada)?`<button class="btn btn-primary" onclick="responderTarefa(${t.id})"><i class="ti ti-message-reply"></i> Responder e Concluir</button>`:''}
+      ${(podeEncaminhar()&&t.status!=='Concluído'&&!t.arquivada)?`<button class="btn btn-outline" onclick="encaminharTarefa(${t.id})"><i class="ti ti-send"></i> Encaminhar</button>`:''}
+      ${(podeResponderCliente()&&t.status!=='Concluído'&&!t.arquivada)?`<button class="btn btn-primary" onclick="responderTarefa(${t.id})"><i class="ti ti-message-reply"></i> Responder e Concluir</button>`:''}
       <button class="btn btn-ghost" onclick="closeModal()">Fechar</button>
     </div>`;
   document.getElementById('modalOverlay').classList.add('open');
@@ -2310,7 +2355,7 @@ function novaInteracao(tipo, texto, anexos){
 // Renderiza o histórico (thread) distinguindo Cliente x Equipe, com data/hora.
 function renderHistorico(hist){
   if(!hist||!hist.length) return '';
-  const rotuloTipo={abertura:'Abertura', resposta:'Resposta', nota:'Nota'};
+  const rotuloTipo={abertura:'Abertura', resposta:'Resposta', nota:'Nota', encaminhamento:'Encaminhamento'};
   return `<hr class="divider"><div class="section-title" style="font-size:.78rem;margin-bottom:10px">Histórico de Interações</div>
     <div style="display:flex;flex-direction:column;gap:10px">`+hist.map(h=>{
       const cor=h.ehCliente?'#0284c7':'#16a34a';
@@ -3969,6 +4014,9 @@ function getSession(){return JSON.parse(sessionStorage.getItem('its_session')||'
 function isCliente(){const s=getSession();return s&&s.cargo==='Cliente';}
 function isOperador(){const s=getSession();return s&&s.cargo==='Operador';}
 function isAdminGestao(){const s=getSession();return !!(s&&(s.isAdmin||s.cargo==='Gerente'));}
+// Responder o cliente e encaminhar tarefas: somente Gerência e Supervisão (e admin).
+function podeResponderCliente(){const s=getSession();return !!(s&&(s.isAdmin||s.cargo==='Gerente'||s.cargo==='Supervisor'));}
+function podeEncaminhar(){return podeResponderCliente();}
 // Quem pode editar/mudar status de emergência: todos exceto Operador e Cliente.
 function podeEditarEmerg(){return !isCliente()&&!isOperador();}
 
