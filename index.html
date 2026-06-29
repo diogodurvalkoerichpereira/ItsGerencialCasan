@@ -221,9 +221,20 @@ textarea{resize:vertical;min-height:72px}
     <div class="topbar-title" id="pageTitle">Gestão de Tarefas</div>
     <div class="topbar-right">
       <button class="btn btn-primary btn-sm" id="topbarBtn" onclick="openNewTask()"><i class="ti ti-plus"></i> Nova Tarefa</button>
+      <div id="notifBell" style="position:relative;cursor:pointer;padding:6px" onclick="toggleNotifs(event)" title="Notificações">
+        <i class="ti ti-bell" style="font-size:20px;color:var(--its-sidebar)"></i>
+        <span id="notifBadge" style="display:none;position:absolute;top:0;right:0;background:var(--its-orange);color:#fff;font-size:.6rem;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px">0</span>
+      </div>
       <div class="avatar" title="Diogo Pereira">DP</div>
     </div>
   </header>
+  <div id="notifPanel" style="display:none;position:fixed;top:54px;right:16px;width:340px;max-height:70vh;overflow:auto;background:#fff;border:1px solid var(--its-border);border-radius:var(--radius-md);box-shadow:var(--shadow-md);z-index:1500">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--its-border)">
+      <strong style="color:var(--its-sidebar);font-size:.9rem">Notificações</strong>
+      <button class="btn btn-ghost btn-sm" onclick="marcarTodasLidas()"><i class="ti ti-checks"></i> Marcar lidas</button>
+    </div>
+    <div id="notifList"></div>
+  </div>
 
   <div class="content">
     <div class="tabs" id="mainTabs" style="display:none">
@@ -1294,6 +1305,7 @@ function responderTarefa(id){
   abrirResposta('Responder Tarefa — '+t.titulo, ({texto,anexos,em})=>{
     t.resposta=texto; t.anexos=anexos; t.resolvidoEm=em; t.status='Concluído';
     t.historico=t.historico||[]; t.historico.push(novaInteracao('resposta',texto,anexos));
+    notificarInterno({icone:'ti-message-check',titulo:'Tarefa respondida/concluída',texto:t.titulo,audiencia:'cliente',paraNome:t.criadoPor||null});
     saveTasks(); closeModal(); applyFilters(); updateDashboard();
     notifyWhatsApp(`✅ *Tarefa Concluída* — iTS Gerencial CASAN\n\n*${t.titulo}*\nResposta: ${texto}\nConcluída em: ${em}${anexos.length?`\n📎 ${anexos.length} anexo(s)`:''}`);
     notifyEmail(`✅ Tarefa Concluída: ${t.titulo}`, t.titulo, 'Tarefa concluída', 'Notificação de Tarefa',
@@ -1401,6 +1413,7 @@ function arquivarTarefa(id){
     t.arquivada=true; t.arquivoInfo=info;
     saveTasks(); closeModal(); applyFilters(); updateDashboard();
     logEvento('Tarefa arquivada', t.titulo+' — '+info.motivo);
+    notificarInterno({icone:'ti-archive',titulo:'Tarefa arquivada/cancelada',texto:t.titulo+' — '+info.motivo,audiencia:'equipe'});
     const pc=info.pedidoCliente;
     notifyWhatsApp(`🗄️ *Tarefa Arquivada/Cancelada* — iTS Gerencial CASAN\n\n*${t.titulo}*\nMotivo: ${info.motivo}${info.obs?`\nObs: ${info.obs}`:''}\nPor: ${info.por} (${info.perfil||'—'})${pc?`\nSolicitado por (cliente): ${pc.solicitante}`:''}`);
     notifyEmail(`🗄️ Tarefa Arquivada: ${t.titulo}`, t.titulo, 'Tarefa arquivada/cancelada', 'Notificação de Tarefa',
@@ -1480,6 +1493,7 @@ function arquivarChamado(id){
     c.historico=c.historico||[]; c.historico.push(novaInteracao('nota','Arquivado/cancelado — '+info.motivo+(info.obs?(' · '+info.obs):''),[]));
     saveChamados(); closeModal(); filterChamados();
     logEvento('Chamado arquivado', c.titulo+' — '+info.motivo);
+    notificarInterno({icone:'ti-archive',titulo:'Chamado cancelado',texto:c.titulo+' — '+info.motivo,audiencia:'equipe'});
     const pc=info.pedidoCliente;
     notifyWhatsApp(`🗄️ *Chamado Cancelado* — iTS Gerencial CASAN\n\n*${c.titulo}*\nMotivo: ${info.motivo}${info.obs?`\nObs: ${info.obs}`:''}\nPor: ${info.por} (${info.perfil||'—'})${pc?`\nSolicitado por (cliente): ${pc.solicitante}`:''}`);
     notifyEmail(`🗄️ Chamado Cancelado: ${c.titulo}`, c.titulo, 'Chamado cancelado/arquivado', 'Notificação de Chamado',
@@ -2081,6 +2095,7 @@ function salvarChamado(criadoIso){
   CHAMADOS.unshift({id:nextChamadoId++,titulo,desc:descCh,criado:criadoIso,status:'Em Atendimento',resolvidoEm:null,
     historico:[novaInteracao('abertura',descCh,anexosAbertura)]});
   saveChamados();
+  notificarInterno({icone:'ti-headset',titulo:'Novo chamado',texto:titulo,audiencia:'equipe'});
   notifyWhatsApp(
     `🆘 *Novo Chamado* — iTS Gerencial CASAN\n\n`+
     `*${titulo}*\n`+
@@ -2220,7 +2235,7 @@ function comentarChamado(id){
     notifyWhatsApp(`💬 *Comentário no chamado* — iTS Gerencial CASAN\n\n*${c.titulo}*\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})\n${texto||'(anexo)'}`);
     notifyEmail(`💬 Comentário no chamado: ${c.titulo}`, c.titulo, 'Novo comentário', 'Notificação de Chamado',
       [{label:'Autor',valor:`${a.por} (${a.ehCliente?'Cliente':'Equipe'})`},{label:'Comentário',valor:texto||'—'},{label:'Anexos',valor:anexos.length?anexos.map(x=>x.name).join(', '):'—'}]);
-    logEvento('Comentário em chamado', c.titulo); showToast('Comentário adicionado.'); verChamado(id);
+    logEvento('Comentário em chamado', c.titulo); notificarInterno({icone:'ti-message',titulo:'Novo comentário no chamado',texto:c.titulo,audiencia:autorAtual().ehCliente?'equipe':'cliente'}); showToast('Comentário adicionado.'); verChamado(id);
   },{btnLabel:'Adicionar comentário',btnIcon:'ti-message-plus',label:'Comentário'});
 }
 
@@ -2234,7 +2249,7 @@ function comentarTarefa(id){
     notifyWhatsApp(`💬 *Comentário na tarefa* — iTS Gerencial CASAN\n\n*${t.titulo}*\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})\n${texto||'(anexo)'}`);
     notifyEmail(`💬 Comentário na tarefa: ${t.titulo}`, t.titulo, 'Novo comentário', 'Notificação de Tarefa',
       [{label:'Autor',valor:`${a.por} (${a.ehCliente?'Cliente':'Equipe'})`},{label:'Comentário',valor:texto||'—'},{label:'Anexos',valor:anexos.length?anexos.map(x=>x.name).join(', '):'—'}]);
-    logEvento('Comentário em tarefa', t.titulo); showToast('Comentário adicionado.'); verTarefa(id);
+    logEvento('Comentário em tarefa', t.titulo); notificarInterno({icone:'ti-message',titulo:'Novo comentário na tarefa',texto:t.titulo,audiencia:autorAtual().ehCliente?'equipe':'cliente',paraNome:autorAtual().ehCliente?null:(t.criadoPor||null)}); showToast('Comentário adicionado.'); verTarefa(id);
   },{btnLabel:'Adicionar comentário',btnIcon:'ti-message-plus',label:'Comentário'});
 }
 function agoraISO(){ const d=new Date();const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
@@ -2297,6 +2312,7 @@ function responderChamado(id){
   abrirResposta('Responder Chamado — '+c.titulo, ({texto,anexos,em})=>{
     c.resposta=texto; c.anexos=anexos; c.resolvidoEm=em; c.status='Resolvido';
     c.historico=c.historico||[]; c.historico.push(novaInteracao('resposta',texto,anexos));
+    notificarInterno({icone:'ti-message-check',titulo:'Chamado respondido/resolvido',texto:c.titulo,audiencia:'cliente'});
     saveChamados(); closeModal(); filterChamados();
     notifyWhatsApp(`✅ *Chamado Resolvido* — iTS Gerencial CASAN\n\n*${c.titulo}*\nResposta: ${texto}\nResolvido em: ${em}${anexos.length?`\n📎 ${anexos.length} anexo(s)`:''}`);
     notifyEmail(`✅ Chamado Resolvido: ${c.titulo}`, c.titulo, 'Chamado resolvido', 'Notificação de Chamado',
@@ -2343,6 +2359,7 @@ function resolverChamado(id){
   c.resolvidoEm=`${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
   c.status='Resolvido';
   saveChamados();
+  notificarInterno({icone:'ti-message-check',titulo:'Chamado resolvido',texto:c.titulo,audiencia:'cliente'});
   logEvento('Chamado resolvido', c.titulo);
   notifyWhatsApp(
     `✅ *Chamado Resolvido* — iTS Gerencial CASAN\n\n`+
@@ -2454,6 +2471,7 @@ function registrarEmerg(){
     status:'Em Atendimento'
   });
   saveEmergs();
+  notificarInterno({icone:'ti-alert-octagon',titulo:'Nova emergência',texto:cidade,audiencia:'operador'});
   notifyWhatsApp(
     `🚨 *Nova Emergência* — iTS Gerencial CASAN\n\n`+
     `Cidade: ${cidade}\n`+
@@ -2994,6 +3012,7 @@ function registrarAviso(){
     situacao:document.getElementById('aSituacao').value
   });
   saveAvisos();
+  notificarInterno({icone:'ti-speakerphone',titulo:'Novo aviso',texto:cidade,audiencia:'operador'});
   notifyWhatsApp(
     `📢 *Novo Aviso* — iTS Gerencial CASAN\n\n`+
     `Cidade: ${cidade}\n`+
@@ -3351,6 +3370,7 @@ function notifyWhatsApp(message){
 // Notifica uma ALTERAÇÃO (edição/mudança de status) por WhatsApp + e-mail.
 function notifyAlteracao(tipoLabel, titulo, linhas){
   const a=autorAtual();
+  notificarInterno({icone:'ti-edit',titulo:tipoLabel+' atualizada',texto:titulo,audiencia:'equipe'});
   const corpo=linhas.map(l=>`${l.label}: ${l.valor||'—'}`).join('\n');
   notifyWhatsApp(`✏️ *${tipoLabel} atualizada* — iTS Gerencial CASAN\n\n*${titulo}*\n${corpo}\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})`);
   notifyEmail(`✏️ ${tipoLabel} atualizada: ${titulo}`, titulo, `${tipoLabel} atualizada`, `Notificação de ${tipoLabel}`,
@@ -3371,6 +3391,7 @@ function notifyEmail(assunto, titulo, subtitulo, cabecalho, linhas){
 }
 
 function sendNotification(task){
+  notificarInterno({icone:'ti-clipboard-plus',titulo:'Nova tarefa',texto:task.titulo,audiencia:'equipe'});
   // WhatsApp (independente do e-mail; respeita destinatários com telefone).
   notifyWhatsApp(
     `🔔 *Nova Tarefa* — iTS Gerencial CASAN\n\n`+
@@ -3409,6 +3430,7 @@ function sendNotification(task){
 }
 
 function sendNotificacaoConclusao(task){
+  notificarInterno({icone:'ti-checkbox',titulo:'Tarefa concluída',texto:task.titulo,audiencia:'cliente',paraNome:task.criadoPor||null});
   notifyWhatsApp(
     `✅ *Tarefa Concluída* — iTS Gerencial CASAN\n\n`+
     `*${task.titulo}*\n`+
@@ -3793,6 +3815,7 @@ function applySession(){
     const mp=document.getElementById('meuPerfil');
     if(mp)mp.innerHTML=`<i class="ti ti-user"></i> ${s.nome}`;
     applyNavPermissions(s.cargo);
+    try{ renderNotifBadge(); }catch(_){}
     if(sessionStorage.getItem('its_token')) hydrateFromAPI();
   }else{
     document.getElementById('loginScreen').style.display='flex';
@@ -3818,6 +3841,77 @@ function logEvento(acao, detalhe){
     saveLogs();
   }catch(_){}
 }
+// ── NOTIFICAÇÕES INTERNAS (sino) ──────────────────────────────────────
+const NOTIF_MAX=400;
+let NOTIFS = JSON.parse(localStorage.getItem('its_notifs')||'null') || [];
+let _nextNotifId = NOTIFS.length ? Math.max(0,...NOTIFS.map(n=>n.id||0))+1 : 1;
+function saveNotifs(){ localStorage.setItem('its_notifs', JSON.stringify(NOTIFS)); remoteSet('its_notifs', NOTIFS); }
+
+// audiencia: 'todos' | 'operador' | 'cliente' | 'equipe' ; paraNome opcional restringe a um nome.
+function notificarInterno({icone='ti-bell', titulo, texto, audiencia='equipe', paraNome=null}){
+  NOTIFS.unshift({ id:_nextNotifId++, em:agoraISO(), icone, titulo:titulo||'', texto:texto||'', audiencia, paraNome:paraNome||null, lidoPor:[] });
+  if(NOTIFS.length>NOTIF_MAX) NOTIFS.length=NOTIF_MAX;
+  saveNotifs();
+  try{ renderNotifBadge(); }catch(_){}
+}
+// A notificação é destinada ao usuário atual?
+function notifParaMim(n){
+  const s=getSession(); if(!s) return false;
+  const cargo=s.cargo||'';
+  if(n.paraNome && n.paraNome!==s.nome) return false;
+  switch(n.audiencia){
+    case 'todos': return true;
+    case 'operador': return cargo==='Operador';
+    case 'cliente': return cargo==='Cliente';
+    case 'equipe': return cargo!=='Cliente' && cargo!=='Operador';
+    default: return false;
+  }
+}
+function notifsDoUsuario(){ return NOTIFS.filter(notifParaMim); }
+function notifsNaoLidas(){ const s=getSession(); const id=s?s.nome:''; return notifsDoUsuario().filter(n=>!(n.lidoPor||[]).includes(id)); }
+function renderNotifBadge(){
+  const badge=document.getElementById('notifBadge'); if(!badge) return;
+  const n=notifsNaoLidas().length;
+  badge.textContent=n>9?'9+':String(n);
+  badge.style.display=n>0?'flex':'none';
+}
+function toggleNotifs(ev){
+  ev&&ev.stopPropagation();
+  const p=document.getElementById('notifPanel');
+  const abrir = p.style.display==='none';
+  p.style.display=abrir?'block':'none';
+  if(abrir) renderNotifList();
+}
+function renderNotifList(){
+  const el=document.getElementById('notifList'); if(!el) return;
+  const s=getSession(); const id=s?s.nome:'';
+  const lista=notifsDoUsuario().slice(0,50);
+  if(!lista.length){ el.innerHTML='<div style="padding:18px;text-align:center;color:var(--its-muted);font-size:.82rem">Nenhuma notificação.</div>'; return; }
+  el.innerHTML=lista.map(n=>{
+    const lido=(n.lidoPor||[]).includes(id);
+    return `<div style="display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid var(--its-border);background:${lido?'#fff':'#f0f6ff'}">
+      <i class="ti ${esc(n.icone)}" style="font-size:18px;color:var(--its-sidebar);margin-top:2px"></i>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.83rem;font-weight:600;color:var(--its-sidebar)">${esc(n.titulo)}</div>
+        ${n.texto?`<div style="font-size:.78rem;color:var(--its-text);white-space:pre-wrap">${esc(n.texto)}</div>`:''}
+        <div style="font-size:.7rem;color:var(--its-muted);margin-top:3px">${esc(n.em)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  // marca como lidas ao abrir
+  notifsDoUsuario().forEach(n=>{ n.lidoPor=n.lidoPor||[]; if(!n.lidoPor.includes(id)) n.lidoPor.push(id); });
+  saveNotifs(); renderNotifBadge();
+}
+function marcarTodasLidas(){
+  const s=getSession(); const id=s?s.nome:'';
+  notifsDoUsuario().forEach(n=>{ n.lidoPor=n.lidoPor||[]; if(!n.lidoPor.includes(id)) n.lidoPor.push(id); });
+  saveNotifs(); renderNotifList(); renderNotifBadge();
+}
+document.addEventListener('click',(e)=>{
+  const p=document.getElementById('notifPanel'); const bell=document.getElementById('notifBell');
+  if(p&&p.style.display!=='none'&&!p.contains(e.target)&&bell&&!bell.contains(e.target)) p.style.display='none';
+});
+
 function renderLogs(){
   const body=document.getElementById('logBody'); const empty=document.getElementById('logEmpty');
   if(!body) return;
@@ -4074,7 +4168,7 @@ async function remoteGet(chave){
 
 // Puxa os dados do servidor; reatribui as variáveis em memória e re-renderiza.
 async function hydrateFromAPI(){
-  const [ponto, cfg, users, adminHash, tasks, chamados, emergs, avisos, logs] = await Promise.all([
+  const [ponto, cfg, users, adminHash, tasks, chamados, emergs, avisos, logs, notifs] = await Promise.all([
     remoteGet('its_ponto_db'),
     remoteGet('its_cfg'),
     remoteGet('its_users'),
@@ -4084,6 +4178,7 @@ async function hydrateFromAPI(){
     remoteGet('its_emergs'),
     remoteGet('its_avisos'),
     remoteGet('its_logs'),
+    remoteGet('its_notifs'),
   ]);
   if(ponto && typeof ponto==='object'){ PONTO_DB = ponto; localStorage.setItem('its_ponto_db', JSON.stringify(ponto)); }
   if(cfg && typeof cfg==='object'){ CFG = cfg; localStorage.setItem('its_cfg', JSON.stringify(cfg)); }
@@ -4098,6 +4193,7 @@ async function hydrateFromAPI(){
   if(Array.isArray(emergs)){ EMERGS = emergs; nextEmergId = Math.max(0,...EMERGS.map(e=>e.id))+1; localStorage.setItem('its_emergs', JSON.stringify(emergs)); }
   if(Array.isArray(avisos)){ AVISOS = avisos; nextAvisoId = Math.max(0,...AVISOS.map(a=>a.id))+1; localStorage.setItem('its_avisos', JSON.stringify(avisos)); }
   if(Array.isArray(logs)){ LOGS = logs; localStorage.setItem('its_logs', JSON.stringify(logs)); try{renderLogs();}catch(_){} }
+  if(Array.isArray(notifs)){ NOTIFS = notifs; _nextNotifId = NOTIFS.length?Math.max(0,...NOTIFS.map(n=>n.id||0))+1:1; localStorage.setItem('its_notifs', JSON.stringify(notifs)); try{renderNotifBadge();}catch(_){} }
 
   // Re-renderiza com os dados do servidor.
   try{ if(typeof renderUsers==='function') renderUsers(); }catch(_){}
@@ -4117,6 +4213,7 @@ async function hydrateFromAPI(){
   if(emergs===null) remoteSet('its_emergs', EMERGS);
   if(avisos===null) remoteSet('its_avisos', AVISOS);
   if(logs===null) remoteSet('its_logs', LOGS);
+  if(notifs===null) remoteSet('its_notifs', NOTIFS);
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────
