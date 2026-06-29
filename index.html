@@ -1305,7 +1305,7 @@ function responderTarefa(id){
   abrirResposta('Responder Tarefa — '+t.titulo, ({texto,anexos,em})=>{
     t.resposta=texto; t.anexos=anexos; t.resolvidoEm=em; t.status='Concluído';
     t.historico=t.historico||[]; t.historico.push(novaInteracao('resposta',texto,anexos));
-    notificarInterno({icone:'ti-message-check',titulo:'Tarefa respondida/concluída',texto:t.titulo,audiencia:'cliente',paraNome:t.criadoPor||null});
+    notificarInterno({icone:'ti-message-check',titulo:'Tarefa respondida/concluída',texto:t.titulo,audiencia:'cliente',paraNome:t.criadoPor||null,ref:{tipo:'tarefa',id:t.id}});
     saveTasks(); closeModal(); applyFilters(); updateDashboard();
     notifyWhatsApp(`✅ *Tarefa Concluída* — iTS Gerencial CASAN\n\n*${t.titulo}*\nResposta: ${texto}\nConcluída em: ${em}${anexos.length?`\n📎 ${anexos.length} anexo(s)`:''}`);
     notifyEmail(`✅ Tarefa Concluída: ${t.titulo}`, t.titulo, 'Tarefa concluída', 'Notificação de Tarefa',
@@ -2095,7 +2095,7 @@ function salvarChamado(criadoIso){
   CHAMADOS.unshift({id:nextChamadoId++,titulo,desc:descCh,criado:criadoIso,status:'Em Atendimento',resolvidoEm:null,
     historico:[novaInteracao('abertura',descCh,anexosAbertura)]});
   saveChamados();
-  notificarInterno({icone:'ti-headset',titulo:'Novo chamado',texto:titulo,audiencia:'equipe'});
+  notificarInterno({icone:'ti-headset',titulo:'Novo chamado',texto:titulo,audiencia:'equipe',ref:{tipo:'chamado',id:CHAMADOS[0].id}});
   notifyWhatsApp(
     `🆘 *Novo Chamado* — iTS Gerencial CASAN\n\n`+
     `*${titulo}*\n`+
@@ -2235,7 +2235,7 @@ function comentarChamado(id){
     notifyWhatsApp(`💬 *Comentário no chamado* — iTS Gerencial CASAN\n\n*${c.titulo}*\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})\n${texto||'(anexo)'}`);
     notifyEmail(`💬 Comentário no chamado: ${c.titulo}`, c.titulo, 'Novo comentário', 'Notificação de Chamado',
       [{label:'Autor',valor:`${a.por} (${a.ehCliente?'Cliente':'Equipe'})`},{label:'Comentário',valor:texto||'—'},{label:'Anexos',valor:anexos.length?anexos.map(x=>x.name).join(', '):'—'}]);
-    logEvento('Comentário em chamado', c.titulo); notificarInterno({icone:'ti-message',titulo:'Novo comentário no chamado',texto:c.titulo,audiencia:autorAtual().ehCliente?'equipe':'cliente'}); showToast('Comentário adicionado.'); verChamado(id);
+    logEvento('Comentário em chamado', c.titulo); notificarInterno({icone:'ti-message',titulo:'Novo comentário no chamado',texto:c.titulo,audiencia:autorAtual().ehCliente?'equipe':'cliente',ref:{tipo:'chamado',id:c.id}}); showToast('Comentário adicionado.'); verChamado(id);
   },{btnLabel:'Adicionar comentário',btnIcon:'ti-message-plus',label:'Comentário'});
 }
 
@@ -2249,7 +2249,7 @@ function comentarTarefa(id){
     notifyWhatsApp(`💬 *Comentário na tarefa* — iTS Gerencial CASAN\n\n*${t.titulo}*\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})\n${texto||'(anexo)'}`);
     notifyEmail(`💬 Comentário na tarefa: ${t.titulo}`, t.titulo, 'Novo comentário', 'Notificação de Tarefa',
       [{label:'Autor',valor:`${a.por} (${a.ehCliente?'Cliente':'Equipe'})`},{label:'Comentário',valor:texto||'—'},{label:'Anexos',valor:anexos.length?anexos.map(x=>x.name).join(', '):'—'}]);
-    logEvento('Comentário em tarefa', t.titulo); notificarInterno({icone:'ti-message',titulo:'Novo comentário na tarefa',texto:t.titulo,audiencia:autorAtual().ehCliente?'equipe':'cliente',paraNome:autorAtual().ehCliente?null:(t.criadoPor||null)}); showToast('Comentário adicionado.'); verTarefa(id);
+    logEvento('Comentário em tarefa', t.titulo); notificarInterno({icone:'ti-message',titulo:'Novo comentário na tarefa',texto:t.titulo,audiencia:autorAtual().ehCliente?'equipe':'cliente',paraNome:autorAtual().ehCliente?null:(t.criadoPor||null),ref:{tipo:'tarefa',id:t.id}}); showToast('Comentário adicionado.'); verTarefa(id);
   },{btnLabel:'Adicionar comentário',btnIcon:'ti-message-plus',label:'Comentário'});
 }
 function agoraISO(){ const d=new Date();const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
@@ -2312,7 +2312,7 @@ function responderChamado(id){
   abrirResposta('Responder Chamado — '+c.titulo, ({texto,anexos,em})=>{
     c.resposta=texto; c.anexos=anexos; c.resolvidoEm=em; c.status='Resolvido';
     c.historico=c.historico||[]; c.historico.push(novaInteracao('resposta',texto,anexos));
-    notificarInterno({icone:'ti-message-check',titulo:'Chamado respondido/resolvido',texto:c.titulo,audiencia:'cliente'});
+    notificarInterno({icone:'ti-message-check',titulo:'Chamado respondido/resolvido',texto:c.titulo,audiencia:'cliente',ref:{tipo:'chamado',id:c.id}});
     saveChamados(); closeModal(); filterChamados();
     notifyWhatsApp(`✅ *Chamado Resolvido* — iTS Gerencial CASAN\n\n*${c.titulo}*\nResposta: ${texto}\nResolvido em: ${em}${anexos.length?`\n📎 ${anexos.length} anexo(s)`:''}`);
     notifyEmail(`✅ Chamado Resolvido: ${c.titulo}`, c.titulo, 'Chamado resolvido', 'Notificação de Chamado',
@@ -2359,7 +2359,7 @@ function resolverChamado(id){
   c.resolvidoEm=`${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
   c.status='Resolvido';
   saveChamados();
-  notificarInterno({icone:'ti-message-check',titulo:'Chamado resolvido',texto:c.titulo,audiencia:'cliente'});
+  notificarInterno({icone:'ti-message-check',titulo:'Chamado resolvido',texto:c.titulo,audiencia:'cliente',ref:{tipo:'chamado',id:c.id}});
   logEvento('Chamado resolvido', c.titulo);
   notifyWhatsApp(
     `✅ *Chamado Resolvido* — iTS Gerencial CASAN\n\n`+
@@ -2471,7 +2471,7 @@ function registrarEmerg(){
     status:'Em Atendimento'
   });
   saveEmergs();
-  notificarInterno({icone:'ti-alert-octagon',titulo:'Nova emergência',texto:cidade,audiencia:'operador'});
+  notificarInterno({icone:'ti-alert-octagon',titulo:'Nova emergência',texto:cidade,audiencia:'operador',ref:{tipo:'emergencia',id:EMERGS[0].id}});
   notifyWhatsApp(
     `🚨 *Nova Emergência* — iTS Gerencial CASAN\n\n`+
     `Cidade: ${cidade}\n`+
@@ -3391,7 +3391,7 @@ function notifyEmail(assunto, titulo, subtitulo, cabecalho, linhas){
 }
 
 function sendNotification(task){
-  notificarInterno({icone:'ti-clipboard-plus',titulo:'Nova tarefa',texto:task.titulo,audiencia:'equipe'});
+  notificarInterno({icone:'ti-clipboard-plus',titulo:'Nova tarefa',texto:task.titulo,audiencia:'equipe',ref:{tipo:'tarefa',id:task.id}});
   // WhatsApp (independente do e-mail; respeita destinatários com telefone).
   notifyWhatsApp(
     `🔔 *Nova Tarefa* — iTS Gerencial CASAN\n\n`+
@@ -3430,7 +3430,7 @@ function sendNotification(task){
 }
 
 function sendNotificacaoConclusao(task){
-  notificarInterno({icone:'ti-checkbox',titulo:'Tarefa concluída',texto:task.titulo,audiencia:'cliente',paraNome:task.criadoPor||null});
+  notificarInterno({icone:'ti-checkbox',titulo:'Tarefa concluída',texto:task.titulo,audiencia:'cliente',paraNome:task.criadoPor||null,ref:{tipo:'tarefa',id:task.id}});
   notifyWhatsApp(
     `✅ *Tarefa Concluída* — iTS Gerencial CASAN\n\n`+
     `*${task.titulo}*\n`+
@@ -3848,8 +3848,8 @@ let _nextNotifId = NOTIFS.length ? Math.max(0,...NOTIFS.map(n=>n.id||0))+1 : 1;
 function saveNotifs(){ localStorage.setItem('its_notifs', JSON.stringify(NOTIFS)); remoteSet('its_notifs', NOTIFS); }
 
 // audiencia: 'todos' | 'operador' | 'cliente' | 'equipe' ; paraNome opcional restringe a um nome.
-function notificarInterno({icone='ti-bell', titulo, texto, audiencia='equipe', paraNome=null}){
-  NOTIFS.unshift({ id:_nextNotifId++, em:agoraISO(), icone, titulo:titulo||'', texto:texto||'', audiencia, paraNome:paraNome||null, lidoPor:[] });
+function notificarInterno({icone='ti-bell', titulo, texto, audiencia='equipe', paraNome=null, ref=null}){
+  NOTIFS.unshift({ id:_nextNotifId++, em:agoraISO(), icone, titulo:titulo||'', texto:texto||'', audiencia, paraNome:paraNome||null, ref:ref||null, lidoPor:[] });
   if(NOTIFS.length>NOTIF_MAX) NOTIFS.length=NOTIF_MAX;
   saveNotifs();
   try{ renderNotifBadge(); }catch(_){}
@@ -3889,10 +3889,12 @@ function renderNotifList(){
   if(!lista.length){ el.innerHTML='<div style="padding:18px;text-align:center;color:var(--its-muted);font-size:.82rem">Nenhuma notificação.</div>'; return; }
   el.innerHTML=lista.map(n=>{
     const lido=(n.lidoPor||[]).includes(id);
-    return `<div style="display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid var(--its-border);background:${lido?'#fff':'#f0f6ff'}">
+    const temRef=n.ref&&n.ref.tipo;
+    const onclick=temRef?` onclick="abrirNotif('${esc(n.ref.tipo)}',${Number(n.ref.id)||0})"`:'';
+    return `<div${onclick} style="display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid var(--its-border);background:${lido?'#fff':'#f0f6ff'};${temRef?'cursor:pointer':''}">
       <i class="ti ${esc(n.icone)}" style="font-size:18px;color:var(--its-sidebar);margin-top:2px"></i>
       <div style="flex:1;min-width:0">
-        <div style="font-size:.83rem;font-weight:600;color:var(--its-sidebar)">${esc(n.titulo)}</div>
+        <div style="font-size:.83rem;font-weight:600;color:var(--its-sidebar)">${esc(n.titulo)}${temRef?' <i class="ti ti-external-link" style="font-size:12px;color:var(--its-muted)"></i>':''}</div>
         ${n.texto?`<div style="font-size:.78rem;color:var(--its-text);white-space:pre-wrap">${esc(n.texto)}</div>`:''}
         <div style="font-size:.7rem;color:var(--its-muted);margin-top:3px">${esc(n.em)}</div>
       </div>
@@ -3906,6 +3908,21 @@ function marcarTodasLidas(){
   const s=getSession(); const id=s?s.nome:'';
   notifsDoUsuario().forEach(n=>{ n.lidoPor=n.lidoPor||[]; if(!n.lidoPor.includes(id)) n.lidoPor.push(id); });
   saveNotifs(); renderNotifList(); renderNotifBadge();
+}
+// Abre o item relacionado à notificação.
+function abrirNotif(tipo, id){
+  document.getElementById('notifPanel').style.display='none';
+  const navTab={tarefa:'tarefas',chamado:'chamados',emergencia:'emergencias',aviso:'avisos'}[tipo];
+  if(!navTab) return;
+  const el=document.querySelector(`.nav-item[onclick*="'${navTab}'"]`);
+  if(el && el.style.display!=='none') setNav(el,navTab);
+  setTimeout(()=>{
+    try{
+      if(tipo==='tarefa'&&typeof verTarefa==='function') verTarefa(id);
+      else if(tipo==='chamado'&&typeof verChamado==='function') verChamado(id);
+      else if(tipo==='emergencia'&&typeof verEmerg==='function') verEmerg(id);
+    }catch(_){}
+  },200);
 }
 document.addEventListener('click',(e)=>{
   const p=document.getElementById('notifPanel'); const bell=document.getElementById('notifBell');
