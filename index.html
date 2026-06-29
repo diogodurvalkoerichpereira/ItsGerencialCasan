@@ -3933,19 +3933,25 @@ function renderNotifList(){
   el.innerHTML=lista.map(n=>{
     const lido=(n.lidoPor||[]).includes(id);
     const temRef=n.ref&&n.ref.tipo;
-    const onclick=temRef?` onclick="abrirNotif('${esc(n.ref.tipo)}',${Number(n.ref.id)||0})"`:'';
-    return `<div${onclick} style="display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid var(--its-border);background:${lido?'#fff':'#f0f6ff'};${temRef?'cursor:pointer':''}">
+    return `<div onclick="onNotifClick(${n.id})" style="display:flex;gap:10px;padding:11px 14px;border-bottom:1px solid var(--its-border);background:${lido?'#fff':'#f0f6ff'};cursor:pointer">
       <i class="ti ${esc(n.icone)}" style="font-size:18px;color:var(--its-sidebar);margin-top:2px"></i>
       <div style="flex:1;min-width:0">
         <div style="font-size:.83rem;font-weight:600;color:var(--its-sidebar)">${esc(n.titulo)}${temRef?' <i class="ti ti-external-link" style="font-size:12px;color:var(--its-muted)"></i>':''}</div>
         ${n.texto?`<div style="font-size:.78rem;color:var(--its-text);white-space:pre-wrap">${esc(n.texto)}</div>`:''}
         <div style="font-size:.7rem;color:var(--its-muted);margin-top:3px">${esc(n.em)}</div>
       </div>
+      ${!lido?`<i class="ti ti-circle-filled" style="font-size:9px;color:var(--its-orange);margin-top:5px" title="Não lida"></i>`:''}
     </div>`;
   }).join('');
-  // marca como lidas ao abrir
-  notifsDoUsuario().forEach(n=>{ n.lidoPor=n.lidoPor||[]; if(!n.lidoPor.includes(id)) n.lidoPor.push(id); });
-  saveNotifs(); renderNotifBadge();
+  // NÃO marca todas como lidas ao abrir — apenas a que for clicada (onNotifClick).
+}
+// Clique em uma notificação: marca SOMENTE ela como lida e, se tiver referência, abre o item.
+function onNotifClick(notifId){
+  const s=getSession(); const id=s?s.nome:'';
+  const n=NOTIFS.find(x=>x.id===notifId);
+  if(n){ n.lidoPor=n.lidoPor||[]; if(!n.lidoPor.includes(id)) n.lidoPor.push(id); saveNotifs(); }
+  renderNotifBadge(); renderNotifList();
+  if(n&&n.ref&&n.ref.tipo) abrirNotif(n.ref.tipo, n.ref.id);
 }
 function marcarTodasLidas(){
   const s=getSession(); const id=s?s.nome:'';
