@@ -510,7 +510,7 @@ textarea{resize:vertical;min-height:72px}
             <label>Serviço</label>
             <select id="eFilterSev" onchange="filterEmerg()">
               <option value="">Todos</option>
-              <option>Água</option><option>Esgoto</option><option>Água e Esgoto</option>
+              <option>Água</option><option>Esgoto</option>
             </select>
           </div>
         </div>
@@ -565,24 +565,15 @@ textarea{resize:vertical;min-height:72px}
                 <option value="">Selecione...</option>
                 <option>Água</option>
                 <option>Esgoto</option>
-                <option>Água e Esgoto</option>
               </select>
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>Canal de Envio</label>
-              <select id="eCanal">
-                <option>WhatsApp</option>
-                <option>E-mail</option>
-                <option>Telefone</option>
-                <option>Sistema</option>
-              </select>
-            </div>
-            <div class="form-group">
               <label>Dentro do Prazo</label>
               <input type="text" id="ePrazo" readonly placeholder="Calculado automaticamente" style="background:#f8fafc;color:var(--its-sidebar);font-weight:700">
             </div>
+            <div class="form-group"></div>
           </div>
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
             <button class="btn btn-ghost" onclick="switchEmergTab('lista', document.querySelector('#emergTabs .tab'))"><i class="ti ti-x"></i> Cancelar</button>
@@ -2473,7 +2464,7 @@ function registrarEmerg(){
     cidade,recebido,enviado,supervisor,
     protocolo:document.getElementById('eProtocolo').value,
     servico,
-    canal:document.getElementById('eCanal').value,
+    canal:'',
     prazo,
     status:'Em Atendimento'
   });
@@ -2528,7 +2519,8 @@ function editarEmerg(id){
   if(!podeEditarEmerg()){ showToast('Apenas Supervisor ou superior pode editar emergências.'); return; }
   const e=EMERGS.find(x=>x.id===id);if(!e)return;
   const statusOpts=['Em Atendimento','Aguardando','Resolvido','Cancelado'];
-  const servOpts=['Água','Esgoto','Água e Esgoto'];
+  const servOpts=['Água','Esgoto'];
+  const canalOpts=['WhatsApp','E-mail','Telefone','Sistema'];
   const sel=(arr,cur)=>arr.map(v=>`<option${cur===v?' selected':''}>${v}</option>`).join('');
   document.getElementById('modalTitle').textContent='Editar Emergência — '+e.cidade;
   document.getElementById('modalContent').innerHTML=`
@@ -2539,7 +2531,7 @@ function editarEmerg(id){
     <div class="form-row-3">
       <div class="form-group"><label>Recebido</label><input type="time" id="edEmRecebido" value="${esc(e.recebido||'')}"></div>
       <div class="form-group"><label>Enviado</label><input type="time" id="edEmEnviado" value="${esc(e.enviado||'')}"></div>
-      <div class="form-group"><label>Canal</label><input type="text" id="edEmCanal" value="${esc(e.canal||'')}"></div>
+      <div class="form-group"><label>Canal</label><select id="edEmCanal"><option value="">Selecione...</option>${sel(canalOpts,e.canal)}</select></div>
     </div>
     <div class="form-group"><label>Protocolo</label><input type="text" id="edEmProtocolo" value="${esc(e.protocolo||'')}"></div>
     <div class="form-group">
