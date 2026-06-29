@@ -2561,7 +2561,7 @@ function editarEmerg(id){
     e.protocolo=document.getElementById('edEmProtocolo').value.trim();
     e.status=document.getElementById('edEmStatus').value;
     saveEmergs(); closeModal(); filterEmerg();
-    notifyAlteracao('Emergência', e.cidade, [{label:'Status',valor:e.status},{label:'Serviço',valor:e.servico},{label:'Recebido',valor:e.recebido},{label:'Enviado',valor:e.enviado}]);
+    notifyAlteracao('Emergência', e.cidade, [{label:'Status',valor:e.status},{label:'Serviço',valor:e.servico},{label:'Recebido',valor:e.recebido},{label:'Enviado',valor:e.enviado}], {semWhatsApp:e.status==='Resolvido'});
     logEvento('Emergência editada', e.cidade+(prev!==e.status?(' — status: '+prev+' → '+e.status):''));
     showToast('Emergência atualizada.');
   };
@@ -2572,7 +2572,7 @@ function cycleEmergStatus(id){
   const opts=['Em Atendimento','Aguardando','Resolvido','Cancelado'];
   e.status=opts[(opts.indexOf(e.status)+1)%opts.length];
   saveEmergs();
-  notifyAlteracao('Emergência', e.cidade, [{label:'Status',valor:e.status},{label:'Serviço',valor:e.servico},{label:'Recebido',valor:e.recebido}]);
+  notifyAlteracao('Emergência', e.cidade, [{label:'Status',valor:e.status},{label:'Serviço',valor:e.servico},{label:'Recebido',valor:e.recebido}], {semWhatsApp:e.status==='Resolvido'});
   logEvento('Status da emergência', e.cidade+' → '+e.status);
   filterEmerg();showToast('Status: '+e.status);
 }
@@ -3490,11 +3490,12 @@ function notifyWhatsApp(message){
 }
 
 // Notifica uma ALTERAÇÃO (edição/mudança de status) por WhatsApp + e-mail.
-function notifyAlteracao(tipoLabel, titulo, linhas){
+function notifyAlteracao(tipoLabel, titulo, linhas, opts={}){
   const a=autorAtual();
   notificarInterno({icone:'ti-edit',titulo:tipoLabel+' atualizada',texto:titulo,audiencia:'equipe'});
   const corpo=linhas.map(l=>`${l.label}: ${l.valor||'—'}`).join('\n');
-  notifyWhatsApp(`✏️ *${tipoLabel} atualizada* — iTS Gerencial CASAN\n\n*${titulo}*\n${corpo}\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})`);
+  // opts.semWhatsApp suprime o WhatsApp (ex.: emergência resolvida não notifica no zap).
+  if(!opts.semWhatsApp) notifyWhatsApp(`✏️ *${tipoLabel} atualizada* — iTS Gerencial CASAN\n\n*${titulo}*\n${corpo}\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})`);
   notifyEmail(`✏️ ${tipoLabel} atualizada: ${titulo}`, titulo, `${tipoLabel} atualizada`, `Notificação de ${tipoLabel}`,
     [...linhas, {label:'Alterado por', valor:`${a.por} (${a.perfil||'—'})`}]);
 }
