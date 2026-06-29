@@ -2049,8 +2049,8 @@ function renderChamados(list){
         <button class="btn btn-ghost btn-sm" onclick="verChamado(${c.id})" title="Ver detalhes/resposta"><i class="ti ti-eye"></i></button>
         ${c.arquivado
           ? `<button class="btn btn-ghost btn-sm" onclick="desarquivarChamado(${c.id})" title="Desarquivar"><i class="ti ti-archive-off"></i></button>`
-          : `<button class="btn btn-ghost btn-sm" onclick="arquivarChamado(${c.id})" title="Arquivar/Cancelar"><i class="ti ti-archive"></i></button>`}
-        ${(c.status==='Em Atendimento'&&!c.arquivado)?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="responderChamado(${c.id})" title="Responder e resolver"><i class="ti ti-message-reply"></i></button>`:''}
+          : ''}
+        ${(c.status==='Em Atendimento'&&!c.arquivado)?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="responderChamado(${c.id})" title="Concluir chamado"><i class="ti ti-message-reply"></i></button>`:''}
         ${c.arquivado?'':`<button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteChamado(${c.id})" title="Excluir"><i class="ti ti-trash"></i></button>`}
       </div></td>
     </tr>`;
@@ -2230,6 +2230,7 @@ function abrirResposta(titulo, onSalvar, opts){
   document.getElementById('modalTitle').textContent=titulo;
   document.getElementById('modalContent').innerHTML=`
     <div class="form-group"><label>${opts.label||'Resposta'} *</label><textarea id="respTexto" placeholder="Escreva aqui... (cole um print com Ctrl+V para anexar)" style="min-height:90px" onpaste="anexarColando(event)"></textarea></div>
+    ${opts.comData?`<div class="form-group"><label>Concluído em</label><input type="datetime-local" id="respEm" value="${opts.emDefault||''}"><div style="font-size:.72rem;color:var(--its-muted);margin-top:4px">Informe quando foi concluído. Até 1h da abertura conta como dentro do prazo.</div></div>`:''}
     <div class="form-group">
       <label>Anexos (documentos / áudios) — opcional</label>
       <div style="display:flex;gap:8px;align-items:center">
@@ -2251,7 +2252,9 @@ function abrirResposta(titulo, onSalvar, opts){
     const texto=document.getElementById('respTexto').value.trim();
     const erro=document.getElementById('respErro');
     if(!texto && !_anexosResp.length){ erro.textContent='Escreva algo ou adicione um anexo.'; erro.style.display='flex'; return; }
-    onSalvar({texto, anexos:_anexosResp.slice(), em: agoraISO()});
+    let em=agoraISO();
+    if(opts.comData){ const v=(document.getElementById('respEm')||{}).value; if(v) em=v.replace('T',' '); }
+    onSalvar({texto, anexos:_anexosResp.slice(), em});
   };
 }
 
@@ -2339,7 +2342,7 @@ function renderHistorico(hist){
 // Responder + resolver um chamado.
 function responderChamado(id){
   const c=CHAMADOS.find(x=>x.id===id);if(!c)return;
-  abrirResposta('Responder Chamado — '+c.titulo, ({texto,anexos,em})=>{
+  abrirResposta('Concluir Chamado — '+c.titulo, ({texto,anexos,em})=>{
     c.resposta=texto; c.anexos=anexos; c.resolvidoEm=em; c.status='Resolvido';
     c.historico=c.historico||[]; c.historico.push(novaInteracao('resposta',texto,anexos));
     notificarInterno({icone:'ti-message-check',titulo:'Chamado respondido/resolvido',texto:c.titulo,audiencia:'cliente',ref:{tipo:'chamado',id:c.id}});
@@ -2348,8 +2351,8 @@ function responderChamado(id){
     notifyEmail(`✅ Chamado Resolvido: ${c.titulo}`, c.titulo, 'Chamado resolvido', 'Notificação de Chamado',
       [{label:'Resposta',valor:texto},{label:'Resolvido em',valor:em},{label:'Anexos',valor:anexos.length?anexos.map(a=>a.name).join(', '):'—'}]);
     logEvento('Chamado resolvido', c.titulo);
-    showToast('Chamado respondido e resolvido!');
-  });
+    showToast('Chamado concluído!');
+  }, {label:'Resposta / Conclusão', btnLabel:'Concluir Chamado', btnIcon:'ti-check', comData:true, emDefault:agoraISO().replace(' ','T')});
 }
 
 // Ver detalhes + resposta + anexos de um chamado.
