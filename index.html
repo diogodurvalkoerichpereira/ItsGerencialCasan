@@ -2736,7 +2736,9 @@ function calcularResumoMensal(){
     </tr>`).join('');
   const totalDias=rows.reduce((s,r)=>s+r.dias,0);
   const totMinGeral=rows.reduce((s,r)=>s+r.minutos,0);
-  document.getElementById('resumoTotal').textContent=`${rows.length} operador(es) · ${totalDias} dia(s) com horas · Total: ${fmtHM(totMinGeral)}`;
+  // Operador-dia: soma da coluna "operador" nos dias efetivamente trabalhados (Duração>0).
+  const operadorDia=PONTO_DATA.reduce((s,r)=>s+((typeof r.durMin==='number'&&r.durMin>0&&r.operadores)?(+r.operadores||0):0),0);
+  document.getElementById('resumoTotal').textContent=`${rows.length} supervisor(es) · ${totalDias} dia(s) com horas · Total: ${fmtHM(totMinGeral)}`+(operadorDia>0?` · Operadores atendidos (operador-dia): ${operadorDia}`:'');
 
   // ── INDICADOR 06 – Presença do Supervisor ─────────────────────────────
   // Total de Horas do Mês = soma da Duração de todos (operadores + supervisor).
@@ -2808,6 +2810,7 @@ function importarPonto(file){
           saida: lower.findIndex(h=>h.includes('saída')||h.includes('saida')),
           dur: lower.findIndex(h=>h.includes('dura')),
           funcao: lower.findIndex(h=>h.includes('função')||h.includes('funcao')||h.includes('cargo')),
+          operadores: lower.findIndex(h=>h.includes('operador')),
         };
         const dataR09=(s)=>{ const m=String(s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if(!m)return ''; let y=m[3]; if(y.length===2)y='20'+y; return `${m[1].padStart(2,'0')}/${m[2].padStart(2,'0')}/${y}`; };
         newData = rows.slice(1).filter(r=>(ci.nome>=0?String(r[ci.nome]||'').trim():'')!=='').map((r,i)=>{
@@ -2823,6 +2826,7 @@ function importarPonto(file){
             fimJornada: ci.saida>=0?r[ci.saida]:'',
             tipo:'', sit:'', inc:'',
             funcao: ci.funcao>=0 ? String(r[ci.funcao]||'').trim() : '',
+            operadores: ci.operadores>=0 ? (parseInt(r[ci.operadores],10)||0) : 0, // qtde de operadores sob o supervisor naquele dia
             durMin: (dm!=null?dm:0), durStr  // horas totais já vêm da coluna Duração
           };
         });
