@@ -1646,6 +1646,7 @@ function gerarRelatorioPonto(){
     if(!map[key])map[key]={mat:r.mat,nome:r.nome,sup:r.sup,minutos:0};
     const sit=(r.sit||'').toLowerCase();
     if(sit.includes('falt')||sit==='folga')return;
+    if(typeof r.durMin==='number'){ if(r.durMin>0)map[key].minutos+=r.durMin; return; }
     const ini=parseMinutes(r.iniJornada),fim=parseMinutes(r.fimJornada);
     const iIni=parseMinutes(r.iniIntervalo),iFim=parseMinutes(r.fimIntervalo);
     if(ini!=null&&fim!=null&&iIni!=null&&iFim!=null){
@@ -2703,6 +2704,8 @@ function calcularResumoMensal(){
     if(sit.includes('falt')){ map[key].faltas++; return; }
     if(sit==='folga'){ map[key].folgas++; return; }
     if(r.inc&&r.inc.trim()!=='') map[key].inc++;
+    // Formato R09: a duração total do dia já vem pronta (coluna Duração).
+    if(typeof r.durMin==='number'){ if(r.durMin>0){ map[key].dias++; map[key].minutos+=r.durMin; } else { map[key].diasSemRegistro++; } return; }
     // Exige os 4 registros: Início Jornada, Início Intervalo, Fim Intervalo, Fim Jornada
     const ini=parseMinutes(r.iniJornada);
     const iniInt=parseMinutes(r.iniIntervalo);
@@ -2728,7 +2731,8 @@ function calcularResumoMensal(){
       <td style="text-align:center;font-weight:700;color:var(--its-sidebar)">${fmtHM(r.minutos)}</td>
     </tr>`).join('');
   const totalDias=rows.reduce((s,r)=>s+r.dias,0);
-  document.getElementById('resumoTotal').textContent=`${rows.length} funcionário(s) · ${totalDias} dia(s) com horas registradas`;
+  const totMinGeral=rows.reduce((s,r)=>s+r.minutos,0);
+  document.getElementById('resumoTotal').textContent=`${rows.length} operador(es) · ${totalDias} dia(s) com horas · Total: ${fmtHM(totMinGeral)}`;
 
   // ── INDICADOR 06 – Presença do Supervisor ─────────────────────────────
   const totalMin=rows.reduce((s,r)=>s+r.minutos,0);
@@ -2782,6 +2786,37 @@ function importarPonto(file){
       const rows = XLSX.utils.sheet_to_json(sh, {header:1, raw:false, defval:''});
       if(rows.length < 2){ status.innerHTML='<div class="alert alert-error"><i class="ti ti-x"></i> Planilha vazia ou formato inválido.</div>'; return; }
       const header = rows[0];
+      const lower = header.map(h=>h.toString().toLowerCase());
+      // Detecta o formato R09 (Dia, Nome, Entrada, Pausa, Retorno, Saída, Duração, operadores)
+      const isR09 = lower.some(h=>h.includes('dura')) && lower.some(h=>h==='dia'||h.includes('operador'));
+      let newData;
+      if(isR09){
+        const ci={
+          dia: lower.findIndex(h=>h==='dia'),
+          nome: lower.findIndex(h=>h.includes('nome')),
+          ent: lower.findIndex(h=>h.includes('entrada')),
+          pausa: lower.findIndex(h=>h.includes('pausa')),
+          ret: lower.findIndex(h=>h.includes('retorno')),
+          saida: lower.findIndex(h=>h.includes('saída')||h.includes('saida')),
+          dur: lower.findIndex(h=>h.includes('dura')),
+        };
+        const dataR09=(s)=>{ const m=String(s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if(!m)return ''; let y=m[3]; if(y.length===2)y='20'+y; return `${m[1].padStart(2,'0')}/${m[2].padStart(2,'0')}/${y}`; };
+        newData = rows.slice(1).filter(r=>(ci.nome>=0?String(r[ci.nome]||'').trim():'')!=='').map((r,i)=>{
+          const durStr = ci.dur>=0 ? String(r[ci.dur]||'') : '';
+          const dm = parseMinutes(durStr);
+          return {
+            id:i, mat:'', sup:'',
+            nome: String(r[ci.nome]||'').trim(),
+            data: dataR09(r[ci.dia]),
+            iniJornada: ci.ent>=0?r[ci.ent]:'',
+            iniIntervalo: ci.pausa>=0?r[ci.pausa]:'',
+            fimIntervalo: ci.ret>=0?r[ci.ret]:'',
+            fimJornada: ci.saida>=0?r[ci.saida]:'',
+            tipo:'', sit:'', inc:'',
+            durMin: (dm!=null?dm:0), durStr  // horas totais já vêm da coluna Duração
+          };
+        });
+      } else {
       const idx = {
         mat: header.findIndex(h=>h.toString().toLowerCase().includes('matr')),
         nome: header.findIndex(h=>h.toString().toLowerCase().includes('nome')),
@@ -2795,7 +2830,7 @@ function importarPonto(file){
         sit: header.findIndex(h=>h.toString().toLowerCase()==='situação'||h.toString().toLowerCase()==='situacao'),
         inc: header.findIndex(h=>h.toString().toLowerCase().includes('inconsist')),
       };
-      const newData = rows.slice(1).filter(r=>r.some(c=>c!=='')).map((r,i)=>({
+      newData = rows.slice(1).filter(r=>r.some(c=>c!=='')).map((r,i)=>({
         id: i,
         mat: idx.mat>=0 ? r[idx.mat] : '',
         nome: idx.nome>=0 ? r[idx.nome] : '',
@@ -2809,6 +2844,7 @@ function importarPonto(file){
         sit: idx.sit>=0 ? r[idx.sit] : '',
         inc: idx.inc>=0 ? r[idx.inc] : '',
       }));
+      }
       // Detecta mês predominante na planilha
       const meses=[...new Set(newData.map(r=>extractMesAno(r.data)).filter(Boolean))];
       const mesKey=meses[0]||`${String(new Date().getMonth()+1).padStart(2,'0')}/${new Date().getFullYear()}`;
