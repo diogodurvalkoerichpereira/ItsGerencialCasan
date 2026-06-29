@@ -693,11 +693,14 @@ textarea{resize:vertical;min-height:72px}
               </select>
             </div>
           </div>
+          <div style="font-size:.78rem;color:var(--its-muted);margin:0 4px 8px">
+            <i class="ti ti-info-circle"></i> Marque na coluna <strong>Função</strong> quem é <strong>Supervisor</strong>; o restante conta como Operador. O <strong>Indicador 06</strong> é recalculado automaticamente.
+          </div>
           <div class="card" style="padding:0;overflow:hidden">
             <table class="task-table" id="resumoTable">
               <thead>
                 <tr>
-                  <th>Nome</th><th>Superior</th>
+                  <th>Nome</th><th>Função</th>
                   <th style="text-align:center">Total Horas</th>
                 </tr>
               </thead>
@@ -752,7 +755,7 @@ textarea{resize:vertical;min-height:72px}
           <div id="importStatus" style="margin-top:14px;display:none"></div>
           <div style="margin-top:16px;border-top:1px solid var(--its-border);padding-top:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
             <div style="font-size:.78rem;color:var(--its-muted)">
-              <strong>Colunas:</strong> Nome · <strong>Função</strong> (Supervisor/Operador) · Data · Início Jornada · Início Intervalo · Fim Intervalo · Fim Jornada · Situação. <em>Aceita também o formato R09 (Dia, Nome, Duração, Função). A coluna Função define o Indicador 06.</em>
+              <strong>Colunas:</strong> Nome · <strong>Função</strong> (Supervisor/Operador) · Data · Início Jornada · Início Intervalo · Fim Intervalo · Fim Jornada · Situação. <em>Aceita também o formato R09 (Dia, Nome, Duração). Se a planilha não trouxer a coluna Função, marque quem é Supervisor na aba <strong>Resumo</strong> — é isso que alimenta o Indicador 06.</em>
             </div>
             <button class="btn btn-outline btn-sm" onclick="baixarModeloPonto()"><i class="ti ti-download"></i> Baixar Modelo .xlsx</button>
           </div>
@@ -1659,8 +1662,8 @@ function gerarRelatorioPonto(){
   });
   const rows=Object.values(map).sort((a,b)=>a.nome.localeCompare(b.nome));
   const totalMin=rows.reduce((s,r)=>s+r.minutos,0);
-  const temFuncao=rows.some(r=>r.funcao&&r.funcao.trim()!=='');
-  const ehSup=r=>temFuncao?String(r.funcao||'').toLowerCase().includes('supervis'):(r.sup&&r.sup.trim()!==''&&r.sup!=='—');
+  // Usa a classificação Supervisor/Operador definida na aba Resumo (PONTO_DB[mes].funcoes).
+  const ehSup=r=>ehSupervisorPonto(mes, r.nome, r.funcao);
   const supMin=rows.filter(ehSup).reduce((s,r)=>s+r.minutos,0);
   const pct=totalMin>0?((supMin/totalMin)*100).toFixed(2):null;
   const cor=pct===null?'var(--its-muted)':parseFloat(pct)>=100?'var(--its-success)':parseFloat(pct)>=90?'var(--its-warning)':'var(--its-danger)';
@@ -2644,6 +2647,31 @@ function getPontoDataResumo(){
   return k&&PONTO_DB[k] ? PONTO_DB[k].registros : [];
 }
 
+// ── Classificação Supervisor/Operador (definida pelo usuário após importar) ──
+// Guardada por mês em PONTO_DB[mes].funcoes = { "NOME": "Supervisor"|"Operador" }.
+// É o que alimenta o Indicador 06 quando a planilha não traz a coluna Função.
+function getFuncoesPonto(mes){
+  return (mes&&PONTO_DB[mes]&&PONTO_DB[mes].funcoes) ? PONTO_DB[mes].funcoes : {};
+}
+function funcaoDe(mes, nome, funcaoArquivo){
+  const ov=getFuncoesPonto(mes)[nome];
+  if(ov) return ov;
+  if(funcaoArquivo && String(funcaoArquivo).trim()!=='') return String(funcaoArquivo).trim();
+  return 'Operador';
+}
+function ehSupervisorPonto(mes, nome, funcaoArquivo){
+  return funcaoDe(mes, nome, funcaoArquivo).toLowerCase().includes('supervis');
+}
+function setFuncaoPonto(el){
+  const sel=document.getElementById('pMonthSelResumo');
+  const mes=sel?sel.value:'';
+  if(!mes||!PONTO_DB[mes])return;
+  PONTO_DB[mes].funcoes=PONTO_DB[mes].funcoes||{};
+  PONTO_DB[mes].funcoes[el.dataset.nome]=el.value;
+  savePontoDB();
+  calcularResumoMensal();
+}
+
 function switchPontoTab(name, el){
   document.querySelectorAll('#pontoTabs .tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
@@ -2699,6 +2727,7 @@ function calcularResumoMensal(){
   document.getElementById('resumo-empty').style.display='none';
   document.getElementById('resumo-data-wrap').style.display='block';
   const PONTO_DATA=getPontoDataResumo();
+  const mesResumo=(document.getElementById('pMonthSelResumo')||{}).value||'';
   const map={};
   PONTO_DATA.forEach(r=>{
     const key=r.mat||r.nome;
@@ -2728,25 +2757,31 @@ function calcularResumoMensal(){
     }
   });
   const rows=Object.values(map).sort((a,b)=>a.nome.localeCompare(b.nome));
-  document.getElementById('resumoBody').innerHTML=rows.map(r=>`
-    <tr>
-      <td style="font-size:.83rem;font-weight:600">${r.nome}</td>
-      <td style="font-size:.78rem;color:var(--its-muted)">${r.sup||'—'}</td>
+  document.getElementById('resumoBody').innerHTML=rows.map(r=>{
+    const isSup=ehSupervisorPonto(mesResumo, r.nome, r.funcao);
+    return `<tr>
+      <td style="font-size:.83rem;font-weight:600">${esc(r.nome)}</td>
+      <td>
+        <select data-nome="${esc(r.nome)}" onchange="setFuncaoPonto(this)" style="font-size:.78rem;padding:3px 6px;border:1px solid var(--its-border);border-radius:4px;font-weight:600;background:#fff;color:${isSup?'var(--its-orange)':'var(--its-muted)'}">
+          <option value="Operador"${!isSup?' selected':''}>Operador</option>
+          <option value="Supervisor"${isSup?' selected':''}>Supervisor</option>
+        </select>
+      </td>
       <td style="text-align:center;font-weight:700;color:var(--its-sidebar)">${fmtHM(r.minutos)}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
   const totalDias=rows.reduce((s,r)=>s+r.dias,0);
   const totMinGeral=rows.reduce((s,r)=>s+r.minutos,0);
   // Operador-dia: soma da coluna "operador" nos dias efetivamente trabalhados (Duração>0).
   const operadorDia=PONTO_DATA.reduce((s,r)=>s+((typeof r.durMin==='number'&&r.durMin>0&&r.operadores)?(+r.operadores||0):0),0);
-  document.getElementById('resumoTotal').textContent=`${rows.length} supervisor(es) · ${totalDias} dia(s) com horas · Total: ${fmtHM(totMinGeral)}`+(operadorDia>0?` · Operadores atendidos (operador-dia): ${operadorDia}`:'');
+  const nSup=rows.filter(r=>ehSupervisorPonto(mesResumo, r.nome, r.funcao)).length;
+  document.getElementById('resumoTotal').textContent=`${rows.length} pessoa(s) · ${nSup} supervisor(es) · ${totalDias} dia(s) com horas · Total: ${fmtHM(totMinGeral)}`+(operadorDia>0?` · Operadores atendidos (operador-dia): ${operadorDia}`:'');
 
   // ── INDICADOR 06 – Presença do Supervisor ─────────────────────────────
   // Total de Horas do Mês = soma da Duração de todos (operadores + supervisor).
   const totalMin=rows.reduce((s,r)=>s+r.minutos,0);
-  // Tempo com supervisão = horas de quem tem Função = Supervisor.
-  // (fallback legado: se nenhuma linha tiver Função, usa a coluna Superior)
-  const temFuncao=rows.some(r=>r.funcao&&r.funcao.trim()!=='');
-  const ehSup=r=>temFuncao?String(r.funcao||'').toLowerCase().includes('supervis'):(r.sup&&r.sup.trim()!==''&&r.sup!=='—');
+  // Tempo com supervisão = horas de quem está marcado como Supervisor (coluna Função).
+  const ehSup=r=>ehSupervisorPonto(mesResumo, r.nome, r.funcao);
   const supMin=rows.filter(ehSup).reduce((s,r)=>s+r.minutos,0);
   const pct=totalMin>0?((supMin/totalMin)*100).toFixed(2):null;
   const cor=pct===null?'var(--its-muted)':parseFloat(pct)>=100?'var(--its-success)':parseFloat(pct)>=90?'var(--its-warning)':'var(--its-danger)';
