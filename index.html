@@ -1260,6 +1260,7 @@ function saveTask(id){
         notifyWhatsApp(`📎 *Anexos adicionados na tarefa* — iTS Gerencial CASAN\n\n*${titulo}*\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})\n${novosAnexos.map(x=>x.name).join(', ')}`);
       }
       if(newStatus==='Concluído'&&prevStatus!=='Concluído'&&TASKS[i].criadoPorCliente) sendNotificacaoConclusao(TASKS[i]);
+      else notifyAlteracao('Tarefa', titulo, [{label:'Status',valor:newStatus},{label:'Área',valor:TASKS[i].area},{label:'Responsável',valor:TASKS[i].resp}]);
     }
   }else{
     const d=new Date();const p=n=>String(n).padStart(2,'0');
@@ -1285,7 +1286,9 @@ function cycleStatus(id){
   const prev=t.status;
   t.status=opts[(opts.indexOf(t.status)+1)%opts.length];
   if(t.status==='Concluído'&&prev!=='Concluído'&&t.criadoPorCliente) sendNotificacaoConclusao(t);
+  else notifyAlteracao('Tarefa', t.titulo, [{label:'Status',valor:t.status},{label:'Área',valor:t.area},{label:'Responsável',valor:t.resp}]);
   saveTasks();
+  logEvento('Status da tarefa', t.titulo+' → '+t.status);
   applyFilters();updateDashboard();
   showToast('Status: '+t.status);
 }
@@ -2513,6 +2516,8 @@ function cycleEmergStatus(id){
   const opts=['Em Atendimento','Aguardando','Resolvido','Cancelado'];
   e.status=opts[(opts.indexOf(e.status)+1)%opts.length];
   saveEmergs();
+  notifyAlteracao('Emergência', e.cidade, [{label:'Status',valor:e.status},{label:'Serviço',valor:e.servico},{label:'Recebido',valor:e.recebido}]);
+  logEvento('Status da emergência', e.cidade+' → '+e.status);
   filterEmerg();showToast('Status: '+e.status);
 }
 
@@ -3312,6 +3317,15 @@ function notifyWhatsApp(message){
     headers:authHeaders({'Content-Type':'application/json'}),
     body:JSON.stringify({message})
   }).catch(()=>{});
+}
+
+// Notifica uma ALTERAÇÃO (edição/mudança de status) por WhatsApp + e-mail.
+function notifyAlteracao(tipoLabel, titulo, linhas){
+  const a=autorAtual();
+  const corpo=linhas.map(l=>`${l.label}: ${l.valor||'—'}`).join('\n');
+  notifyWhatsApp(`✏️ *${tipoLabel} atualizada* — iTS Gerencial CASAN\n\n*${titulo}*\n${corpo}\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})`);
+  notifyEmail(`✏️ ${tipoLabel} atualizada: ${titulo}`, titulo, `${tipoLabel} atualizada`, `Notificação de ${tipoLabel}`,
+    [...linhas, {label:'Alterado por', valor:`${a.por} (${a.perfil||'—'})`}]);
 }
 
 // Envia e-mail genérico (chamados, emergências, avisos) para destinatários
