@@ -1175,6 +1175,12 @@ function renderTasks(list){
     </tr>`).join('');
 }
 
+// Coordenador, Gerente e Admin veem todas as tarefas; os demais só veem
+// as que foram encaminhadas para eles (ou que eles próprios criaram).
+function podeVerTodasTarefas(){
+  const s=getSession();
+  return !!(s&&(s.isAdmin||s.cargo==='Gerente'||s.cargo==='Coordenador'));
+}
 function applyFilters(){
   const q=document.getElementById('searchInput').value.toLowerCase();
   const st=document.getElementById('filterStatus').value;
@@ -1182,7 +1188,9 @@ function applyFilters(){
   const verArq=document.getElementById('filterArquivadas')?.checked;
   const encMim=document.getElementById('filterEncMim')?.checked;
   const meuNome=(getSession()||{}).nome||'';
+  const verTodas=podeVerTodasTarefas();
   renderTasks(TASKS.filter(t=>
+    (verTodas || (t.encaminhadoPara&&t.encaminhadoPara.nome===meuNome) || t.criadoPor===meuNome)&&
     (verArq?t.arquivada:!t.arquivada)&&
     (!encMim||(t.encaminhadoPara&&t.encaminhadoPara.nome===meuNome))&&
     (!q||t.titulo.toLowerCase().includes(q)||t.area.toLowerCase().includes(q))&&
@@ -4032,6 +4040,7 @@ function applySession(){
     if(mp)mp.innerHTML=`<i class="ti ti-user"></i> ${s.nome}`;
     applyNavPermissions(s.cargo);
     try{ renderNotifBadge(); startNotifPolling(); }catch(_){}
+    try{ applyFilters(); }catch(_){}
     if(sessionStorage.getItem('its_token')) hydrateFromAPI();
   }else{
     document.getElementById('loginScreen').style.display='flex';
