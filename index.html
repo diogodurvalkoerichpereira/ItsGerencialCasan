@@ -1389,8 +1389,10 @@ function verTarefa(id){
       <div class="form-group"><label>Área</label><div style="font-size:.85rem">${esc(t.area)||'—'}</div></div>
     </div>
     <div class="form-group"><label>Descrição</label><div style="font-size:.85rem">${esc(t.desc)||'—'}</div></div>
-    ${t.encaminhadoPara?`<div class="its-alert alert-info" style="display:block"><i class="ti ti-send"></i> <strong>Encaminhada para ${esc(t.encaminhadoPara.nome)}${t.encaminhadoPara.cargo?` (${esc(t.encaminhadoPara.cargo)})`:''}</strong><div style="font-size:.78rem;color:var(--its-muted);margin-top:3px">Por ${esc(t.encaminhadoPara.por)} · ${esc(t.encaminhadoPara.em)}${t.encaminhadoPara.obs?`<br>Obs: ${esc(t.encaminhadoPara.obs)}`:''}</div></div>`:''}
-    ${t.historico&&t.historico.length?renderHistorico(t.historico):(t.resposta?`<hr class="divider"><div class="form-group"><label>Resposta</label><div style="font-size:.85rem;background:#f8fafc;padding:10px;border-radius:6px">${esc(t.resposta)}</div></div>${renderAnexos(t.anexos)}`:'')}
+    ${(!isCliente()&&t.encaminhadoPara)?`<div class="its-alert alert-info" style="display:block"><i class="ti ti-send"></i> <strong>Encaminhada para ${esc(t.encaminhadoPara.nome)}${t.encaminhadoPara.cargo?` (${esc(t.encaminhadoPara.cargo)})`:''}</strong><div style="font-size:.78rem;color:var(--its-muted);margin-top:3px">Por ${esc(t.encaminhadoPara.por)} · ${esc(t.encaminhadoPara.em)}${t.encaminhadoPara.obs?`<br>Obs: ${esc(t.encaminhadoPara.obs)}`:''}</div></div>`:''}
+    ${isCliente()
+      ? resultadoFinalCliente(t)
+      : (t.historico&&t.historico.length?renderHistorico(t.historico):(t.resposta?`<hr class="divider"><div class="form-group"><label>Resposta</label><div style="font-size:.85rem;background:#f8fafc;padding:10px;border-radius:6px">${esc(t.resposta)}</div></div>${renderAnexos(t.anexos)}`:''))}
     ${t.arquivada&&t.arquivoInfo?`<hr class="divider"><div class="its-alert alert-warning" style="display:block"><i class="ti ti-archive"></i> <strong>Arquivada</strong><div style="font-size:.8rem;margin-top:4px;line-height:1.6">
       Motivo: <strong>${esc(t.arquivoInfo.motivo)}</strong><br>
       ${t.arquivoInfo.obs?`Observação: ${esc(t.arquivoInfo.obs)}<br>`:''}
@@ -2461,6 +2463,21 @@ function autorAtual(){
 function novaInteracao(tipo, texto, anexos){
   const a=autorAtual();
   return { tipo, texto:texto||'', anexos:anexos||[], por:a.por, perfil:a.perfil, ehCliente:a.ehCliente, em:a.em };
+}
+// Visão do CLIENTE: ele não enxerga as tratativas internas (encaminhamentos,
+// notas da equipe). Vê apenas o RESULTADO FINAL — e somente quando a tarefa
+// está concluída e a resposta final foi dada por Coordenador ou Gerente.
+function resultadoFinalCliente(t){
+  const hist=t.historico||[];
+  const gestao=['Gerente','Coordenador','Admin'];
+  const resp=[...hist].reverse().find(h=>h.tipo==='resposta' && gestao.includes(h.perfil));
+  if(t.status==='Concluído' && resp){
+    return `<hr class="divider"><div class="form-group"><label>Resultado Final</label>
+      <div style="font-size:.85rem;background:#f0fdf4;border:1px solid #bbf7d0;padding:12px;border-radius:8px;white-space:pre-wrap">${esc(resp.texto)||'—'}</div></div>
+      <div style="font-size:.72rem;color:var(--its-muted);margin-top:4px">Concluída por ${esc(resp.por)}${resp.perfil?` (${esc(resp.perfil)})`:''} · ${esc(resp.em)}</div>
+      ${renderAnexos(resp.anexos)}`;
+  }
+  return `<hr class="divider"><div class="its-alert alert-info" style="display:block"><i class="ti ti-clock"></i> A tarefa está em andamento. Você será notificado quando o resultado final for concluído.</div>`;
 }
 // Renderiza o histórico (thread) distinguindo Cliente x Equipe, com data/hora.
 function renderHistorico(hist){
