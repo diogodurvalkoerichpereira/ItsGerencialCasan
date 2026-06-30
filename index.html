@@ -4278,6 +4278,7 @@ function startNotifPolling(){
 function notifParaMim(n){
   const s=getSession(); if(!s) return false;
   const cargo=s.cargo||'';
+  if(cargo==='Operador') return false; // Operador não recebe notificações
   if(n.paraNome && n.paraNome!==s.nome) return false;
   switch(n.audiencia){
     case 'todos': return true;
@@ -4290,7 +4291,11 @@ function notifParaMim(n){
 function notifsDoUsuario(){ return NOTIFS.filter(notifParaMim); }
 function notifsNaoLidas(){ const s=getSession(); const id=s?s.nome:''; return notifsDoUsuario().filter(n=>!(n.lidoPor||[]).includes(id)); }
 function renderNotifBadge(){
+  // Operador não tem acesso às notificações: esconde o sininho por completo.
+  const bell=document.getElementById('notifBell');
+  if(bell) bell.style.display=isOperador()?'none':'';
   const badge=document.getElementById('notifBadge'); if(!badge) return;
+  if(isOperador()){ badge.style.display='none'; return; }
   const n=notifsNaoLidas().length;
   badge.textContent=n>9?'9+':String(n);
   badge.style.display=n>0?'flex':'none';
