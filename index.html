@@ -4252,7 +4252,7 @@ function limparLogs(){
 const NAV_PERMISSIONS={
   Operador:['emergencias'],                                          // só criar emergência
   Supervisor:['emergencias','chamados','avisos','tarefas','relatorio'],
-  Monitor:['emergencias','chamados','avisos','tarefas','relatorio'], // mesmo nível operacional do supervisor
+  Monitor:['tarefas'],                                              // só tarefas atribuídas a ele
   Cliente:['tarefas','relatorio'],                                   // criar tarefa + relatórios (demais módulos só via relatório)
 };
 function applyNavPermissions(cargo){
