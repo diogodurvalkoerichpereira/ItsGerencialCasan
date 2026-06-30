@@ -580,6 +580,10 @@ textarea{resize:vertical;min-height:72px}
             </div>
             <div class="form-group"></div>
           </div>
+          <div class="form-group">
+            <label>Descrição</label>
+            <textarea id="eDesc" placeholder="Detalhes da emergência..."></textarea>
+          </div>
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
             <button class="btn btn-ghost" onclick="switchEmergTab('lista', document.querySelector('#emergTabs .tab'))"><i class="ti ti-x"></i> Cancelar</button>
             <button class="btn btn-danger" onclick="registrarEmerg()"><i class="ti ti-device-floppy"></i> Salvar Emergência</button>
@@ -2668,6 +2672,7 @@ function registrarEmerg(){
     servico,
     canal:'',
     prazo,
+    desc:document.getElementById('eDesc').value.trim(),
     status:'Em Atendimento',
     criadoPor:(getSession()||{}).nome||''
   });
@@ -2682,7 +2687,7 @@ function registrarEmerg(){
   );
   notifyEmail(`🚨 Nova Emergência: ${cidade}`, `Emergência — ${cidade}`, 'Nova ocorrência de emergência', 'Notificação de Emergência',
     [{label:'Cidade',valor:cidade},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Dentro do prazo',valor:prazo}]);
-  ['eData','eRecebido','eCidade','eProtocolo'].forEach(id=>document.getElementById(id).value='');
+  ['eData','eRecebido','eCidade','eProtocolo','eDesc'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('eServico').selectedIndex=0;
   const firstTab=document.querySelector('#emergTabs .tab');
   switchEmergTab('lista',firstTab);
@@ -2709,6 +2714,7 @@ function verEmerg(id){
       <div class="form-group"><label>Serviço</label><div style="font-size:.88rem">${esc(e.servico)}</div></div>
     </div>
     <div class="form-group"><label>Protocolo</label><div style="font-size:.85rem;background:#f8fafc;padding:8px 10px;border-radius:6px">${esc(e.protocolo)||'—'}</div></div>
+    <div class="form-group"><label>Descrição</label><div style="font-size:.85rem;background:#f8fafc;padding:8px 10px;border-radius:6px;white-space:pre-wrap">${esc(e.desc)||'—'}</div></div>
     <div class="form-group"><label>Canal de Envio</label><div style="font-size:.88rem">${esc(e.canal)}</div></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-ghost" onclick="closeModal()">Fechar</button>
