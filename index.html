@@ -651,7 +651,7 @@ textarea{resize:vertical;min-height:72px}
               <label>Data</label>
               <input type="date" id="pFilterData" onchange="filterPonto()">
             </div>
-            <div class="form-group">
+            <div class="form-group" style="display:none">
               <label>Superior</label>
               <select id="pFilterSup" onchange="filterPonto()">
                 <option value="">Todos</option>
@@ -663,7 +663,7 @@ textarea{resize:vertical;min-height:72px}
             <table class="task-table" id="pontoTable">
               <thead>
                 <tr>
-                  <th>Nome</th><th>Superior</th>
+                  <th>Nome</th>
                   <th>Data</th><th>Início Jornada</th><th>Início Intervalo</th>
                   <th>Fim Intervalo</th><th>Fim Jornada</th>
                   <th>Tipo Jornada</th><th>Situação</th><th>Inconsistência</th>
@@ -697,7 +697,7 @@ textarea{resize:vertical;min-height:72px}
             <table class="task-table" id="resumoTable">
               <thead>
                 <tr>
-                  <th>Nome</th><th>Superior</th>
+                  <th>Nome</th>
                   <th style="text-align:center">Total Horas</th>
                 </tr>
               </thead>
@@ -1664,6 +1664,10 @@ function gerarRelatorioPonto(){
   const supMin=rows.filter(ehSup).reduce((s,r)=>s+r.minutos,0);
   const pct=totalMin>0?((supMin/totalMin)*100).toFixed(2):null;
   const cor=pct===null?'var(--its-muted)':parseFloat(pct)>=100?'var(--its-success)':parseFloat(pct)>=90?'var(--its-warning)':'var(--its-danger)';
+  // Operador-dia: soma da coluna "operador" nos dias trabalhados (Duração>0).
+  const operadorDia=data.reduce((s,r)=>s+((typeof r.durMin==='number'&&r.durMin>0&&r.operadores)?(+r.operadores||0):0),0);
+  // Cliente não pode ver o nome dos operadores — apenas supervisores.
+  const linhasRel = isCliente() ? rows.filter(ehSup) : rows;
   const mLabel=fmtMesLabel(mes);
   document.getElementById('reportResult').innerHTML=`
     <div class="card">
@@ -1675,9 +1679,9 @@ function gerarRelatorioPonto(){
         <div class="logo-icon" style="width:40px;height:40px;font-size:13px">iTS</div>
       </div>
       <table class="task-table">
-        <thead><tr><th>Nome</th><th style="text-align:center">Total Horas</th></tr></thead>
-        <tbody>${rows.map(r=>`<tr>
-          <td style="font-size:.83rem;font-weight:600">${r.nome}</td>
+        <thead><tr><th>${isCliente()?'Supervisor':'Nome'}</th><th style="text-align:center">Total Horas</th></tr></thead>
+        <tbody>${linhasRel.map(r=>`<tr>
+          <td style="font-size:.83rem;font-weight:600">${esc(r.nome)}</td>
           <td style="text-align:center;font-weight:700;color:var(--its-sidebar)">${fmtHM(r.minutos)}</td>
         </tr>`).join('')}</tbody>
       </table>
@@ -1701,6 +1705,16 @@ function gerarRelatorioPonto(){
             <div style="font-size:1.4rem;font-weight:800;font-variant-numeric:tabular-nums;color:${cor}">${pct!==null?`${pct.replace('.',',')}%`:'—'}</div>
           </div>
         </div>
+        ${operadorDia>0?`<div style="display:grid;grid-template-columns:repeat(2,1fr);background:#fff;border-top:1px solid var(--its-border)">
+          <div style="padding:14px 18px;border-right:1px solid var(--its-border)">
+            <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Supervisores</div>
+            <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar)">${rows.filter(ehSup).length||rows.length}</div>
+          </div>
+          <div style="padding:14px 18px">
+            <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Operadores atendidos (operador-dia)</div>
+            <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar)">${operadorDia}</div>
+          </div>
+        </div>`:''}
         <div style="background:#f8fafc;padding:8px 16px;font-size:.74rem;color:var(--its-muted);border-top:1px solid var(--its-border)">
           <strong style="color:var(--its-text)">Cálculo:</strong> Tempo total com supervisão ÷ Total de horas do mês × 100 &nbsp;·&nbsp;
           <strong style="color:var(--its-text)">Instrumento:</strong> Folhas ponto importadas
@@ -2728,10 +2742,13 @@ function calcularResumoMensal(){
     }
   });
   const rows=Object.values(map).sort((a,b)=>a.nome.localeCompare(b.nome));
-  document.getElementById('resumoBody').innerHTML=rows.map(r=>`
+  // Cliente vê apenas supervisores (não os nomes dos operadores).
+  const temFuncaoR=rows.some(r=>r.funcao&&r.funcao.trim()!=='');
+  const ehSupR=r=>temFuncaoR?String(r.funcao||'').toLowerCase().includes('supervis'):(r.sup&&r.sup.trim()!==''&&r.sup!=='—');
+  const linhasResumo=isCliente()?rows.filter(ehSupR):rows;
+  document.getElementById('resumoBody').innerHTML=linhasResumo.map(r=>`
     <tr>
-      <td style="font-size:.83rem;font-weight:600">${r.nome}</td>
-      <td style="font-size:.78rem;color:var(--its-muted)">${r.sup||'—'}</td>
+      <td style="font-size:.83rem;font-weight:600">${esc(r.nome)}</td>
       <td style="text-align:center;font-weight:700;color:var(--its-sidebar)">${fmtHM(r.minutos)}</td>
     </tr>`).join('');
   const totalDias=rows.reduce((s,r)=>s+r.dias,0);
@@ -2955,7 +2972,6 @@ function filterPonto(){
   document.getElementById('pontoBody').innerHTML = shown.map(r=>`
     <tr>
       <td style="font-size:.82rem;font-weight:600;white-space:nowrap">${r.nome}</td>
-      <td style="font-size:.78rem;color:var(--its-muted);white-space:nowrap">${r.sup}</td>
       <td style="font-size:.8rem">${r.data}</td>
       <td style="font-size:.8rem">${r.iniJornada||'—'}</td>
       <td style="font-size:.8rem">${r.iniIntervalo||'—'}</td>
