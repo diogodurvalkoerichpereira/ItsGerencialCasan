@@ -3359,16 +3359,16 @@ function registrarAviso(){
     obs:document.getElementById('aObs').value.trim()
   });
   saveAvisos();
-  notificarInterno({icone:'ti-speakerphone',titulo:'Novo aviso',texto:cidade,audiencia:'operador'});
+  notificarInterno({icone:'ti-alert-triangle',titulo:'Alerta de Emergência',texto:cidade,audiencia:'operador'});
   notifyWhatsApp(
-    `📢 *Novo Aviso* — iTS Gerencial CASAN\n\n`+
+    `🚨 *ALERTA EMERGÊNCIA* — iTS Gerencial CASAN\n\n`+
     `Cidade: ${cidade}\n`+
     `Bairro: ${bairro}\n`+
     `Serviço: ${servico}\n`+
     `Recebido: ${recebido}\n`+
     `Canal: ${canal}`
   );
-  notifyEmail(`📢 Novo Aviso: ${cidade}`, `Aviso — ${cidade}`, 'Novo aviso registrado', 'Notificação de Aviso',
+  notifyEmail(`🚨 Alerta Emergência: ${cidade}`, `Emergência — ${cidade}`, 'Alerta de emergência registrado', 'Notificação de Emergência',
     [{label:'Cidade',valor:cidade},{label:'Bairro',valor:bairro},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Canal',valor:canal}]);
   ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aPrevNormData','aInserido','aInseridoData','aObs'].forEach(id=>document.getElementById(id).value='');
   ['aServico','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
