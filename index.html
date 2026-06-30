@@ -2757,16 +2757,18 @@ function registrarEmerg(){
     criadoPor:(getSession()||{}).nome||''
   });
   saveEmergs();
-  notificarInterno({icone:'ti-alert-octagon',titulo:'Nova emergência',texto:cidade,audiencia:'operador',ref:{tipo:'emergencia',id:EMERGS[0].id}});
+  const atendenteEm=(getSession()||{}).nome||'';
+  notificarInterno({icone:'ti-alert-octagon',titulo:'Nova emergência',texto:cidade+(atendenteEm?` · Atendente: ${atendenteEm}`:''),audiencia:'operador',ref:{tipo:'emergencia',id:EMERGS[0].id}});
   notifyWhatsApp(
     `🚨 *Nova Emergência* — iTS Gerencial CASAN\n\n`+
     `Cidade: ${cidade}\n`+
     `Serviço: ${servico}\n`+
     `Recebido: ${recebido}\n`+
-    `Dentro do prazo: ${prazo}`
+    `Dentro do prazo: ${prazo}\n`+
+    `Atendente: ${atendenteEm||'—'}`
   );
   notifyEmail(`🚨 Nova Emergência: ${cidade}`, `Emergência — ${cidade}`, 'Nova ocorrência de emergência', 'Notificação de Emergência',
-    [{label:'Cidade',valor:cidade},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Dentro do prazo',valor:prazo}]);
+    [{label:'Cidade',valor:cidade},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Dentro do prazo',valor:prazo},{label:'Atendente',valor:atendenteEm||'—'}]);
   ['eData','eRecebido','eCidade','eProtocolo','eDesc'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('eServico').selectedIndex=0;
   const firstTab=document.querySelector('#emergTabs .tab');
@@ -3437,26 +3439,29 @@ function registrarAviso(){
   if(_pnData&&_pnHora) prevNorm=`${_pnData.slice(8,10)}/${_pnData.slice(5,7)} ${_pnHora}`;
   else if(_pnHora) prevNorm=_pnHora;
   else if(_pnData) prevNorm=`${_pnData.slice(8,10)}/${_pnData.slice(5,7)}`;
+  const atendente=(getSession()||{}).nome||'';
   AVISOS.unshift({
     id:nextAvisoId++,
-    data:`${dd}/${dm}`,cidade,bairro,servico,recebido,inserido,supervisor,
+    data:`${dd}/${dm}`,cidade,bairro,servico,recebido,inserido,supervisor:atendente,
     prevNorm,
     canal,
     situacao:document.getElementById('aSituacao').value,
-    obs:document.getElementById('aObs').value.trim()
+    obs:document.getElementById('aObs').value.trim(),
+    criadoPor:atendente
   });
   saveAvisos();
-  notificarInterno({icone:'ti-alert-triangle',titulo:'Alerta de Emergência',texto:cidade,audiencia:'operador'});
+  notificarInterno({icone:'ti-alert-triangle',titulo:'Alerta de Emergência',texto:cidade+(atendente?` · Atendente: ${atendente}`:''),audiencia:'operador'});
   notifyWhatsApp(
     `🚨 *ALERTA EMERGÊNCIA* — iTS Gerencial CASAN\n\n`+
     `Cidade: ${cidade}\n`+
     `Bairro: ${bairro}\n`+
     `Serviço: ${servico}\n`+
     `Recebido: ${recebido}\n`+
-    `Canal: ${canal}`
+    `Canal: ${canal}\n`+
+    `Atendente: ${atendente||'—'}`
   );
   notifyEmail(`🚨 Alerta Emergência: ${cidade}`, `Emergência — ${cidade}`, 'Alerta de emergência registrado', 'Notificação de Emergência',
-    [{label:'Cidade',valor:cidade},{label:'Bairro',valor:bairro},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Canal',valor:canal}]);
+    [{label:'Cidade',valor:cidade},{label:'Bairro',valor:bairro},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Canal',valor:canal},{label:'Atendente',valor:atendente||'—'}]);
   ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aPrevNormData','aInserido','aInseridoData','aObs'].forEach(id=>document.getElementById(id).value='');
   ['aServico','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
   const firstTab=document.querySelector('#avisosTabs .tab');
