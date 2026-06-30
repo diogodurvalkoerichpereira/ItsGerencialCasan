@@ -1366,6 +1366,8 @@ function confirmarEncaminhar(id){
   saveTasks(); closeModal(); applyFilters();
   notificarInterno({icone:'ti-send',titulo:'Tarefa encaminhada para você',texto:t.titulo,audiencia:'equipe',paraNome:nome,ref:{tipo:'tarefa',id:t.id}});
   notifyWhatsApp(`➡️ *Tarefa Encaminhada* — iTS Gerencial CASAN\n\n*${t.titulo}*\nPara: ${nome} (${cargo})${obs?`\nObs: ${obs}`:''}\nPor: ${a.por}`);
+  notifyEmail(`➡️ Tarefa Encaminhada: ${t.titulo}`, t.titulo, 'Tarefa encaminhada', 'Notificação de Tarefa',
+    [{label:'Encaminhada para',valor:`${nome} (${cargo})`},{label:'Observação',valor:obs||'—'},{label:'Por',valor:`${a.por} (${a.perfil||'—'})`}]);
   logEvento('Tarefa encaminhada', t.titulo+' → '+nome);
   showToast('Tarefa encaminhada para '+nome+'.');
 }
@@ -3283,6 +3285,8 @@ function salvarSituacao(id){
   a.situacao=document.getElementById('mSituacao').value;
   a.obs=document.getElementById('mObs').value.trim();
   saveAvisos();
+  notifyAlteracao('Aviso', a.cidade, [{label:'Situação',valor:a.situacao||'Em aberto'},{label:'Bairro',valor:a.bairro},{label:'Serviço',valor:a.servico},{label:'Observação',valor:a.obs||'—'}]);
+  logEvento('Situação do aviso', a.cidade+' → '+(a.situacao||'Em aberto'));
   closeModal();filterAvisos();showToast('Situação atualizada!');
 }
 
