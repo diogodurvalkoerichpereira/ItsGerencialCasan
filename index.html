@@ -396,6 +396,7 @@ textarea{resize:vertical;min-height:72px}
             <option value="tarefas-ind11">Solicitações / Questionamentos – Indicador 11</option>
             <option value="chamados-ind12">Chamados – Indicador 12</option>
             <option value="avisos-ind13">Quadro de Avisos – Indicador 13</option>
+            <option value="avisos-ind14">Quadro de Avisos – Indicador 14 (dentro do prazo)</option>
           </select>
         </div>
         <div id="rptPontoFilters" style="display:none">
@@ -1006,6 +1007,7 @@ textarea{resize:vertical;min-height:72px}
               <tr>
                 <th>Data</th><th>Cidade</th><th>Bairro</th><th>Serviço</th><th>Recebido</th><th>Inserido</th>
                 <th>Prev. Normalização</th><th>Canal</th>
+                <th style="text-align:center">Dentro do Prazo</th>
                 <th>Situação</th><th>Ações</th>
               </tr>
             </thead>
@@ -1667,6 +1669,7 @@ function generateReport(){
   if(tipo==='tarefas-ind11'){gerarRelatorioInd11();return;}
   if(tipo==='chamados-ind12'){gerarRelatorioInd12();return;}
   if(tipo==='avisos-ind13'){gerarRelatorioInd13();return;}
+  if(tipo==='avisos-ind14'){gerarRelatorioInd14();return;}
   const de=document.getElementById('rptDe').value;
   const ate=document.getElementById('rptAte').value;
   const area=document.getElementById('rptArea').value;
@@ -1798,6 +1801,17 @@ function gerarRelatorioPonto(){
 }
 // Aviso é "correto" se não foi marcado como incorreto E não foi Cancelado pela ITS.
 function avisoCorreto(a){ return a.registroOk!==false && a.situacao!=='Cancelado pela ITS'; }
+// Indicador 14: prazo do Quadro de Avisos = 10 min entre Recebido e Inserido.
+const PRAZO_AVISO_MIN=10;
+function avisoDentroPrazo(a){
+  const rec=parseMinutes(a&&a.recebido);
+  let insStr=String((a&&a.inserido)||'').trim();
+  if(insStr.includes(' ')) insStr=insStr.split(' ').pop(); // descarta a data, fica só HH:MM
+  const ins=parseMinutes(insStr);
+  if(rec==null||ins==null) return false;
+  let diff=ins-rec; if(diff<0) diff+=1440; // vira a meia-noite
+  return diff<=PRAZO_AVISO_MIN;
+}
 function gerarRelatorioInd13(){
   if(!AVISOS.length){showToast('Nenhum aviso registrado.','warn');return;}
   const total=AVISOS.length;
@@ -1857,6 +1871,72 @@ function gerarRelatorioInd13(){
           <td style="font-size:.8rem">${esc(a.canal)||'—'}</td>
           <td>${situacaoBadge(a.situacao)}</td>
           <td style="text-align:center;font-weight:700;color:${avisoCorreto(a)?'var(--its-success)':'var(--its-danger)'}">${avisoCorreto(a)?'✓ Correto':(a.situacao==='Cancelado pela ITS'?'✗ Cancelado ITS':'✗ Incorreto')}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+  mostrarRelatorio();
+}
+
+function gerarRelatorioInd14(){
+  if(!AVISOS.length){showToast('Nenhum aviso registrado.','warn');return;}
+  const total=AVISOS.length;
+  const noPrazo=AVISOS.filter(avisoDentroPrazo).length;
+  const fora=total-noPrazo;
+  const pct=((noPrazo/total)*100).toFixed(2);
+  const cor=parseFloat(pct)>=100?'var(--its-success)':parseFloat(pct)>=90?'var(--its-warning)':'var(--its-danger)';
+  document.getElementById('reportResult').innerHTML=`
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div style="font-size:1rem;font-weight:700;color:var(--its-sidebar)">Relatório de Quadro de Avisos – Indicador 14</div>
+          <div style="font-size:.76rem;color:var(--its-muted)">Encaminhamento dentro do prazo (10 min) · Gerado em ${fmtDate(today())}</div>
+        </div>
+        <div class="logo-icon" style="width:40px;height:40px;font-size:13px">iTS</div>
+      </div>
+      <div class="stat-grid" style="margin-bottom:20px">
+        <div class="stat-card" style="background:#eef4fb"><div class="stat-value" style="color:var(--its-sidebar)">${total}</div><div class="stat-label">Total de Avisos</div></div>
+        <div class="stat-card" style="background:#f0fdf4"><div class="stat-value" style="color:var(--its-success)">${noPrazo}</div><div class="stat-label">Dentro do Prazo (10 min)</div></div>
+        <div class="stat-card" style="background:#fef2f2"><div class="stat-value" style="color:var(--its-danger)">${fora}</div><div class="stat-label">Fora do Prazo</div></div>
+      </div>
+      <div style="border:1px solid var(--its-border);border-radius:var(--radius-md);overflow:hidden">
+        <div style="background:var(--its-sidebar);padding:10px 16px;display:flex;align-items:center;gap:10px">
+          <span style="background:var(--its-orange);color:#fff;font-size:.7rem;font-weight:800;padding:2px 9px;border-radius:4px;letter-spacing:.04em">IND 14</span>
+          <span style="color:#fff;font-size:.85rem;font-weight:700;letter-spacing:.03em">ENCAMINHAMENTO DE DEMANDAS DENTRO DO PRAZO</span>
+          <span style="margin-left:auto;color:rgba(255,255,255,.55);font-size:.75rem">Meta: 100%</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);background:#fff">
+          <div style="padding:14px 18px;border-right:1px solid var(--its-border)">
+            <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Dentro do Prazo</div>
+            <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar)">${noPrazo}</div>
+          </div>
+          <div style="padding:14px 18px;border-right:1px solid var(--its-border)">
+            <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Total de Avisos</div>
+            <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar)">${total}</div>
+          </div>
+          <div style="padding:14px 18px">
+            <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Indicador 14</div>
+            <div style="font-size:1.4rem;font-weight:800;color:${cor}">${pct.replace('.',',')}%</div>
+          </div>
+        </div>
+        <div style="background:#f8fafc;padding:8px 16px;font-size:.74rem;color:var(--its-muted);border-top:1px solid var(--its-border)">
+          <strong style="color:var(--its-text)">Cálculo:</strong> Avisos encaminhados dentro do prazo ÷ Total de avisos × 100 &nbsp;·&nbsp;
+          <strong style="color:var(--its-text)">Prazo:</strong> 10 minutos (Recebido → Inserido)
+        </div>
+      </div>
+
+      <hr class="divider">
+      <div class="section-title" style="font-size:.78rem">Avisos no período</div>
+      <table class="task-table">
+        <thead><tr><th>Data</th><th>Cidade</th><th>Bairro</th><th>Serviço</th><th>Canal</th><th>Recebido</th><th>Inserido</th><th style="text-align:center">Dentro do Prazo</th></tr></thead>
+        <tbody>${AVISOS.map(a=>`<tr>
+          <td style="font-size:.8rem">${esc(a.data)||'—'}</td>
+          <td style="font-size:.82rem;font-weight:600">${esc(a.cidade)||'—'}</td>
+          <td style="font-size:.8rem">${esc(a.bairro)||'—'}</td>
+          <td style="font-size:.8rem">${esc(a.servico)||'—'}</td>
+          <td style="font-size:.8rem">${esc(a.canal)||'—'}</td>
+          <td style="font-size:.8rem">${esc(a.recebido)||'—'}</td>
+          <td style="font-size:.8rem">${esc(a.inserido)||'—'}</td>
+          <td style="text-align:center;font-weight:700;color:${avisoDentroPrazo(a)?'var(--its-success)':'var(--its-danger)'}">${avisoDentroPrazo(a)?'✓ Sim':'✗ Não'}</td>
         </tr>`).join('')}</tbody>
       </table>
     </div>`;
@@ -3294,6 +3374,7 @@ function renderAvisos(list){
       <td style="font-size:.8rem">${esc(a.inserido)}</td>
       <td style="font-size:.8rem;font-weight:600;color:var(--its-sidebar)">${esc(a.prevNorm)||'—'}</td>
       <td style="font-size:.8rem">${esc(a.canal)}</td>
+      <td style="text-align:center;font-size:.78rem;font-weight:700;color:${avisoDentroPrazo(a)?'var(--its-success)':'var(--its-danger)'}">${avisoDentroPrazo(a)?'✓ Sim':'✗ Não'}</td>
       <td>${situacaoBadge(a.situacao)}${a.obs?`<div style="font-size:.7rem;color:var(--its-muted);margin-top:3px">${esc(a.obs)}</div>`:''}</td>
       <td>
         <div style="display:flex;gap:4px">
