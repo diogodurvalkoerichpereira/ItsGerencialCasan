@@ -3454,6 +3454,8 @@ function setNav(el,tab){
     btn.innerHTML='<i class="ti ti-user-plus"></i> Novo Usuário';
     btn.onclick=openNewUser;
     renderUsers();
+    // Traz operadores cadastrados pela landing page e re-renderiza.
+    syncUsersFromAPI().then(mudou=>{ if(mudou) renderUsers(); });
   } else if(tab==='logs'){
     btn.style.display='none';
     renderLogs();
@@ -3834,6 +3836,35 @@ async function apiUpdateUser(o){
     await fetch(`${ITS_API}/usuarios/${idc}`,{method:'PUT',headers:authHeaders({'Content-Type':'application/json'}),
       body:JSON.stringify({nome:o.nome,perfil:o.cargo,ativo:o.status==='Ativo'})});
   }catch(_){}
+}
+// Traz da API (casan_usuarios) os usuários que ainda não estão na lista local —
+// inclui os operadores que se cadastraram pela landing page (cadastro-operador).
+// O servidor é a fonte da verdade para nome/cargo/status desses registros.
+async function syncUsersFromAPI(){
+  if(!sessionStorage.its_token) return false; // só faz sentido autenticado
+  let list;
+  try{
+    const r=await fetch(`${ITS_API}/usuarios`,{headers:authHeaders()});
+    if(!r.ok) return false;
+    list=await r.json();
+  }catch(_){ return false; }
+  if(!Array.isArray(list)) return false;
+  let mudou=false;
+  list.forEach(api=>{
+    const email=(api.email||'').toLowerCase();
+    if(!email) return;
+    const status=api.ativo?'Ativo':'Inativo';
+    const local=USERS.find(u=>(u.email||'').toLowerCase()===email);
+    if(!local){
+      USERS.push({id:nextUserId++,nome:api.nome||email,email:api.email,cargo:api.perfil||'Operador',status,hash:HASH_PADRAO});
+      mudou=true;
+    }else if(local.status!==status||local.cargo!==api.perfil){
+      // Reflete o estado do servidor (ex.: foi ativado/desativado por lá).
+      local.status=status; if(api.perfil) local.cargo=api.perfil; mudou=true;
+    }
+  });
+  if(mudou){ localStorage.setItem('its_users',JSON.stringify(USERS)); }
+  return mudou;
 }
 function cargoBadge(c){return `<span class="badge ${CARGO_BADGE[c]||'badge-gray'}"><span class="badge-dot"></span>${c}</span>`;}
 function userStatusBadge(s){return `<span class="badge ${s==='Ativo'?'badge-green':'badge-gray'}"><span class="badge-dot"></span>${s}</span>`;}
