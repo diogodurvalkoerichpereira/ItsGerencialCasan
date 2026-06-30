@@ -1049,7 +1049,10 @@ textarea{resize:vertical;min-height:72px}
           <div class="form-row">
             <div class="form-group">
               <label>Previsão de Normalização</label>
-              <input type="time" id="aPrevNorm" placeholder="Ex: 21:00">
+              <div style="display:flex;gap:8px">
+                <input type="date" id="aPrevNormData" style="flex:1">
+                <input type="time" id="aPrevNorm" placeholder="Ex: 21:00" style="flex:1">
+              </div>
             </div>
             <div class="form-group">
               <label>Canal de Envio *</label>
@@ -3318,10 +3321,17 @@ function registrarAviso(){
   const inseridoHora=_iHora||_horaAuto;
   const inseridoDataFmt=_iData?`${_iData.slice(8,10)}/${_iData.slice(5,7)}`:_dataAuto;
   const inserido=inseridoDataFmt===`${dd}/${dm}`?inseridoHora:`${inseridoDataFmt} ${inseridoHora}`;
+  // Previsão de normalização: data (opcional) + hora. Guarda como "DD/MM HH:MM".
+  const _pnData=document.getElementById('aPrevNormData').value;
+  const _pnHora=document.getElementById('aPrevNorm').value;
+  let prevNorm='—';
+  if(_pnData&&_pnHora) prevNorm=`${_pnData.slice(8,10)}/${_pnData.slice(5,7)} ${_pnHora}`;
+  else if(_pnHora) prevNorm=_pnHora;
+  else if(_pnData) prevNorm=`${_pnData.slice(8,10)}/${_pnData.slice(5,7)}`;
   AVISOS.unshift({
     id:nextAvisoId++,
     data:`${dd}/${dm}`,cidade,bairro,servico,recebido,inserido,supervisor,
-    prevNorm:document.getElementById('aPrevNorm').value||'—',
+    prevNorm,
     canal,
     situacao:document.getElementById('aSituacao').value,
     obs:document.getElementById('aObs').value.trim()
@@ -3338,7 +3348,7 @@ function registrarAviso(){
   );
   notifyEmail(`📢 Novo Aviso: ${cidade}`, `Aviso — ${cidade}`, 'Novo aviso registrado', 'Notificação de Aviso',
     [{label:'Cidade',valor:cidade},{label:'Bairro',valor:bairro},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Canal',valor:canal}]);
-  ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aInserido','aInseridoData','aObs'].forEach(id=>document.getElementById(id).value='');
+  ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aPrevNormData','aInserido','aInseridoData','aObs'].forEach(id=>document.getElementById(id).value='');
   ['aServico','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
   const firstTab=document.querySelector('#avisosTabs .tab');
   switchAvisosTab('lista',firstTab);
