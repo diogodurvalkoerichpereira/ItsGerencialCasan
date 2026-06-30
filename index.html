@@ -2240,6 +2240,7 @@ function salvarChamado(criadoIso){
   const descCh=document.getElementById('cDesc').value;
   const anexosAbertura=(typeof _anexosResp!=='undefined')?_anexosResp.slice():[];
   CHAMADOS.unshift({id:nextChamadoId++,titulo,desc:descCh,criado:criadoIso,status:'Em Atendimento',resolvidoEm:null,
+    criadoPor:(getSession()||{}).nome||'',
     historico:[novaInteracao('abertura',descCh,anexosAbertura)]});
   saveChamados();
   notificarInterno({icone:'ti-headset',titulo:'Novo chamado',texto:titulo,audiencia:'equipe',ref:{tipo:'chamado',id:CHAMADOS[0].id}});
@@ -2411,7 +2412,7 @@ function comentarChamado(id){
     notifyWhatsApp(`💬 *Comentário no chamado* — iTS Gerencial CASAN\n\n*${c.titulo}*\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})\n${texto||'(anexo)'}`);
     notifyEmail(`💬 Comentário no chamado: ${c.titulo}`, c.titulo, 'Novo comentário', 'Notificação de Chamado',
       [{label:'Autor',valor:`${a.por} (${a.ehCliente?'Cliente':'Equipe'})`},{label:'Comentário',valor:texto||'—'},{label:'Anexos',valor:anexos.length?anexos.map(x=>x.name).join(', '):'—'}]);
-    logEvento('Comentário em chamado', c.titulo); notificarInterno({icone:'ti-message',titulo:'Novo comentário no chamado',texto:c.titulo,audiencia:autorAtual().ehCliente?'equipe':'cliente',ref:{tipo:'chamado',id:c.id}}); showToast('Comentário adicionado.'); verChamado(id);
+    logEvento('Comentário em chamado', c.titulo); notificarInterno({icone:'ti-message',titulo:'Novo comentário no chamado',texto:c.titulo,audiencia:autorAtual().ehCliente?'equipe':'cliente',paraNome:autorAtual().ehCliente?null:(c.criadoPor||null),ref:{tipo:'chamado',id:c.id}}); showToast('Comentário adicionado.'); verChamado(id);
   },{btnLabel:'Adicionar comentário',btnIcon:'ti-message-plus',label:'Comentário'});
 }
 
@@ -2488,7 +2489,7 @@ function responderChamado(id){
   abrirResposta('Concluir Chamado — '+c.titulo, ({texto,anexos,em})=>{
     c.resposta=texto; c.anexos=anexos; c.resolvidoEm=em; c.status='Resolvido';
     c.historico=c.historico||[]; c.historico.push(novaInteracao('resposta',texto,anexos));
-    notificarInterno({icone:'ti-message-check',titulo:'Chamado respondido/resolvido',texto:c.titulo,audiencia:'cliente',ref:{tipo:'chamado',id:c.id}});
+    notificarInterno({icone:'ti-message-check',titulo:'Chamado respondido/resolvido',texto:c.titulo,audiencia:'cliente',paraNome:c.criadoPor||null,ref:{tipo:'chamado',id:c.id}});
     saveChamados(); closeModal(); filterChamados();
     notifyWhatsApp(`✅ *Chamado Resolvido* — iTS Gerencial CASAN\n\n*${c.titulo}*\nResposta: ${texto}\nResolvido em: ${em}${anexos.length?`\n📎 ${anexos.length} anexo(s)`:''}`);
     notifyEmail(`✅ Chamado Resolvido: ${c.titulo}`, c.titulo, 'Chamado resolvido', 'Notificação de Chamado',
@@ -2525,7 +2526,7 @@ function resolverChamado(id){
   c.resolvidoEm=`${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
   c.status='Resolvido';
   saveChamados();
-  notificarInterno({icone:'ti-message-check',titulo:'Chamado resolvido',texto:c.titulo,audiencia:'cliente',ref:{tipo:'chamado',id:c.id}});
+  notificarInterno({icone:'ti-message-check',titulo:'Chamado resolvido',texto:c.titulo,audiencia:'cliente',paraNome:c.criadoPor||null,ref:{tipo:'chamado',id:c.id}});
   logEvento('Chamado resolvido', c.titulo);
   notifyWhatsApp(
     `✅ *Chamado Resolvido* — iTS Gerencial CASAN\n\n`+
@@ -4236,6 +4237,9 @@ function saveNotifs(){ localStorage.setItem('its_notifs', JSON.stringify(NOTIFS)
 
 // audiencia: 'todos' | 'operador' | 'cliente' | 'equipe' ; paraNome opcional restringe a um nome.
 function notificarInterno({icone='ti-bell', titulo, texto, audiencia='equipe', paraNome=null, ref=null}){
+  // O Cliente só é notificado quando quem responde é Gerente/Coordenador
+  // (gestão). Respostas/comentários de outras áreas não geram notificação ao cliente.
+  if(audiencia==='cliente' && !isAdminGestao()) return;
   NOTIFS.unshift({ id:_nextNotifId++, em:agoraISO(), icone, titulo:titulo||'', texto:texto||'', audiencia, paraNome:paraNome||null, ref:ref||null, lidoPor:[] });
   if(NOTIFS.length>NOTIF_MAX) NOTIFS.length=NOTIF_MAX;
   saveNotifs();
