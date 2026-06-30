@@ -3853,6 +3853,7 @@ async function syncUsersFromAPI(){
   list.forEach(api=>{
     const email=(api.email||'').toLowerCase();
     if(!email) return;
+    if(api.perfil==='Admin') return; // conta técnica: não exibir
     const status=api.ativo?'Ativo':'Inativo';
     const local=USERS.find(u=>(u.email||'').toLowerCase()===email);
     if(!local){
@@ -3871,6 +3872,8 @@ function userStatusBadge(s){return `<span class="badge ${s==='Ativo'?'badge-gree
 
 function renderUsers(list){
   if(!list)list=USERS;
+  // Nunca lista o usuário Admin (conta técnica de sistema).
+  list=list.filter(u=>u.cargo!=='Admin');
   const tb=document.getElementById('userBody');
   const em=document.getElementById('userEmpty');
   if(!list.length){tb.innerHTML='';em.style.display='block';return}
