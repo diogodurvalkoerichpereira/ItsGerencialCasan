@@ -930,6 +930,32 @@ textarea{resize:vertical;min-height:72px}
 
     <!-- ===== USUÁRIOS ===== -->
     <div class="panel" id="panel-usuarios">
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#eef4fb;color:var(--its-sidebar)"><i class="ti ti-users"></i></div>
+          <div class="stat-value" id="u-total">0</div>
+          <div class="stat-label">Total de Usuários</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#f0fdf4;color:var(--its-success)"><i class="ti ti-user-check"></i></div>
+          <div class="stat-value" id="u-ativos">0</div>
+          <div class="stat-label">Ativos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#fef2f2;color:var(--its-danger)"><i class="ti ti-user-off"></i></div>
+          <div class="stat-value" id="u-inativos">0</div>
+          <div class="stat-label">Inativos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:#fff3ee;color:var(--its-orange)"><i class="ti ti-user-plus"></i></div>
+          <div class="stat-value" id="u-pendentes">0</div>
+          <div class="stat-label">Operadores Pendentes</div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-title" style="font-size:.78rem">Usuários por Cargo</div>
+        <div class="chart-bar-wrap" id="chartCargos"></div>
+      </div>
       <div class="filter-row">
         <div class="form-group">
           <label>Buscar usuário</label>
@@ -4233,7 +4259,27 @@ async function syncUsersFromAPI(){
 function cargoBadge(c){return `<span class="badge ${CARGO_BADGE[c]||'badge-gray'}"><span class="badge-dot"></span>${c}</span>`;}
 function userStatusBadge(s){return `<span class="badge ${s==='Ativo'?'badge-green':'badge-gray'}"><span class="badge-dot"></span>${s}</span>`;}
 
+function updateUsuariosStats(){
+  const set=(id,v)=>{const el=document.getElementById(id); if(el) el.textContent=v;};
+  const base=USERS.filter(u=>u.cargo!=='Admin');
+  const ativos=base.filter(u=>u.status==='Ativo').length;
+  set('u-total',base.length);
+  set('u-ativos',ativos);
+  set('u-inativos',base.length-ativos);
+  set('u-pendentes',base.filter(u=>u.cargo==='Operador'&&u.status!=='Ativo').length);
+  const wrap=document.getElementById('chartCargos');
+  if(wrap){
+    const cargos=['Gerente','Coordenador','Supervisor','Monitor','Operador','Cliente'];
+    const cor=['#183c5a','#0284c7','#E85928','#d97706','#16a34a','#64748b'];
+    const max=Math.max(...cargos.map(c=>base.filter(u=>u.cargo===c).length),1);
+    wrap.innerHTML=cargos.map((c,i)=>{
+      const cnt=base.filter(u=>u.cargo===c).length;
+      return `<div class="chart-row"><div class="chart-label">${c}</div><div class="chart-track"><div class="chart-fill" style="width:${Math.round(cnt/max*100)}%;background:${cor[i]}">${cnt||''}</div></div><div class="chart-val">${cnt}</div></div>`;
+    }).join('');
+  }
+}
 function renderUsers(list){
+  updateUsuariosStats();
   if(!list)list=USERS;
   // Nunca lista o usuário Admin (conta técnica de sistema).
   list=list.filter(u=>u.cargo!=='Admin');
