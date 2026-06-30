@@ -1856,9 +1856,10 @@ function gerarRelatorioInd13(){
 }
 
 function gerarRelatorioInd09(){
-  if(!EMERGS.length){showToast('Nenhuma emergência cadastrada.','warn');return;}
-  const total=EMERGS.length;
-  const noPrazo=EMERGS.filter(e=>{
+  const lista=emergsVisiveis();
+  if(!lista.length){showToast('Nenhuma emergência cadastrada.','warn');return;}
+  const total=lista.length;
+  const noPrazo=lista.filter(e=>{
     if(!e.prazo)return false;
     const[h,m]=(e.prazo||'99:99').split(':').map(Number);
     return(h*60+m)<=5;
@@ -1915,7 +1916,7 @@ function gerarRelatorioInd09(){
           <th>Serviço</th><th>Canal</th><th style="text-align:center">Tempo</th>
           <th style="text-align:center">No prazo</th><th>Status</th>
         </tr></thead>
-        <tbody>${EMERGS.map(e=>{
+        <tbody>${lista.map(e=>{
           const[h,m]=(e.prazo||'99:99').split(':').map(Number);
           const ok=(h*60+m)<=5;
           return `<tr>
@@ -2584,21 +2585,29 @@ function renderEmerg(list){
   updateEmergStats();
 }
 
+// O Operador só enxerga as emergências que ele próprio criou; os demais
+// perfis veem todas. Usado na lista, nas estatísticas e no relatório Ind 09.
+function emergsVisiveis(){
+  if(isOperador()){ const meu=(getSession()||{}).nome||''; return EMERGS.filter(e=>e.criadoPor===meu); }
+  return EMERGS;
+}
+
 function filterEmerg(){
   const q=document.getElementById('eSearch').value.toLowerCase();
   const st=document.getElementById('eFilterStatus').value;
   const sv=document.getElementById('eFilterSev').value;
-  renderEmerg(EMERGS.filter(e=>
+  renderEmerg(emergsVisiveis().filter(e=>
     (!q||e.cidade.toLowerCase().includes(q)||e.protocolo.toLowerCase().includes(q))&&
     (!st||e.status===st)&&(!sv||e.servico===sv)
   ));
 }
 
 function updateEmergStats(){
-  document.getElementById('e-total').textContent=EMERGS.length;
-  document.getElementById('e-aberto').textContent=EMERGS.filter(e=>e.status==='Em Atendimento').length;
-  document.getElementById('e-resolvido').textContent=EMERGS.filter(e=>e.status==='Resolvido').length;
-  document.getElementById('e-critica').textContent=EMERGS.filter(e=>{
+  const base=emergsVisiveis();
+  document.getElementById('e-total').textContent=base.length;
+  document.getElementById('e-aberto').textContent=base.filter(e=>e.status==='Em Atendimento').length;
+  document.getElementById('e-resolvido').textContent=base.filter(e=>e.status==='Resolvido').length;
+  document.getElementById('e-critica').textContent=base.filter(e=>{
     if(!e.prazo)return false;
     const [h,m]=e.prazo.split(':').map(Number);
     return(h*60+m)>30;
@@ -2634,7 +2643,8 @@ function registrarEmerg(){
     servico,
     canal:'',
     prazo,
-    status:'Em Atendimento'
+    status:'Em Atendimento',
+    criadoPor:(getSession()||{}).nome||''
   });
   saveEmergs();
   notificarInterno({icone:'ti-alert-octagon',titulo:'Nova emergência',texto:cidade,audiencia:'operador',ref:{tipo:'emergencia',id:EMERGS[0].id}});
