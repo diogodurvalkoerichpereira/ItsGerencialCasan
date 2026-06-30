@@ -2222,23 +2222,28 @@ function filterChamados(){
 function abrirNovoChamado(){
   document.getElementById('modalTitle').textContent='Novo Chamado';
   const now=new Date();const p=n=>String(n).padStart(2,'0');
-  const criadoIso=`${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
+  const criadoLocal=`${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())}T${p(now.getHours())}:${p(now.getMinutes())}`;
   document.getElementById('modalContent').innerHTML=`
     <div class="form-group"><label>Título *</label><input type="text" id="cTitulo" placeholder="Descreva o problema..."></div>
     <div class="form-group"><label>Descrição</label><textarea id="cDesc" placeholder="Detalhes do chamado... (cole um print com Ctrl+V para anexar)" onpaste="anexarColando(event)"></textarea></div>
     ${anexoWidgetHTML('Anexos na abertura (documentos / áudios) — opcional')}
-    <div class="form-group"><label>Data/Hora Abertura <span style="font-weight:400;color:var(--its-muted)">(automático)</span></label>
-      <input type="text" value="${criadoIso}" disabled style="background:#f8fafc;color:var(--its-sidebar);font-weight:600;cursor:not-allowed"></div>
+    <div class="form-group"><label>Data/Hora Abertura <span style="font-weight:400;color:var(--its-muted)">(ajustável)</span></label>
+      <input type="datetime-local" id="cCriado" value="${criadoLocal}"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarChamado('${criadoIso}')"><i class="ti ti-device-floppy"></i> Salvar</button>
+      <button class="btn btn-primary" onclick="salvarChamado()"><i class="ti ti-device-floppy"></i> Salvar</button>
     </div>`;
   document.getElementById('modalOverlay').classList.add('open');
   initAnexoWidget();
 }
-function salvarChamado(criadoIso){
+function salvarChamado(){
   const titulo=document.getElementById('cTitulo').value.trim();
   if(!titulo){alert('Informe o título do chamado.');return;}
+  // Data/hora de abertura ajustável (datetime-local → "YYYY-MM-DD HH:MM").
+  const _crEl=document.getElementById('cCriado');
+  const now=new Date();const p=n=>String(n).padStart(2,'0');
+  const criadoIso=(_crEl&&_crEl.value)?_crEl.value.replace('T',' ')
+    :`${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
   const descCh=document.getElementById('cDesc').value;
   const anexosAbertura=(typeof _anexosResp!=='undefined')?_anexosResp.slice():[];
   CHAMADOS.unshift({id:nextChamadoId++,titulo,desc:descCh,criado:criadoIso,status:'Em Atendimento',resolvidoEm:null,
