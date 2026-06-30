@@ -307,7 +307,7 @@ app.post('/auth/registrar', asyncH(async (req, res) => {
   if (!nomeT || !emailT) return res.status(400).json({ error: 'Nome completo e e-mail são obrigatórios.' });
   if (nomeT.length < 3 || !nomeT.includes(' ')) return res.status(400).json({ error: 'Informe o nome completo.' });
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailT)) return res.status(400).json({ error: 'E-mail inválido.' });
-  if (!senha || String(senha).length < 4) return res.status(400).json({ error: 'A senha deve ter ao menos 4 caracteres.' });
+  if (!senha || String(senha).length < 6) return res.status(400).json({ error: 'A senha deve ter ao menos 6 caracteres.' });
 
   registrarCadastro(ip);
 

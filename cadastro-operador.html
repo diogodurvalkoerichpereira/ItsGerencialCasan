@@ -80,7 +80,7 @@
           <input type="email" id="email" name="email" autocomplete="email" required placeholder="seu.email@exemplo.com">
 
           <label for="senha">Crie uma senha</label>
-          <input type="password" id="senha" name="senha" autocomplete="new-password" required placeholder="Mínimo de 4 caracteres">
+          <input type="password" id="senha" name="senha" autocomplete="new-password" required placeholder="Mínimo de 6 caracteres" minlength="6">
           <div class="hint">Você usará esta senha para entrar após a ativação da conta.</div>
 
           <button type="submit" id="btn">Solicitar acesso</button>
@@ -126,7 +126,7 @@
 
       if(!nome || nome.indexOf(' ') === -1){ showErr('Informe seu nome completo.'); return; }
       if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ showErr('Informe um e-mail válido.'); return; }
-      if(senha.length < 4){ showErr('A senha deve ter ao menos 4 caracteres.'); return; }
+      if(senha.length < 6){ showErr('A senha deve ter ao menos 6 caracteres.'); return; }
 
       btn.disabled = true; btn.textContent = 'Enviando...';
 
