@@ -4054,7 +4054,7 @@ function applySession(){
 function getSession(){return JSON.parse(sessionStorage.getItem('its_session')||'null');}
 function isCliente(){const s=getSession();return s&&s.cargo==='Cliente';}
 function isOperador(){const s=getSession();return s&&s.cargo==='Operador';}
-function isAdminGestao(){const s=getSession();return !!(s&&(s.isAdmin||s.cargo==='Gerente'));}
+function isAdminGestao(){const s=getSession();return !!(s&&(s.isAdmin||s.cargo==='Gerente'||s.cargo==='Coordenador'));}
 // Responder o cliente e encaminhar tarefas: somente Gerência e Supervisão (e admin).
 function podeResponderCliente(){const s=getSession();return !!(s&&(s.isAdmin||s.cargo==='Gerente'||s.cargo==='Supervisor'));}
 function podeEncaminhar(){return podeResponderCliente();}
@@ -4248,9 +4248,12 @@ function limparLogs(){
   LOGS=[]; saveLogs(); renderLogs(); logEvento('Logs','Logs limpos pelo administrador');
 }
 // Mapa de permissões: cargo → seções visíveis (null = acesso total)
+// Seções visíveis por cargo (null/ausente = acesso total: Gerente, Coordenador, Admin).
 const NAV_PERMISSIONS={
-  Operador:['chamados','emergencias','avisos'],
-  Cliente:['chamados','relatorio','tarefas'],
+  Operador:['emergencias'],                                          // só criar emergência
+  Supervisor:['emergencias','chamados','avisos','tarefas','relatorio'],
+  Monitor:['emergencias','chamados','avisos','tarefas','relatorio'], // mesmo nível operacional do supervisor
+  Cliente:['tarefas','relatorio'],                                   // criar tarefa + relatórios (demais módulos só via relatório)
 };
 function applyNavPermissions(cargo){
   const allowed=NAV_PERMISSIONS[cargo]||null;

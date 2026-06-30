@@ -139,7 +139,7 @@ const requirePerfil = (...perfis) => (req, res, next) => {
   }
   next();
 };
-const PERFIS_GESTAO = ['Admin', 'Gerente'];
+const PERFIS_GESTAO = ['Admin', 'Gerente', 'Coordenador'];
 
 // Middleware: exige token de sessao valido (Authorization: Bearer <token>)
 const requireAuth = asyncH(async (req, res, next) => {
