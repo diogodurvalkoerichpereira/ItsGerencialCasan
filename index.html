@@ -1724,7 +1724,7 @@ function gerarRelatorioPonto(){
   const rows=Object.values(map).sort((a,b)=>a.nome.localeCompare(b.nome));
   // Indicador 06: cobertura de supervisão sobre 24h × dias do mês.
   // Classificação Supervisor/Operador vem da aba Resumo (PONTO_DB[mes].funcoes).
-  const cov=coberturaSupervisao(data, (nome,funcao)=>ehSupervisorPonto(mes,nome,funcao));
+  const cov=coberturaSupervisao(data, (nome,funcao)=>ehSupervisorPonto(mes,nome,funcao), mes);
   const totalMin=cov.totalMin;
   const supMin=cov.coberto;
   const pct=totalMin>0?((supMin/totalMin)*100).toFixed(2):null;
@@ -2844,7 +2844,13 @@ function dayIndexPonto(d){
   const m=String(d||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
   return m ? Date.UTC(+m[3], +m[2]-1, +m[1])/86400000 : null;
 }
-function coberturaSupervisao(registros, isSupFn){
+// Nº de dias do mês de referência (mesKey = "MM/YYYY"). Trata 28/29/30/31.
+function diasNoMes(mesKey){
+  const m=String(mesKey||'').match(/(\d{1,2})\/(\d{4})/);
+  if(!m) return null;
+  return new Date(+m[2], +m[1], 0).getDate(); // dia 0 do mês seguinte = último dia do mês
+}
+function coberturaSupervisao(registros, isSupFn, mesKey){
   const dias=new Set();
   const intervals=[];
   (registros||[]).forEach(r=>{
@@ -2866,7 +2872,11 @@ function coberturaSupervisao(registros, isSupFn){
     else { coberto+=curE-curS; curS=s; curE=e; }
   }
   if(curE!=null) coberto+=curE-curS;
-  return { coberto, dias:dias.size, totalMin:dias.size*24*60 };
+  // Total do mês = 24h × dias do MÊS de referência (28/29/30/31). Se o mês não
+  // for informado, cai para os dias presentes nos registros (comportamento antigo).
+  const dn=diasNoMes(mesKey);
+  const totalDias=(dn!=null)?dn:dias.size;
+  return { coberto, dias:totalDias, totalMin:totalDias*24*60 };
 }
 
 function switchPontoTab(name, el){
@@ -2981,7 +2991,7 @@ function calcularResumoMensal(){
   // ── INDICADOR 06 – Presença do Supervisor ─────────────────────────────
   // Total de Horas do Mês = 24h × dias do mês (ex.: 24 × 30 = 720h).
   // Horas c/ supervisão = união dos turnos dos supervisores (cobertura real).
-  const cov=coberturaSupervisao(PONTO_DATA, (nome,funcao)=>ehSupervisorPonto(mesResumo,nome,funcao));
+  const cov=coberturaSupervisao(PONTO_DATA, (nome,funcao)=>ehSupervisorPonto(mesResumo,nome,funcao), mesResumo);
   const totalMin=cov.totalMin;
   const supMin=cov.coberto;
   const pct=totalMin>0?((supMin/totalMin)*100).toFixed(2):null;
