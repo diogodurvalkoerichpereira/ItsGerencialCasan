@@ -281,6 +281,12 @@ textarea{resize:vertical;min-height:72px}
             <input type="checkbox" id="filterArquivadas" onchange="applyFilters()" style="width:auto;accent-color:var(--its-orange)"> Ver arquivadas
           </label>
         </div>
+        <div class="form-group" style="flex:0 0 auto;min-width:auto">
+          <label>&nbsp;</label>
+          <label style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:.8rem;cursor:pointer;white-space:nowrap">
+            <input type="checkbox" id="filterEncMim" onchange="applyFilters()" style="width:auto;accent-color:var(--its-orange)"> Encaminhadas para mim
+          </label>
+        </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
         <table class="task-table">
@@ -321,12 +327,6 @@ textarea{resize:vertical;min-height:72px}
             <option value="no_prazo">Dentro do Prazo</option>
             <option value="fora_prazo">Fora do Prazo</option>
           </select>
-        </div>
-        <div class="form-group" style="flex:0 0 auto;min-width:auto">
-          <label>&nbsp;</label>
-          <label style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:.8rem;cursor:pointer;white-space:nowrap">
-            <input type="checkbox" id="chamadoFilterArquivados" onchange="filterChamados()" style="width:auto;accent-color:var(--its-orange)"> Ver arquivados
-          </label>
         </div>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
@@ -510,7 +510,7 @@ textarea{resize:vertical;min-height:72px}
             <label>Serviço</label>
             <select id="eFilterSev" onchange="filterEmerg()">
               <option value="">Todos</option>
-              <option>Água</option><option>Esgoto</option><option>Água e Esgoto</option>
+              <option>Água</option><option>Esgoto</option>
             </select>
           </div>
         </div>
@@ -565,24 +565,15 @@ textarea{resize:vertical;min-height:72px}
                 <option value="">Selecione...</option>
                 <option>Água</option>
                 <option>Esgoto</option>
-                <option>Água e Esgoto</option>
               </select>
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>Canal de Envio</label>
-              <select id="eCanal">
-                <option>WhatsApp</option>
-                <option>E-mail</option>
-                <option>Telefone</option>
-                <option>Sistema</option>
-              </select>
-            </div>
-            <div class="form-group">
               <label>Dentro do Prazo</label>
               <input type="text" id="ePrazo" readonly placeholder="Calculado automaticamente" style="background:#f8fafc;color:var(--its-sidebar);font-weight:700">
             </div>
+            <div class="form-group"></div>
           </div>
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
             <button class="btn btn-ghost" onclick="switchEmergTab('lista', document.querySelector('#emergTabs .tab'))"><i class="ti ti-x"></i> Cancelar</button>
@@ -693,11 +684,14 @@ textarea{resize:vertical;min-height:72px}
               </select>
             </div>
           </div>
+          <div style="font-size:.78rem;color:var(--its-muted);margin:0 4px 8px">
+            <i class="ti ti-info-circle"></i> Marque na coluna <strong>Função</strong> quem é <strong>Supervisor</strong>; o restante conta como Operador. O <strong>Indicador 06</strong> é recalculado automaticamente.
+          </div>
           <div class="card" style="padding:0;overflow:hidden">
             <table class="task-table" id="resumoTable">
               <thead>
                 <tr>
-                  <th>Nome</th>
+                  <th>Nome</th><th>Função</th>
                   <th style="text-align:center">Total Horas</th>
                 </tr>
               </thead>
@@ -718,7 +712,7 @@ textarea{resize:vertical;min-height:72px}
                 <div id="ind06-sup" style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar);font-variant-numeric:tabular-nums">—</div>
               </div>
               <div style="padding:14px 18px;border-right:1px solid var(--its-border)">
-                <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Total Horas do Mês</div>
+                <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Total do Mês (24h × dias)</div>
                 <div id="ind06-total" style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar);font-variant-numeric:tabular-nums">—</div>
               </div>
               <div style="padding:14px 18px">
@@ -727,9 +721,9 @@ textarea{resize:vertical;min-height:72px}
               </div>
             </div>
             <div style="background:#f8fafc;padding:8px 16px;font-size:.74rem;color:var(--its-muted);border-top:1px solid var(--its-border)">
-              <strong style="color:var(--its-text)">Cálculo:</strong> Tempo total com supervisão ÷ Total de horas do mês × 100 &nbsp;·&nbsp;
+              <strong style="color:var(--its-text)">Cálculo:</strong> Horas com supervisor presente ÷ (24h × dias do mês) × 100 &nbsp;·&nbsp;
               <strong style="color:var(--its-text)">Instrumento:</strong> Folhas ponto importadas &nbsp;·&nbsp;
-              <strong style="color:var(--its-text)">Exemplo:</strong> 710h ÷ 720h = 98,61%
+              <strong style="color:var(--its-text)">Exemplo:</strong> 710h ÷ 720h (24×30) = 98,61%
             </div>
           </div>
         </div>
@@ -752,7 +746,7 @@ textarea{resize:vertical;min-height:72px}
           <div id="importStatus" style="margin-top:14px;display:none"></div>
           <div style="margin-top:16px;border-top:1px solid var(--its-border);padding-top:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
             <div style="font-size:.78rem;color:var(--its-muted)">
-              <strong>Colunas:</strong> Nome · <strong>Função</strong> (Supervisor/Operador) · Data · Início Jornada · Início Intervalo · Fim Intervalo · Fim Jornada · Situação. <em>Aceita também o formato R09 (Dia, Nome, Duração, Função). A coluna Função define o Indicador 06.</em>
+              <strong>Colunas:</strong> Nome · <strong>Função</strong> (Supervisor/Operador) · Data · Início Jornada · Início Intervalo · Fim Intervalo · Fim Jornada · Situação. <em>Aceita também o formato R09 (Dia, Nome, Duração). Se a planilha não trouxer a coluna Função, marque quem é Supervisor na aba <strong>Resumo</strong> — é isso que alimenta o Indicador 06.</em>
             </div>
             <button class="btn btn-outline btn-sm" onclick="baixarModeloPonto()"><i class="ti ti-download"></i> Baixar Modelo .xlsx</button>
           </div>
@@ -962,7 +956,7 @@ textarea{resize:vertical;min-height:72px}
           <div class="stat-card">
             <div class="stat-icon" style="background:#f0fdf4;color:var(--its-success)"><i class="ti ti-circle-check"></i></div>
             <div class="stat-value" id="a-encerrado">0</div>
-            <div class="stat-label">Encerrados</div>
+            <div class="stat-label">Concluídos</div>
           </div>
           <div class="stat-card">
             <div class="stat-icon" style="background:#fff3ee;color:var(--its-orange)"><i class="ti ti-clock-pause"></i></div>
@@ -992,7 +986,7 @@ textarea{resize:vertical;min-height:72px}
             <label>Situação</label>
             <select id="aFilterSit" onchange="filterAvisos()">
               <option value="">Todas</option>
-              <option>Encerrado</option><option>Prorrogado</option><option>Em aberto</option>
+              <option>Concluído</option><option>Prorrogado</option><option>Cancelado</option><option>Em aberto</option>
             </select>
           </div>
         </div>
@@ -1003,7 +997,7 @@ textarea{resize:vertical;min-height:72px}
               <tr>
                 <th>Data</th><th>Cidade</th><th>Bairro</th><th>Serviço</th><th>Recebido</th><th>Inserido</th>
                 <th>Prev. Normalização</th><th>Canal</th>
-                <th>Encerrado/Prorrogado</th><th>Ações</th>
+                <th>Situação</th><th>Ações</th>
               </tr>
             </thead>
             <tbody id="avisosBody"></tbody>
@@ -1062,12 +1056,18 @@ textarea{resize:vertical;min-height:72px}
               </select>
             </div>
           </div>
-          <div class="form-group">
-            <label>Encerrado / Prorrogado</label>
-            <select id="aSituacao">
-              <option value="">Em aberto</option>
-              <option>Encerrado</option><option>Prorrogado</option>
-            </select>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Situação</label>
+              <select id="aSituacao">
+                <option value="">Em aberto</option>
+                <option>Concluído</option><option>Prorrogado</option><option>Cancelado</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Observações</label>
+              <input type="text" id="aObs" placeholder="Ex.: Cancelado por ITS / Cancelado por CASAN">
+            </div>
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -1153,7 +1153,7 @@ function renderTasks(list){
   list=list.slice().sort((a,b)=>b.id-a.id);
   tb.innerHTML=list.map(t=>`
     <tr>
-      <td><span class="priority-dot ${prioClass(t.prio)}"></span><strong style="font-size:.83rem">${esc(t.titulo)}</strong></td>
+      <td><span class="priority-dot ${prioClass(t.prio)}"></span><strong style="font-size:.83rem">${esc(t.titulo)}</strong>${t.encaminhadoPara?`<span title="Encaminhada para ${esc(t.encaminhadoPara.nome)}" style="font-size:.68rem;color:var(--its-sidebar);background:#eef4fb;border-radius:4px;padding:1px 6px;margin-left:6px;white-space:nowrap"><i class="ti ti-send"></i> ${esc(t.encaminhadoPara.nome)}</span>`:''}</td>
       <td style="color:var(--its-muted);font-size:.8rem">${esc(t.area)}</td>
       <td style="font-size:.8rem">${fmtPrazo(t.prazo)}</td>
       <td>${prioBadge(t.prio)}</td>
@@ -1165,7 +1165,8 @@ function renderTasks(list){
             ? `<button class="btn btn-ghost btn-sm" onclick="desarquivarTarefa(${t.id})" title="Desarquivar"><i class="ti ti-archive-off"></i></button>`
             : `<button class="btn btn-ghost btn-sm" onclick="arquivarTarefa(${t.id})" title="Arquivar"><i class="ti ti-archive"></i></button>`}
           ${(isCliente()||t.arquivada)?'':`
-          ${t.status!=='Concluído'?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="responderTarefa(${t.id})" title="Responder e concluir"><i class="ti ti-message-reply"></i></button>`:''}
+          ${(podeEncaminhar()&&t.status!=='Concluído')?`<button class="btn btn-ghost btn-sm" style="color:var(--its-sidebar)" onclick="encaminharTarefa(${t.id})" title="Encaminhar para supervisão/monitoria"><i class="ti ti-send"></i></button>`:''}
+          ${(podeResponderCliente()&&t.status!=='Concluído')?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="responderTarefa(${t.id})" title="Responder e concluir"><i class="ti ti-message-reply"></i></button>`:''}
           <button class="btn btn-ghost btn-sm" onclick="editTask(${t.id})" title="Editar"><i class="ti ti-edit"></i></button>
           <button class="btn btn-ghost btn-sm" onclick="cycleStatus(${t.id})" title="Próximo status"><i class="ti ti-refresh"></i></button>
           <button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteTask(${t.id})" title="Excluir"><i class="ti ti-trash"></i></button>`}
@@ -1179,8 +1180,11 @@ function applyFilters(){
   const st=document.getElementById('filterStatus').value;
   const pr=document.getElementById('filterPrio').value;
   const verArq=document.getElementById('filterArquivadas')?.checked;
+  const encMim=document.getElementById('filterEncMim')?.checked;
+  const meuNome=(getSession()||{}).nome||'';
   renderTasks(TASKS.filter(t=>
     (verArq?t.arquivada:!t.arquivada)&&
+    (!encMim||(t.encaminhadoPara&&t.encaminhadoPara.nome===meuNome))&&
     (!q||t.titulo.toLowerCase().includes(q)||t.area.toLowerCase().includes(q))&&
     (!st||t.status===st)&&(!pr||t.prio===pr)
   ));
@@ -1315,6 +1319,49 @@ function responderTarefa(id){
   });
 }
 
+// Encaminhar tarefa para a supervisão / monitoria (somente Gerência e Supervisão).
+function encaminharTarefa(id){
+  const t=TASKS.find(x=>x.id===id);if(!t)return;
+  if(!podeEncaminhar()){ showToast('Apenas Gerência e Supervisão podem encaminhar.','warn'); return; }
+  const destinos=USERS.filter(u=>u.status==='Ativo' && (u.cargo==='Supervisor'||u.cargo==='Monitor'));
+  document.getElementById('modalTitle').textContent='Encaminhar Tarefa — '+t.titulo;
+  document.getElementById('modalContent').innerHTML=`
+    <div style="font-size:.82rem;color:var(--its-muted);margin-bottom:12px">Encaminhe para a <strong>supervisão</strong> ou <strong>monitoria</strong> tratar. A resposta ao cliente continua sendo dada pela supervisão/gerência.</div>
+    <div class="form-group">
+      <label>Encaminhar para *</label>
+      <select id="encDest">
+        <option value="">Selecione...</option>
+        ${destinos.map(u=>`<option value="${esc(u.nome)}" data-cargo="${esc(u.cargo)}">${esc(u.nome)} — ${esc(u.cargo)}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group"><label>Observação (opcional)</label><textarea id="encObs" placeholder="Instruções para quem vai tratar..." style="min-height:70px"></textarea></div>
+    <div id="encErro" class="its-alert alert-error" style="display:${destinos.length?'none':'flex'};margin-bottom:10px">${destinos.length?'':'Nenhum usuário de Supervisão/Monitoria ativo cadastrado.'}</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarEncaminhar(${t.id})"><i class="ti ti-send"></i> Encaminhar</button>
+    </div>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function confirmarEncaminhar(id){
+  const t=TASKS.find(x=>x.id===id);if(!t)return;
+  const sel=document.getElementById('encDest');
+  const erro=document.getElementById('encErro');
+  const nome=sel.value;
+  if(!nome){ erro.textContent='Selecione para quem encaminhar.'; erro.style.display='flex'; return; }
+  const cargo=sel.options[sel.selectedIndex].dataset.cargo||'';
+  const obs=document.getElementById('encObs').value.trim();
+  const a=autorAtual();
+  t.encaminhadoPara={nome,cargo,por:a.por,perfil:a.perfil,em:a.em,obs};
+  if(t.status!=='Concluído') t.status='Em andamento'; // entra no fluxo ativo
+  t.historico=t.historico||[];
+  t.historico.push(novaInteracao('encaminhamento', `Encaminhado para ${nome} (${cargo})`+(obs?` — ${obs}`:'')));
+  saveTasks(); closeModal(); applyFilters();
+  notificarInterno({icone:'ti-send',titulo:'Tarefa encaminhada para você',texto:t.titulo,audiencia:'equipe',paraNome:nome,ref:{tipo:'tarefa',id:t.id}});
+  notifyWhatsApp(`➡️ *Tarefa Encaminhada* — iTS Gerencial CASAN\n\n*${t.titulo}*\nPara: ${nome} (${cargo})${obs?`\nObs: ${obs}`:''}\nPor: ${a.por}`);
+  logEvento('Tarefa encaminhada', t.titulo+' → '+nome);
+  showToast('Tarefa encaminhada para '+nome+'.');
+}
+
 // Ver detalhes + resposta + anexos de uma tarefa.
 function verTarefa(id){
   const t=TASKS.find(x=>x.id===id);if(!t)return;
@@ -1326,6 +1373,7 @@ function verTarefa(id){
       <div class="form-group"><label>Área</label><div style="font-size:.85rem">${esc(t.area)||'—'}</div></div>
     </div>
     <div class="form-group"><label>Descrição</label><div style="font-size:.85rem">${esc(t.desc)||'—'}</div></div>
+    ${t.encaminhadoPara?`<div class="its-alert alert-info" style="display:block"><i class="ti ti-send"></i> <strong>Encaminhada para ${esc(t.encaminhadoPara.nome)}${t.encaminhadoPara.cargo?` (${esc(t.encaminhadoPara.cargo)})`:''}</strong><div style="font-size:.78rem;color:var(--its-muted);margin-top:3px">Por ${esc(t.encaminhadoPara.por)} · ${esc(t.encaminhadoPara.em)}${t.encaminhadoPara.obs?`<br>Obs: ${esc(t.encaminhadoPara.obs)}`:''}</div></div>`:''}
     ${t.historico&&t.historico.length?renderHistorico(t.historico):(t.resposta?`<hr class="divider"><div class="form-group"><label>Resposta</label><div style="font-size:.85rem;background:#f8fafc;padding:10px;border-radius:6px">${esc(t.resposta)}</div></div>${renderAnexos(t.anexos)}`:'')}
     ${t.arquivada&&t.arquivoInfo?`<hr class="divider"><div class="its-alert alert-warning" style="display:block"><i class="ti ti-archive"></i> <strong>Arquivada</strong><div style="font-size:.8rem;margin-top:4px;line-height:1.6">
       Motivo: <strong>${esc(t.arquivoInfo.motivo)}</strong><br>
@@ -1339,7 +1387,8 @@ function verTarefa(id){
     </div></div>`:''}
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
       ${!t.arquivada?`<button class="btn btn-outline" onclick="comentarTarefa(${t.id})"><i class="ti ti-message-plus"></i> Comentar</button>`:''}
-      ${(!isCliente()&&t.status!=='Concluído'&&!t.arquivada)?`<button class="btn btn-primary" onclick="responderTarefa(${t.id})"><i class="ti ti-message-reply"></i> Responder e Concluir</button>`:''}
+      ${(podeEncaminhar()&&t.status!=='Concluído'&&!t.arquivada)?`<button class="btn btn-outline" onclick="encaminharTarefa(${t.id})"><i class="ti ti-send"></i> Encaminhar</button>`:''}
+      ${(podeResponderCliente()&&t.status!=='Concluído'&&!t.arquivada)?`<button class="btn btn-primary" onclick="responderTarefa(${t.id})"><i class="ti ti-message-reply"></i> Responder e Concluir</button>`:''}
       <button class="btn btn-ghost" onclick="closeModal()">Fechar</button>
     </div>`;
   document.getElementById('modalOverlay').classList.add('open');
@@ -1658,16 +1707,17 @@ function gerarRelatorioPonto(){
     }
   });
   const rows=Object.values(map).sort((a,b)=>a.nome.localeCompare(b.nome));
-  const totalMin=rows.reduce((s,r)=>s+r.minutos,0);
-  const temFuncao=rows.some(r=>r.funcao&&r.funcao.trim()!=='');
-  const ehSup=r=>temFuncao?String(r.funcao||'').toLowerCase().includes('supervis'):(r.sup&&r.sup.trim()!==''&&r.sup!=='—');
-  const supMin=rows.filter(ehSup).reduce((s,r)=>s+r.minutos,0);
+  // Indicador 06: cobertura de supervisão sobre 24h × dias do mês.
+  // Classificação Supervisor/Operador vem da aba Resumo (PONTO_DB[mes].funcoes).
+  const cov=coberturaSupervisao(data, (nome,funcao)=>ehSupervisorPonto(mes,nome,funcao));
+  const totalMin=cov.totalMin;
+  const supMin=cov.coberto;
   const pct=totalMin>0?((supMin/totalMin)*100).toFixed(2):null;
   const cor=pct===null?'var(--its-muted)':parseFloat(pct)>=100?'var(--its-success)':parseFloat(pct)>=90?'var(--its-warning)':'var(--its-danger)';
   // Operador-dia: soma da coluna "operador" nos dias trabalhados (Duração>0).
   const operadorDia=data.reduce((s,r)=>s+((typeof r.durMin==='number'&&r.durMin>0&&r.operadores)?(+r.operadores||0):0),0);
   // Cliente não pode ver o nome dos operadores — apenas supervisores.
-  const linhasRel = isCliente() ? rows.filter(ehSup) : rows;
+  const linhasRel = isCliente() ? rows.filter(r=>ehSupervisorPonto(mes, r.nome, r.funcao)) : rows;
   const mLabel=fmtMesLabel(mes);
   document.getElementById('reportResult').innerHTML=`
     <div class="card">
@@ -1697,7 +1747,7 @@ function gerarRelatorioPonto(){
             <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar);font-variant-numeric:tabular-nums">${fmtHM(supMin)}</div>
           </div>
           <div style="padding:14px 18px;border-right:1px solid var(--its-border)">
-            <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Total Horas do Mês</div>
+            <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Total do Mês (24h × dias)</div>
             <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar);font-variant-numeric:tabular-nums">${fmtHM(totalMin)}</div>
           </div>
           <div style="padding:14px 18px">
@@ -1708,7 +1758,7 @@ function gerarRelatorioPonto(){
         ${operadorDia>0?`<div style="display:grid;grid-template-columns:repeat(2,1fr);background:#fff;border-top:1px solid var(--its-border)">
           <div style="padding:14px 18px;border-right:1px solid var(--its-border)">
             <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Supervisores</div>
-            <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar)">${rows.filter(ehSup).length||rows.length}</div>
+            <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar)">${rows.filter(r=>ehSupervisorPonto(mes, r.nome, r.funcao)).length||rows.length}</div>
           </div>
           <div style="padding:14px 18px">
             <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Operadores atendidos (operador-dia)</div>
@@ -1716,7 +1766,7 @@ function gerarRelatorioPonto(){
           </div>
         </div>`:''}
         <div style="background:#f8fafc;padding:8px 16px;font-size:.74rem;color:var(--its-muted);border-top:1px solid var(--its-border)">
-          <strong style="color:var(--its-text)">Cálculo:</strong> Tempo total com supervisão ÷ Total de horas do mês × 100 &nbsp;·&nbsp;
+          <strong style="color:var(--its-text)">Cálculo:</strong> Horas com supervisor presente ÷ (24h × dias do mês) × 100 &nbsp;·&nbsp;
           <strong style="color:var(--its-text)">Instrumento:</strong> Folhas ponto importadas
         </div>
       </div>
@@ -2060,11 +2110,8 @@ function renderChamados(list){
       <td style="font-size:.82rem">${prazoHtml}</td>
       <td><div style="display:flex;gap:4px">
         <button class="btn btn-ghost btn-sm" onclick="verChamado(${c.id})" title="Ver detalhes/resposta"><i class="ti ti-eye"></i></button>
-        ${c.arquivado
-          ? `<button class="btn btn-ghost btn-sm" onclick="desarquivarChamado(${c.id})" title="Desarquivar"><i class="ti ti-archive-off"></i></button>`
-          : `<button class="btn btn-ghost btn-sm" onclick="arquivarChamado(${c.id})" title="Arquivar/Cancelar"><i class="ti ti-archive"></i></button>`}
-        ${(c.status==='Em Atendimento'&&!c.arquivado)?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="responderChamado(${c.id})" title="Responder e resolver"><i class="ti ti-message-reply"></i></button>`:''}
-        ${c.arquivado?'':`<button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteChamado(${c.id})" title="Excluir"><i class="ti ti-trash"></i></button>`}
+        ${c.status==='Em Atendimento'?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="responderChamado(${c.id})" title="Concluir chamado"><i class="ti ti-message-reply"></i></button>`:''}
+        <button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteChamado(${c.id})" title="Excluir"><i class="ti ti-trash"></i></button>
       </div></td>
     </tr>`;
   }).join('');
@@ -2073,9 +2120,7 @@ function filterChamados(){
   const q=document.getElementById('chamadoSearch').value.toLowerCase();
   const st=document.getElementById('chamadoFilterStatus').value;
   const pr=document.getElementById('chamadoFilterPrazo').value;
-  const verArq=document.getElementById('chamadoFilterArquivados')?.checked;
   renderChamados(CHAMADOS.filter(c=>{
-    if(verArq?!c.arquivado:c.arquivado)return false;
     if(q&&!c.titulo.toLowerCase().includes(q)&&!(c.desc||'').toLowerCase().includes(q))return false;
     if(st&&c.status!==st)return false;
     if(pr){
@@ -2093,7 +2138,7 @@ function abrirNovoChamado(){
   const criadoIso=`${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
   document.getElementById('modalContent').innerHTML=`
     <div class="form-group"><label>Título *</label><input type="text" id="cTitulo" placeholder="Descreva o problema..."></div>
-    <div class="form-group"><label>Descrição</label><textarea id="cDesc" placeholder="Detalhes do chamado..."></textarea></div>
+    <div class="form-group"><label>Descrição</label><textarea id="cDesc" placeholder="Detalhes do chamado... (cole um print com Ctrl+V para anexar)" onpaste="anexarColando(event)"></textarea></div>
     ${anexoWidgetHTML('Anexos na abertura (documentos / áudios) — opcional')}
     <div class="form-group"><label>Data/Hora Abertura <span style="font-weight:400;color:var(--its-muted)">(automático)</span></label>
       <input type="text" value="${criadoIso}" disabled style="background:#f8fafc;color:var(--its-sidebar);font-weight:600;cursor:not-allowed"></div>
@@ -2194,6 +2239,32 @@ async function adicionarAnexos(){
   renderListaAnexos();
 }
 
+// Colar (Ctrl+V) um print na descrição/resposta: a imagem da área de
+// transferência é adicionada automaticamente como anexo (Opção A).
+async function anexarColando(e){
+  const items=Array.from((e.clipboardData||{}).items||[]);
+  const imgs=items.filter(it=>it.kind==='file' && (it.type||'').startsWith('image/'));
+  if(!imgs.length) return; // sem imagem: deixa o texto colar normalmente
+  e.preventDefault();
+  const erro=document.getElementById('respErro');
+  const setErro=m=>{ if(erro){erro.textContent=m;erro.style.display='flex';} else showToast(m,'warn'); };
+  const p=n=>String(n).padStart(2,'0');
+  let add=0;
+  for(let k=0;k<imgs.length;k++){
+    const f=imgs[k].getAsFile(); if(!f) continue;
+    if(f.size > ANEXO_MAX_MB*1048576){ setErro(`Imagem colada passa de ${ANEXO_MAX_MB} MB.`); continue; }
+    const total=_anexosResp.reduce((s,a)=>s+a.size,0)+f.size;
+    if(total > ANEXO_MAX_TOTAL_MB*1048576){ setErro(`Total de anexos passa de ${ANEXO_MAX_TOTAL_MB} MB.`); continue; }
+    const d=new Date();
+    const ext=((f.type.split('/')[1])||'png').replace('jpeg','jpg');
+    const nome=`print-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}${imgs.length>1?'-'+(k+1):''}.${ext}`;
+    try{ const obj=await lerArquivo(f); obj.name=nome; _anexosResp.push(obj); if(erro)erro.style.display='none'; add++; }
+    catch(err){ setErro(err.message); }
+  }
+  renderListaAnexos();
+  if(add) showToast(add>1?`${add} prints anexados!`:'Print anexado!');
+}
+
 function removerAnexoResp(i){ _anexosResp.splice(i,1); renderListaAnexos(); }
 
 function renderListaAnexos(){
@@ -2216,7 +2287,8 @@ function abrirResposta(titulo, onSalvar, opts){
   _anexosResp=[];
   document.getElementById('modalTitle').textContent=titulo;
   document.getElementById('modalContent').innerHTML=`
-    <div class="form-group"><label>${opts.label||'Resposta'} *</label><textarea id="respTexto" placeholder="Escreva aqui..." style="min-height:90px"></textarea></div>
+    <div class="form-group"><label>${opts.label||'Resposta'} *</label><textarea id="respTexto" placeholder="Escreva aqui... (cole um print com Ctrl+V para anexar)" style="min-height:90px" onpaste="anexarColando(event)"></textarea></div>
+    ${opts.comData?`<div class="form-group"><label>Concluído em</label><input type="datetime-local" id="respEm" value="${opts.emDefault||''}"><div style="font-size:.72rem;color:var(--its-muted);margin-top:4px">Informe quando foi concluído. Até 1h da abertura conta como dentro do prazo.</div></div>`:''}
     <div class="form-group">
       <label>Anexos (documentos / áudios) — opcional</label>
       <div style="display:flex;gap:8px;align-items:center">
@@ -2238,7 +2310,9 @@ function abrirResposta(titulo, onSalvar, opts){
     const texto=document.getElementById('respTexto').value.trim();
     const erro=document.getElementById('respErro');
     if(!texto && !_anexosResp.length){ erro.textContent='Escreva algo ou adicione um anexo.'; erro.style.display='flex'; return; }
-    onSalvar({texto, anexos:_anexosResp.slice(), em: agoraISO()});
+    let em=agoraISO();
+    if(opts.comData){ const v=(document.getElementById('respEm')||{}).value; if(v) em=v.replace('T',' '); }
+    onSalvar({texto, anexos:_anexosResp.slice(), em});
   };
 }
 
@@ -2280,7 +2354,7 @@ function anexoWidgetHTML(label){
         <input type="file" id="respAnexos" multiple accept="${ANEXO_ACCEPT}" style="flex:1">
         <button type="button" class="btn btn-outline btn-sm" onclick="adicionarAnexos()"><i class="ti ti-plus"></i> Adicionar</button>
       </div>
-      <div style="font-size:.72rem;color:var(--its-muted);margin:4px 0 8px">Selecione e clique em Adicionar (pode repetir). Até ${ANEXO_MAX_MB} MB por arquivo, ${ANEXO_MAX_TOTAL_MB} MB no total.</div>
+      <div style="font-size:.72rem;color:var(--its-muted);margin:4px 0 8px">Selecione e clique em Adicionar (pode repetir) ou cole um print (Ctrl+V) na descrição. Até ${ANEXO_MAX_MB} MB por arquivo, ${ANEXO_MAX_TOTAL_MB} MB no total.</div>
       <div id="respLista" style="display:flex;flex-direction:column;gap:5px"></div>
       <div id="respErro" class="its-alert alert-error" style="display:none;margin-top:8px"></div>
     </div>`;
@@ -2305,7 +2379,7 @@ function novaInteracao(tipo, texto, anexos){
 // Renderiza o histórico (thread) distinguindo Cliente x Equipe, com data/hora.
 function renderHistorico(hist){
   if(!hist||!hist.length) return '';
-  const rotuloTipo={abertura:'Abertura', resposta:'Resposta', nota:'Nota'};
+  const rotuloTipo={abertura:'Abertura', resposta:'Resposta', nota:'Nota', encaminhamento:'Encaminhamento'};
   return `<hr class="divider"><div class="section-title" style="font-size:.78rem;margin-bottom:10px">Histórico de Interações</div>
     <div style="display:flex;flex-direction:column;gap:10px">`+hist.map(h=>{
       const cor=h.ehCliente?'#0284c7':'#16a34a';
@@ -2326,7 +2400,7 @@ function renderHistorico(hist){
 // Responder + resolver um chamado.
 function responderChamado(id){
   const c=CHAMADOS.find(x=>x.id===id);if(!c)return;
-  abrirResposta('Responder Chamado — '+c.titulo, ({texto,anexos,em})=>{
+  abrirResposta('Concluir Chamado — '+c.titulo, ({texto,anexos,em})=>{
     c.resposta=texto; c.anexos=anexos; c.resolvidoEm=em; c.status='Resolvido';
     c.historico=c.historico||[]; c.historico.push(novaInteracao('resposta',texto,anexos));
     notificarInterno({icone:'ti-message-check',titulo:'Chamado respondido/resolvido',texto:c.titulo,audiencia:'cliente',ref:{tipo:'chamado',id:c.id}});
@@ -2335,8 +2409,8 @@ function responderChamado(id){
     notifyEmail(`✅ Chamado Resolvido: ${c.titulo}`, c.titulo, 'Chamado resolvido', 'Notificação de Chamado',
       [{label:'Resposta',valor:texto},{label:'Resolvido em',valor:em},{label:'Anexos',valor:anexos.length?anexos.map(a=>a.name).join(', '):'—'}]);
     logEvento('Chamado resolvido', c.titulo);
-    showToast('Chamado respondido e resolvido!');
-  });
+    showToast('Chamado concluído!');
+  }, {label:'Resposta / Conclusão', btnLabel:'Concluir Chamado', btnIcon:'ti-check', comData:true, emDefault:agoraISO().replace(' ','T')});
 }
 
 // Ver detalhes + resposta + anexos de um chamado.
@@ -2352,19 +2426,9 @@ function verChamado(id){
       <div class="form-group"><label>Resolvido em</label><div style="font-size:.85rem">${esc(c.resolvidoEm)||'—'}</div></div>
     </div>
     ${c.historico&&c.historico.length?renderHistorico(c.historico):(c.resposta?`<hr class="divider"><div class="form-group"><label>Resposta</label><div style="font-size:.85rem;background:#f8fafc;padding:10px;border-radius:6px">${esc(c.resposta)}</div></div>${renderAnexos(c.anexos)}`:'')}
-    ${c.arquivado&&c.arquivoInfo?`<hr class="divider"><div class="its-alert alert-warning" style="display:block"><i class="ti ti-archive"></i> <strong>Arquivado/Cancelado</strong><div style="font-size:.8rem;margin-top:4px;line-height:1.6">
-      Motivo: <strong>${esc(c.arquivoInfo.motivo)}</strong><br>
-      ${c.arquivoInfo.obs?`Observação: ${esc(c.arquivoInfo.obs)}<br>`:''}
-      Por: ${esc(c.arquivoInfo.por)}${c.arquivoInfo.perfil?` (${esc(c.arquivoInfo.perfil)})`:''} · em ${esc(c.arquivoInfo.em)}
-      ${c.arquivoInfo.pedidoCliente?`<br><br><strong>Pedido do cliente:</strong><br>
-        Solicitante: ${esc(c.arquivoInfo.pedidoCliente.solicitante)}${c.arquivoInfo.pedidoCliente.cargo?` (${esc(c.arquivoInfo.pedidoCliente.cargo)})`:''}<br>
-        ${c.arquivoInfo.pedidoCliente.contato?`Contato: ${esc(c.arquivoInfo.pedidoCliente.contato)}<br>`:''}
-        ${c.arquivoInfo.pedidoCliente.dataPedido?`Data do pedido: ${esc(c.arquivoInfo.pedidoCliente.dataPedido)}<br>`:''}
-        Registrado por: ${esc(c.arquivoInfo.pedidoCliente.registradoPor)}`:''}
-    </div></div>`:''}
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-      ${c.arquivado?'':`<button class="btn btn-outline" onclick="comentarChamado(${c.id})"><i class="ti ti-message-plus"></i> Comentar</button>`}
-      ${c.status==='Em Atendimento'?`<button class="btn btn-primary" onclick="responderChamado(${c.id})"><i class="ti ti-message-reply"></i> Responder e Resolver</button>`:''}
+      <button class="btn btn-outline" onclick="comentarChamado(${c.id})"><i class="ti ti-message-plus"></i> Comentar</button>
+      ${c.status==='Em Atendimento'?`<button class="btn btn-primary" onclick="responderChamado(${c.id})"><i class="ti ti-message-reply"></i> Concluir Chamado</button>`:''}
       <button class="btn btn-ghost" onclick="closeModal()">Fechar</button>
     </div>`;
   document.getElementById('modalOverlay').classList.add('open');
@@ -2459,6 +2523,13 @@ function updateEmergStats(){
   }).length;
 }
 
+// Prazo da emergência = tempo decorrido de "Recebido" até "Enviado" (HH:MM).
+function calcPrazoEmerg(recebido, enviado){
+  const r=parseMinutes(recebido), e=parseMinutes(enviado);
+  if(r==null||e==null) return '00:00';
+  let diff=e-r; if(diff<0)diff+=1440;
+  return String(Math.floor(diff/60)).padStart(2,'0')+':'+String(diff%60).padStart(2,'0');
+}
 function registrarEmerg(){
   const data=document.getElementById('eData').value;
   if(!data){alert('Informe a data.');return}
@@ -2471,11 +2542,7 @@ function registrarEmerg(){
   if(!servico){alert('Selecione o serviço.');return}
   const now=new Date();
   const enviado=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-  const [rh,rm]=recebido.split(':').map(Number);
-  const [eh,em]=enviado.split(':').map(Number);
-  let diff=(eh*60+em)-(rh*60+rm);
-  if(diff<0)diff+=1440;
-  const prazo=String(Math.floor(diff/60)).padStart(2,'0')+':'+String(diff%60).padStart(2,'0');
+  const prazo=calcPrazoEmerg(recebido, enviado);
   const [dy,dm,dd]=data.split('-');
   EMERGS.unshift({
     id:nextEmergId++,
@@ -2483,7 +2550,7 @@ function registrarEmerg(){
     cidade,recebido,enviado,supervisor,
     protocolo:document.getElementById('eProtocolo').value,
     servico,
-    canal:document.getElementById('eCanal').value,
+    canal:'',
     prazo,
     status:'Em Atendimento'
   });
@@ -2538,7 +2605,8 @@ function editarEmerg(id){
   if(!podeEditarEmerg()){ showToast('Apenas Supervisor ou superior pode editar emergências.'); return; }
   const e=EMERGS.find(x=>x.id===id);if(!e)return;
   const statusOpts=['Em Atendimento','Aguardando','Resolvido','Cancelado'];
-  const servOpts=['Água','Esgoto','Água e Esgoto'];
+  const servOpts=['Água','Esgoto'];
+  const canalOpts=['WhatsApp','E-mail','Telefone','Sistema'];
   const sel=(arr,cur)=>arr.map(v=>`<option${cur===v?' selected':''}>${v}</option>`).join('');
   document.getElementById('modalTitle').textContent='Editar Emergência — '+e.cidade;
   document.getElementById('modalContent').innerHTML=`
@@ -2549,7 +2617,7 @@ function editarEmerg(id){
     <div class="form-row-3">
       <div class="form-group"><label>Recebido</label><input type="time" id="edEmRecebido" value="${esc(e.recebido||'')}"></div>
       <div class="form-group"><label>Enviado</label><input type="time" id="edEmEnviado" value="${esc(e.enviado||'')}"></div>
-      <div class="form-group"><label>Canal</label><input type="text" id="edEmCanal" value="${esc(e.canal||'')}"></div>
+      <div class="form-group"><label>Canal</label><select id="edEmCanal"><option value="">Selecione...</option>${sel(canalOpts,e.canal)}</select></div>
     </div>
     <div class="form-group"><label>Protocolo</label><input type="text" id="edEmProtocolo" value="${esc(e.protocolo||'')}"></div>
     <div class="form-group">
@@ -2567,11 +2635,12 @@ function editarEmerg(id){
     e.servico=document.getElementById('edEmServico').value;
     e.recebido=document.getElementById('edEmRecebido').value||e.recebido;
     e.enviado=document.getElementById('edEmEnviado').value||e.enviado;
+    e.prazo=calcPrazoEmerg(e.recebido, e.enviado);
     e.canal=document.getElementById('edEmCanal').value.trim();
     e.protocolo=document.getElementById('edEmProtocolo').value.trim();
     e.status=document.getElementById('edEmStatus').value;
     saveEmergs(); closeModal(); filterEmerg();
-    notifyAlteracao('Emergência', e.cidade, [{label:'Status',valor:e.status},{label:'Serviço',valor:e.servico},{label:'Recebido',valor:e.recebido},{label:'Enviado',valor:e.enviado}]);
+    notifyAlteracao('Emergência', e.cidade, [{label:'Status',valor:e.status},{label:'Serviço',valor:e.servico},{label:'Recebido',valor:e.recebido},{label:'Enviado',valor:e.enviado}], {semWhatsApp:e.status==='Resolvido'});
     logEvento('Emergência editada', e.cidade+(prev!==e.status?(' — status: '+prev+' → '+e.status):''));
     showToast('Emergência atualizada.');
   };
@@ -2582,7 +2651,7 @@ function cycleEmergStatus(id){
   const opts=['Em Atendimento','Aguardando','Resolvido','Cancelado'];
   e.status=opts[(opts.indexOf(e.status)+1)%opts.length];
   saveEmergs();
-  notifyAlteracao('Emergência', e.cidade, [{label:'Status',valor:e.status},{label:'Serviço',valor:e.servico},{label:'Recebido',valor:e.recebido}]);
+  notifyAlteracao('Emergência', e.cidade, [{label:'Status',valor:e.status},{label:'Serviço',valor:e.servico},{label:'Recebido',valor:e.recebido}], {semWhatsApp:e.status==='Resolvido'});
   logEvento('Status da emergência', e.cidade+' → '+e.status);
   filterEmerg();showToast('Status: '+e.status);
 }
@@ -2658,6 +2727,66 @@ function getPontoDataResumo(){
   return k&&PONTO_DB[k] ? PONTO_DB[k].registros : [];
 }
 
+// ── Classificação Supervisor/Operador (definida pelo usuário após importar) ──
+// Guardada por mês em PONTO_DB[mes].funcoes = { "NOME": "Supervisor"|"Operador" }.
+// É o que alimenta o Indicador 06 quando a planilha não traz a coluna Função.
+function getFuncoesPonto(mes){
+  return (mes&&PONTO_DB[mes]&&PONTO_DB[mes].funcoes) ? PONTO_DB[mes].funcoes : {};
+}
+function funcaoDe(mes, nome, funcaoArquivo){
+  const ov=getFuncoesPonto(mes)[nome];
+  if(ov) return ov;
+  if(funcaoArquivo && String(funcaoArquivo).trim()!=='') return String(funcaoArquivo).trim();
+  return 'Operador';
+}
+function ehSupervisorPonto(mes, nome, funcaoArquivo){
+  return funcaoDe(mes, nome, funcaoArquivo).toLowerCase().includes('supervis');
+}
+function setFuncaoPonto(el){
+  const sel=document.getElementById('pMonthSelResumo');
+  const mes=sel?sel.value:'';
+  if(!mes||!PONTO_DB[mes])return;
+  PONTO_DB[mes].funcoes=PONTO_DB[mes].funcoes||{};
+  PONTO_DB[mes].funcoes[el.dataset.nome]=el.value;
+  savePontoDB();
+  calcularResumoMensal();
+}
+
+// ── Indicador 06 – cobertura de supervisão ───────────────────────────────
+// Total do mês = 24h × nº de dias (ex.: 24 × 30 = 720h). Meta 100% = supervisor
+// presente o tempo todo. "Horas c/ supervisão" = união dos intervalos de
+// presença real (Entrada–Saída) dos supervisores, na linha do tempo (trata
+// turnos que viram a meia-noite e sobreposição entre supervisores sem dupla
+// contagem).
+function dayIndexPonto(d){
+  const m=String(d||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  return m ? Date.UTC(+m[3], +m[2]-1, +m[1])/86400000 : null;
+}
+function coberturaSupervisao(registros, isSupFn){
+  const dias=new Set();
+  const intervals=[];
+  (registros||[]).forEach(r=>{
+    if((r.data||'').trim()) dias.add(r.data.trim());
+    if(!isSupFn(r.nome, r.funcao)) return;
+    const di=dayIndexPonto(r.data); if(di==null) return;
+    const ini=parseMinutes(r.iniJornada), fim=parseMinutes(r.fimJornada);
+    if(ini==null||fim==null) return;
+    const start=di*1440+ini;
+    let end=di*1440+fim;
+    if(end<=start) end+=1440; // turno que vira a meia-noite
+    intervals.push([start,end]);
+  });
+  intervals.sort((a,b)=>a[0]-b[0]);
+  let coberto=0, curS=null, curE=null;
+  for(const [s,e] of intervals){
+    if(curE==null){ curS=s; curE=e; continue; }
+    if(s<=curE){ if(e>curE) curE=e; }
+    else { coberto+=curE-curS; curS=s; curE=e; }
+  }
+  if(curE!=null) coberto+=curE-curS;
+  return { coberto, dias:dias.size, totalMin:dias.size*24*60 };
+}
+
 function switchPontoTab(name, el){
   document.querySelectorAll('#pontoTabs .tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
@@ -2713,6 +2842,7 @@ function calcularResumoMensal(){
   document.getElementById('resumo-empty').style.display='none';
   document.getElementById('resumo-data-wrap').style.display='block';
   const PONTO_DATA=getPontoDataResumo();
+  const mesResumo=(document.getElementById('pMonthSelResumo')||{}).value||'';
   const map={};
   PONTO_DATA.forEach(r=>{
     const key=r.mat||r.nome;
@@ -2742,29 +2872,36 @@ function calcularResumoMensal(){
     }
   });
   const rows=Object.values(map).sort((a,b)=>a.nome.localeCompare(b.nome));
-  // Cliente vê apenas supervisores (não os nomes dos operadores).
-  const temFuncaoR=rows.some(r=>r.funcao&&r.funcao.trim()!=='');
-  const ehSupR=r=>temFuncaoR?String(r.funcao||'').toLowerCase().includes('supervis'):(r.sup&&r.sup.trim()!==''&&r.sup!=='—');
-  const linhasResumo=isCliente()?rows.filter(ehSupR):rows;
-  document.getElementById('resumoBody').innerHTML=linhasResumo.map(r=>`
-    <tr>
+  // Cliente vê apenas supervisores (não os nomes dos operadores) e sem edição.
+  const cli=isCliente();
+  const linhasResumo=cli?rows.filter(r=>ehSupervisorPonto(mesResumo, r.nome, r.funcao)):rows;
+  document.getElementById('resumoBody').innerHTML=linhasResumo.map(r=>{
+    const isSup=ehSupervisorPonto(mesResumo, r.nome, r.funcao);
+    return `<tr>
       <td style="font-size:.83rem;font-weight:600">${esc(r.nome)}</td>
+      <td>${cli
+        ? `<span style="font-size:.78rem;font-weight:600;color:${isSup?'var(--its-orange)':'var(--its-muted)'}">${isSup?'Supervisor':'Operador'}</span>`
+        : `<select data-nome="${esc(r.nome)}" onchange="setFuncaoPonto(this)" style="font-size:.78rem;padding:3px 6px;border:1px solid var(--its-border);border-radius:4px;font-weight:600;background:#fff;color:${isSup?'var(--its-orange)':'var(--its-muted)'}">
+          <option value="Operador"${!isSup?' selected':''}>Operador</option>
+          <option value="Supervisor"${isSup?' selected':''}>Supervisor</option>
+        </select>`}
+      </td>
       <td style="text-align:center;font-weight:700;color:var(--its-sidebar)">${fmtHM(r.minutos)}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
   const totalDias=rows.reduce((s,r)=>s+r.dias,0);
   const totMinGeral=rows.reduce((s,r)=>s+r.minutos,0);
   // Operador-dia: soma da coluna "operador" nos dias efetivamente trabalhados (Duração>0).
   const operadorDia=PONTO_DATA.reduce((s,r)=>s+((typeof r.durMin==='number'&&r.durMin>0&&r.operadores)?(+r.operadores||0):0),0);
-  document.getElementById('resumoTotal').textContent=`${rows.length} supervisor(es) · ${totalDias} dia(s) com horas · Total: ${fmtHM(totMinGeral)}`+(operadorDia>0?` · Operadores atendidos (operador-dia): ${operadorDia}`:'');
+  const nSup=rows.filter(r=>ehSupervisorPonto(mesResumo, r.nome, r.funcao)).length;
+  document.getElementById('resumoTotal').textContent=`${rows.length} pessoa(s) · ${nSup} supervisor(es) · ${totalDias} dia(s) com horas · Total: ${fmtHM(totMinGeral)}`+(operadorDia>0?` · Operadores atendidos (operador-dia): ${operadorDia}`:'');
 
   // ── INDICADOR 06 – Presença do Supervisor ─────────────────────────────
-  // Total de Horas do Mês = soma da Duração de todos (operadores + supervisor).
-  const totalMin=rows.reduce((s,r)=>s+r.minutos,0);
-  // Tempo com supervisão = horas de quem tem Função = Supervisor.
-  // (fallback legado: se nenhuma linha tiver Função, usa a coluna Superior)
-  const temFuncao=rows.some(r=>r.funcao&&r.funcao.trim()!=='');
-  const ehSup=r=>temFuncao?String(r.funcao||'').toLowerCase().includes('supervis'):(r.sup&&r.sup.trim()!==''&&r.sup!=='—');
-  const supMin=rows.filter(ehSup).reduce((s,r)=>s+r.minutos,0);
+  // Total de Horas do Mês = 24h × dias do mês (ex.: 24 × 30 = 720h).
+  // Horas c/ supervisão = união dos turnos dos supervisores (cobertura real).
+  const cov=coberturaSupervisao(PONTO_DATA, (nome,funcao)=>ehSupervisorPonto(mesResumo,nome,funcao));
+  const totalMin=cov.totalMin;
+  const supMin=cov.coberto;
   const pct=totalMin>0?((supMin/totalMin)*100).toFixed(2):null;
   const cor=pct===null?'var(--its-muted)':parseFloat(pct)>=100?'var(--its-success)':parseFloat(pct)>=90?'var(--its-warning)':'var(--its-danger)';
   document.getElementById('ind06-sup').textContent=fmtHM(supMin);
@@ -2989,7 +3126,7 @@ function filterPonto(){
 let nextAvisoId = 4;
 let AVISOS = JSON.parse(localStorage.getItem('its_avisos')||'null') || [
   {id:1,data:'25/06',cidade:'Florianópolis',bairro:'Centro',servico:'Água',recebido:'16:01',inserido:'16:07',supervisor:'Bruno',prevNorm:'21:00',canal:'WhatsApp',situacao:''},
-  {id:2,data:'25/06',cidade:'Florianópolis',bairro:'Trindade',servico:'Esgoto',recebido:'17:08',inserido:'17:16',supervisor:'Bruno',prevNorm:'02:00',canal:'WhatsApp',situacao:'Encerrado'},
+  {id:2,data:'25/06',cidade:'Florianópolis',bairro:'Trindade',servico:'Esgoto',recebido:'17:08',inserido:'17:16',supervisor:'Bruno',prevNorm:'02:00',canal:'WhatsApp',situacao:'Concluído'},
   {id:3,data:'25/06',cidade:'Laguna',bairro:'Mar Grosso',servico:'Água',recebido:'17:08',inserido:'17:20',supervisor:'Bruno',prevNorm:'00:00',canal:'E-mail',situacao:''},
   {id:4,data:'25/06',cidade:'Ascurra',bairro:'Centro',servico:'Água e Esgoto',recebido:'19:29',inserido:'19:33',supervisor:'Wilson',prevNorm:'15:00',canal:'WhatsApp',situacao:''},
   {id:5,data:'25/06',cidade:'Angelina',bairro:'Sede',servico:'Água',recebido:'19:35',inserido:'20:08',supervisor:'Wilson',prevNorm:'00:00',canal:'E-mail',situacao:''},
@@ -2998,9 +3135,13 @@ let AVISOS = JSON.parse(localStorage.getItem('its_avisos')||'null') || [
 function saveAvisos(){localStorage.setItem('its_avisos',JSON.stringify(AVISOS));remoteSet('its_avisos',AVISOS);}
 nextAvisoId = Math.max(0,...AVISOS.map(a=>a.id))+1;
 
+// Normaliza situação legada: "Encerrado" passou a se chamar "Concluído" (nomenclatura CASAN).
+function normSit(s){ return s==='Encerrado'?'Concluído':(s||''); }
 function situacaoBadge(s){
-  if(s==='Encerrado') return `<span class="badge badge-green"><span class="badge-dot"></span>Encerrado</span>`;
+  s=normSit(s);
+  if(s==='Concluído') return `<span class="badge badge-green"><span class="badge-dot"></span>Concluído</span>`;
   if(s==='Prorrogado') return `<span class="badge badge-orange"><span class="badge-dot"></span>Prorrogado</span>`;
+  if(s==='Cancelado') return `<span class="badge badge-gray"><span class="badge-dot"></span>Cancelado</span>`;
   return `<span class="badge badge-blue"><span class="badge-dot"></span>Em aberto</span>`;
 }
 
@@ -3019,7 +3160,7 @@ function renderAvisos(list){
       <td style="font-size:.8rem">${esc(a.inserido)}</td>
       <td style="font-size:.8rem;font-weight:600;color:var(--its-sidebar)">${esc(a.prevNorm)||'—'}</td>
       <td style="font-size:.8rem">${esc(a.canal)}</td>
-      <td>${situacaoBadge(a.situacao)}</td>
+      <td>${situacaoBadge(a.situacao)}${a.obs?`<div style="font-size:.7rem;color:var(--its-muted);margin-top:3px">${esc(a.obs)}</div>`:''}</td>
       <td>
         <div style="display:flex;gap:4px">
           <button class="btn btn-ghost btn-sm" onclick="editarSituacao(${a.id})" title="Alterar situação"><i class="ti ti-edit"></i></button>
@@ -3037,13 +3178,13 @@ function filterAvisos(){
   renderAvisos(AVISOS.filter(a=>
     (!q||a.cidade.toLowerCase().includes(q))&&
     (!canal||a.canal===canal)&&
-    (!sit||(sit==='Em aberto'?!a.situacao:a.situacao===sit))
+    (!sit||(sit==='Em aberto'?!a.situacao:normSit(a.situacao)===sit))
   ));
 }
 
 function updateAvisosStats(){
   document.getElementById('a-total').textContent=AVISOS.length;
-  document.getElementById('a-encerrado').textContent=AVISOS.filter(a=>a.situacao==='Encerrado').length;
+  document.getElementById('a-encerrado').textContent=AVISOS.filter(a=>normSit(a.situacao)==='Concluído').length;
   document.getElementById('a-prorrogado').textContent=AVISOS.filter(a=>a.situacao==='Prorrogado').length;
   document.getElementById('a-aberto').textContent=AVISOS.filter(a=>!a.situacao).length;
 }
@@ -3076,7 +3217,8 @@ function registrarAviso(){
     data:`${dd}/${dm}`,cidade,bairro,servico,recebido,inserido,supervisor,
     prevNorm:document.getElementById('aPrevNorm').value||'—',
     canal,
-    situacao:document.getElementById('aSituacao').value
+    situacao:document.getElementById('aSituacao').value,
+    obs:document.getElementById('aObs').value.trim()
   });
   saveAvisos();
   notificarInterno({icone:'ti-speakerphone',titulo:'Novo aviso',texto:cidade,audiencia:'operador'});
@@ -3090,7 +3232,7 @@ function registrarAviso(){
   );
   notifyEmail(`📢 Novo Aviso: ${cidade}`, `Aviso — ${cidade}`, 'Novo aviso registrado', 'Notificação de Aviso',
     [{label:'Cidade',valor:cidade},{label:'Bairro',valor:bairro},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Canal',valor:canal}]);
-  ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aInserido','aInseridoData'].forEach(id=>document.getElementById(id).value='');
+  ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aInserido','aInseridoData','aObs'].forEach(id=>document.getElementById(id).value='');
   ['aServico','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
   const firstTab=document.querySelector('#avisosTabs .tab');
   switchAvisosTab('lista',firstTab);
@@ -3112,9 +3254,14 @@ function editarSituacao(id){
       <label>Nova situação</label>
       <select id="mSituacao">
         <option value="" ${!a.situacao?'selected':''}>Em aberto</option>
-        <option ${a.situacao==='Encerrado'?'selected':''}>Encerrado</option>
+        <option ${normSit(a.situacao)==='Concluído'?'selected':''}>Concluído</option>
         <option ${a.situacao==='Prorrogado'?'selected':''}>Prorrogado</option>
+        <option ${a.situacao==='Cancelado'?'selected':''}>Cancelado</option>
       </select>
+    </div>
+    <div class="form-group">
+      <label>Observações</label>
+      <input type="text" id="mObs" value="${esc(a.obs||'')}" placeholder="Ex.: Cancelado por ITS / Cancelado por CASAN">
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
@@ -3126,6 +3273,7 @@ function editarSituacao(id){
 function salvarSituacao(id){
   const a=AVISOS.find(x=>x.id===id);if(!a)return;
   a.situacao=document.getElementById('mSituacao').value;
+  a.obs=document.getElementById('mObs').value.trim();
   saveAvisos();
   closeModal();filterAvisos();showToast('Situação atualizada!');
 }
@@ -3435,11 +3583,12 @@ function notifyWhatsApp(message){
 }
 
 // Notifica uma ALTERAÇÃO (edição/mudança de status) por WhatsApp + e-mail.
-function notifyAlteracao(tipoLabel, titulo, linhas){
+function notifyAlteracao(tipoLabel, titulo, linhas, opts={}){
   const a=autorAtual();
   notificarInterno({icone:'ti-edit',titulo:tipoLabel+' atualizada',texto:titulo,audiencia:'equipe'});
   const corpo=linhas.map(l=>`${l.label}: ${l.valor||'—'}`).join('\n');
-  notifyWhatsApp(`✏️ *${tipoLabel} atualizada* — iTS Gerencial CASAN\n\n*${titulo}*\n${corpo}\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})`);
+  // opts.semWhatsApp suprime o WhatsApp (ex.: emergência resolvida não notifica no zap).
+  if(!opts.semWhatsApp) notifyWhatsApp(`✏️ *${tipoLabel} atualizada* — iTS Gerencial CASAN\n\n*${titulo}*\n${corpo}\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})`);
   notifyEmail(`✏️ ${tipoLabel} atualizada: ${titulo}`, titulo, `${tipoLabel} atualizada`, `Notificação de ${tipoLabel}`,
     [...linhas, {label:'Alterado por', valor:`${a.por} (${a.perfil||'—'})`}]);
 }
@@ -3892,6 +4041,9 @@ function getSession(){return JSON.parse(sessionStorage.getItem('its_session')||'
 function isCliente(){const s=getSession();return s&&s.cargo==='Cliente';}
 function isOperador(){const s=getSession();return s&&s.cargo==='Operador';}
 function isAdminGestao(){const s=getSession();return !!(s&&(s.isAdmin||s.cargo==='Gerente'));}
+// Responder o cliente e encaminhar tarefas: somente Gerência e Supervisão (e admin).
+function podeResponderCliente(){const s=getSession();return !!(s&&(s.isAdmin||s.cargo==='Gerente'||s.cargo==='Supervisor'));}
+function podeEncaminhar(){return podeResponderCliente();}
 // Quem pode editar/mudar status de emergência: todos exceto Operador e Cliente.
 function podeEditarEmerg(){return !isCliente()&&!isOperador();}
 
