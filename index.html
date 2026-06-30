@@ -767,10 +767,13 @@ textarea{resize:vertical;min-height:72px}
 
     <!-- ===== MEDIÇÃO ===== -->
     <div class="panel" id="panel-medicao">
-      <div class="card">
-        <div class="section-title">Medição</div>
-        <div class="empty-state"><i class="ti ti-ruler-measure"></i>Em breve: módulo de Medição.</div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-title">Importar Medição</div>
+        <div style="font-size:.82rem;color:var(--its-muted);margin-bottom:12px">Importe a planilha padrão de medição (.xlsx). O sistema gera um relatório totalizando <strong>Valor Mensal</strong>, <strong>Valor Glosa</strong> e <strong>Total a Receber</strong>.</div>
+        <input type="file" id="medicaoFile" accept=".xls,.xlsx" style="display:none" onchange="importarMedicao(this.files[0])">
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('medicaoFile').click()"><i class="ti ti-upload"></i> Importar planilha</button>
       </div>
+      <div id="medicaoResult"></div>
     </div>
 
     <!-- ===== CONFIGURAÇÕES ===== -->
@@ -2740,17 +2743,16 @@ function calcPrazoEmerg(recebido, enviado){
   return String(Math.floor(diff/60)).padStart(2,'0')+':'+String(diff%60).padStart(2,'0');
 }
 function registrarEmerg(){
-  const data=document.getElementById('eData').value;
-  if(!data){alert('Informe a data.');return}
-  const recebido=document.getElementById('eRecebido').value;
-  if(!recebido){alert('Informe o horário recebido.');return}
   const cidade=document.getElementById('eCidade').value.trim();
   if(!cidade){alert('Informe a cidade.');return}
-  const supervisor='';
   const servico=document.getElementById('eServico').value;
   if(!servico){alert('Selecione o serviço.');return}
-  const now=new Date();
-  const enviado=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const supervisor='';
+  // Data e Horário Recebido = momento em que a emergência é SALVA (não a abertura).
+  const now=new Date();const pad=n=>String(n).padStart(2,'0');
+  const data=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  const recebido=`${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const enviado=recebido;
   const prazo=calcPrazoEmerg(recebido, enviado);
   const [dy,dm,dd]=data.split('-');
   EMERGS.unshift({
@@ -3151,6 +3153,113 @@ function baixarModeloPonto(){
   XLSX.utils.book_append_sheet(wb,ws,'Ponto');
   XLSX.writeFile(wb,'modelo-ponto-its.xlsx');
   showToast('Modelo baixado!');
+}
+
+// ── MEDIÇÃO ───────────────────────────────────────────────────────────
+let MEDICAO = JSON.parse(localStorage.getItem('its_medicao')||'null');
+// Converte "R$ 520.827,95" / "1.234,56" / número → Number (ou null se N/A).
+function parseMoeda(v){
+  if(v==null||v==='') return null;
+  if(typeof v==='number') return v;
+  let s=String(v).trim();
+  if(/n\s*\/?\s*a/i.test(s)) return null;       // "N/A"
+  s=s.replace(/r\$/i,'').replace(/\s/g,'');
+  s=s.replace(/\./g,'').replace(',', '.');       // formato BR
+  const n=parseFloat(s);
+  return isNaN(n)?null:n;
+}
+function fmtMoeda(n){
+  if(n==null) return 'N/A';
+  return 'R$ ' + n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function primeiraMoeda(row){
+  for(const c of row){ const m=parseMoeda(c); if(m!=null) return m; }
+  return null;
+}
+function importarMedicao(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellText:true,cellDates:false,raw:false});
+      const sh=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(sh,{header:1,raw:false,defval:''});
+      const indicadores=[];
+      let valorMensal=null, glosa=null, totalReceber=null, referencia='';
+      rows.forEach((r,i)=>{
+        if(i===0) return; // cabeçalho
+        const c0=String(r[0]||'').trim();
+        const medida=String(r[1]||'').trim();
+        if(!c0 && !medida && !r.some(x=>String(x||'').trim())) return; // linha vazia
+        const ehIndicador=/m[íi]nimo|m[áa]ximo/i.test(medida);
+        if(ehIndicador){
+          indicadores.push({indicador:c0,medida:medida,meta:r[2],entregue:r[3],criterio:r[4],glosa:r[5]});
+          return;
+        }
+        const low=r.map(x=>String(x||'').toLowerCase()).join(' ');
+        if(/total a receber/.test(low)){ totalReceber=primeiraMoeda(r); }
+        else if(/glosa/.test(low)){ glosa=primeiraMoeda(r); }
+        else { const m=primeiraMoeda(r); if(m!=null && valorMensal==null){ valorMensal=m; referencia=c0; } }
+      });
+      if(valorMensal==null && totalReceber==null && !indicadores.length){
+        showToast('Planilha não reconhecida. Verifique o formato.','warn'); return;
+      }
+      MEDICAO={ indicadores, valorMensal, glosa, totalReceber, referencia,
+        arquivo:file.name, importadoEm:agoraISO() };
+      localStorage.setItem('its_medicao', JSON.stringify(MEDICAO));
+      remoteSet('its_medicao', MEDICAO);
+      logEvento('Medição importada', file.name+(referencia?(' — '+referencia):''));
+      renderMedicao();
+      showToast('Medição importada!');
+    }catch(err){ showToast('Falha ao ler a planilha: '+err.message,'warn'); }
+  };
+  reader.readAsArrayBuffer(file);
+  const inp=document.getElementById('medicaoFile'); if(inp) inp.value='';
+}
+function renderMedicao(){
+  const el=document.getElementById('medicaoResult'); if(!el) return;
+  if(!MEDICAO){ el.innerHTML=''; return; }
+  const m=MEDICAO;
+  const linhas=(m.indicadores||[]).map(it=>`<tr>
+      <td style="font-size:.8rem;font-weight:600">${esc(it.indicador)||'—'}</td>
+      <td style="font-size:.8rem;text-align:center">${esc(it.medida)||'—'}</td>
+      <td style="font-size:.8rem;text-align:center">${esc(it.meta)||'—'}</td>
+      <td style="font-size:.8rem;text-align:center">${esc(it.entregue)||'—'}</td>
+      <td style="font-size:.8rem;text-align:center">${esc(it.criterio)||'—'}</td>
+      <td style="font-size:.8rem;text-align:center">${esc(it.glosa)||'—'}</td>
+    </tr>`).join('');
+  el.innerHTML=`
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div style="font-size:1rem;font-weight:700;color:var(--its-sidebar)">Relatório de Medição${m.referencia?` — ${esc(m.referencia)}`:''}</div>
+          <div style="font-size:.76rem;color:var(--its-muted)">Arquivo: ${esc(m.arquivo||'—')} · Importado em ${esc(m.importadoEm||'')}</div>
+        </div>
+        <div class="logo-icon" style="width:40px;height:40px;font-size:13px">iTS</div>
+      </div>
+      <div style="border:1px solid var(--its-border);border-radius:var(--radius-md);overflow:hidden;margin-bottom:18px">
+        <div style="display:flex;justify-content:space-between;padding:14px 18px;background:var(--its-sidebar);color:#fff">
+          <span style="font-weight:700">Valor Mensal</span>
+          <span style="font-weight:800;font-variant-numeric:tabular-nums">${fmtMoeda(m.valorMensal)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:14px 18px;background:#fff;border-bottom:1px solid var(--its-border)">
+          <span style="font-weight:700;color:var(--its-text)">Valor Glosa</span>
+          <span style="font-weight:800;font-variant-numeric:tabular-nums;color:${(m.glosa&&m.glosa>0)?'var(--its-danger)':'var(--its-text)'}">${fmtMoeda(m.glosa)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:16px 18px;background:#1f2937;color:#fff">
+          <span style="font-weight:800;font-size:1.05rem">Total a Receber</span>
+          <span style="font-weight:900;font-size:1.05rem;font-variant-numeric:tabular-nums">${fmtMoeda(m.totalReceber)}</span>
+        </div>
+      </div>
+      ${linhas?`<div class="section-title" style="font-size:.78rem">Indicadores</div>
+      <table class="task-table">
+        <thead><tr><th>Indicador</th><th style="text-align:center">Medida</th><th style="text-align:center">Meta</th><th style="text-align:center">Entregue</th><th style="text-align:center">Critério</th><th style="text-align:center">Glosa</th></tr></thead>
+        <tbody>${linhas}</tbody>
+      </table>`:''}
+      <div style="display:flex;justify-content:flex-end;margin-top:14px">
+        <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="ti ti-printer"></i> Imprimir / PDF</button>
+      </div>
+    </div>`;
 }
 
 function handlePontoDrop(e){
@@ -3630,6 +3739,7 @@ function setNav(el,tab){
     renderLogs();
   } else if(tab==='medicao'){
     btn.style.display='none';
+    renderMedicao();
   } else {
     btn.innerHTML='<i class="ti ti-plus"></i> Nova Solicitação';
     btn.onclick=openNewTask;
@@ -4774,7 +4884,7 @@ async function remoteGet(chave){
 
 // Puxa os dados do servidor; reatribui as variáveis em memória e re-renderiza.
 async function hydrateFromAPI(){
-  const [ponto, cfg, users, adminHash, tasks, chamados, emergs, avisos, logs, notifs] = await Promise.all([
+  const [ponto, cfg, users, adminHash, tasks, chamados, emergs, avisos, logs, notifs, medicao] = await Promise.all([
     remoteGet('its_ponto_db'),
     remoteGet('its_cfg'),
     remoteGet('its_users'),
@@ -4785,6 +4895,7 @@ async function hydrateFromAPI(){
     remoteGet('its_avisos'),
     remoteGet('its_logs'),
     remoteGet('its_notifs'),
+    remoteGet('its_medicao'),
   ]);
   if(ponto && typeof ponto==='object'){ PONTO_DB = ponto; localStorage.setItem('its_ponto_db', JSON.stringify(ponto)); }
   if(cfg && typeof cfg==='object'){ CFG = cfg; localStorage.setItem('its_cfg', JSON.stringify(cfg)); }
@@ -4800,6 +4911,7 @@ async function hydrateFromAPI(){
   if(Array.isArray(avisos)){ AVISOS = avisos; nextAvisoId = Math.max(0,...AVISOS.map(a=>a.id))+1; localStorage.setItem('its_avisos', JSON.stringify(avisos)); }
   if(Array.isArray(logs)){ LOGS = logs; localStorage.setItem('its_logs', JSON.stringify(logs)); try{renderLogs();}catch(_){} }
   if(Array.isArray(notifs)){ NOTIFS = notifs; _nextNotifId = NOTIFS.length?Math.max(0,...NOTIFS.map(n=>n.id||0))+1:1; localStorage.setItem('its_notifs', JSON.stringify(notifs)); try{renderNotifBadge(); notifsDoUsuario().forEach(n=>_notifVistos.add(n.id));}catch(_){} }
+  if(medicao && typeof medicao==='object'){ MEDICAO = medicao; localStorage.setItem('its_medicao', JSON.stringify(medicao)); try{ if(document.getElementById('panel-medicao').classList.contains('active')) renderMedicao(); }catch(_){} }
 
   // Re-renderiza com os dados do servidor.
   try{ if(typeof renderUsers==='function') renderUsers(); }catch(_){}
