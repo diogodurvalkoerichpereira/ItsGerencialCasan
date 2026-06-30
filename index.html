@@ -986,7 +986,7 @@ textarea{resize:vertical;min-height:72px}
             <label>Situação</label>
             <select id="aFilterSit" onchange="filterAvisos()">
               <option value="">Todas</option>
-              <option>Concluído</option><option>Prorrogado</option><option>Cancelado</option><option>Em aberto</option>
+              <option>Concluído</option><option>Prorrogado</option><option>Cancelado pela ITS</option><option>Cancelado pela CASAN</option><option>Em aberto</option>
             </select>
           </div>
         </div>
@@ -1061,7 +1061,7 @@ textarea{resize:vertical;min-height:72px}
               <label>Situação</label>
               <select id="aSituacao">
                 <option value="">Em aberto</option>
-                <option>Concluído</option><option>Prorrogado</option><option>Cancelado</option>
+                <option>Concluído</option><option>Prorrogado</option><option>Cancelado pela ITS</option><option>Cancelado pela CASAN</option>
               </select>
             </div>
             <div class="form-group">
@@ -3151,7 +3151,7 @@ function situacaoBadge(s){
   s=normSit(s);
   if(s==='Concluído') return `<span class="badge badge-green"><span class="badge-dot"></span>Concluído</span>`;
   if(s==='Prorrogado') return `<span class="badge badge-orange"><span class="badge-dot"></span>Prorrogado</span>`;
-  if(s==='Cancelado') return `<span class="badge badge-gray"><span class="badge-dot"></span>Cancelado</span>`;
+  if(s&&s.indexOf('Cancelado')===0) return `<span class="badge badge-red"><span class="badge-dot"></span>${esc(s)}</span>`;
   return `<span class="badge badge-blue"><span class="badge-dot"></span>Em aberto</span>`;
 }
 
@@ -3266,7 +3266,8 @@ function editarSituacao(id){
         <option value="" ${!a.situacao?'selected':''}>Em aberto</option>
         <option ${normSit(a.situacao)==='Concluído'?'selected':''}>Concluído</option>
         <option ${a.situacao==='Prorrogado'?'selected':''}>Prorrogado</option>
-        <option ${a.situacao==='Cancelado'?'selected':''}>Cancelado</option>
+        <option ${a.situacao==='Cancelado pela ITS'?'selected':''}>Cancelado pela ITS</option>
+        <option ${a.situacao==='Cancelado pela CASAN'?'selected':''}>Cancelado pela CASAN</option>
       </select>
     </div>
     <div class="form-group">
