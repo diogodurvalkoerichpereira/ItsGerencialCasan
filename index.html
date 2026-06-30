@@ -2696,9 +2696,11 @@ function verEmerg(id){
 function editarEmerg(id){
   if(!podeEditarEmerg()){ showToast('Apenas Supervisor ou superior pode editar emergências.'); return; }
   const e=EMERGS.find(x=>x.id===id);if(!e)return;
-  const statusOpts=['Em Atendimento','Aguardando','Resolvido','Cancelado'];
-  const servOpts=['Água','Esgoto'];
-  const canalOpts=['WhatsApp','E-mail','Telefone','Sistema'];
+  // Ao editar só faz sentido marcar como Resolvido (a emergência foi enviada).
+  const statusOpts=['Resolvido'];
+  const servOpts=['Água'];
+  // Apenas os canais efetivamente usados.
+  const canalOpts=['WhatsApp','Telefone'];
   const sel=(arr,cur)=>arr.map(v=>`<option${cur===v?' selected':''}>${v}</option>`).join('');
   document.getElementById('modalTitle').textContent='Editar Emergência — '+e.cidade;
   document.getElementById('modalContent').innerHTML=`
@@ -2707,14 +2709,14 @@ function editarEmerg(id){
       <div class="form-group"><label>Serviço</label><select id="edEmServico">${sel(servOpts,e.servico)}</select></div>
     </div>
     <div class="form-row-3">
-      <div class="form-group"><label>Recebido</label><input type="time" id="edEmRecebido" value="${esc(e.recebido||'')}"></div>
+      <div class="form-group"><label>Recebido <span style="color:var(--its-muted);font-weight:400">(bloqueado)</span></label><input type="time" id="edEmRecebido" value="${esc(e.recebido||'')}" disabled style="background:#f1f5f9;cursor:not-allowed"></div>
       <div class="form-group"><label>Enviado</label><input type="time" id="edEmEnviado" value="${esc(e.enviado||'')}"></div>
       <div class="form-group"><label>Canal</label><select id="edEmCanal"><option value="">Selecione...</option>${sel(canalOpts,e.canal)}</select></div>
     </div>
-    <div class="form-group"><label>Protocolo</label><input type="text" id="edEmProtocolo" value="${esc(e.protocolo||'')}"></div>
+    <div class="form-group"><label>Protocolo <span style="color:var(--its-muted);font-weight:400">(bloqueado)</span></label><input type="text" id="edEmProtocolo" value="${esc(e.protocolo||'')}" disabled style="background:#f1f5f9;cursor:not-allowed"></div>
     <div class="form-group">
       <label>Status *</label>
-      <select id="edEmStatus" style="font-weight:600">${sel(statusOpts,e.status)}</select>
+      <select id="edEmStatus" style="font-weight:600">${sel(statusOpts,'Resolvido')}</select>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
@@ -2725,11 +2727,10 @@ function editarEmerg(id){
     const prev=e.status;
     e.cidade=document.getElementById('edEmCidade').value.trim()||e.cidade;
     e.servico=document.getElementById('edEmServico').value;
-    e.recebido=document.getElementById('edEmRecebido').value||e.recebido;
+    // Recebido e Protocolo são bloqueados na edição: mantêm o valor do cadastro.
     e.enviado=document.getElementById('edEmEnviado').value||e.enviado;
     e.prazo=calcPrazoEmerg(e.recebido, e.enviado);
     e.canal=document.getElementById('edEmCanal').value.trim();
-    e.protocolo=document.getElementById('edEmProtocolo').value.trim();
     e.status=document.getElementById('edEmStatus').value;
     saveEmergs(); closeModal(); filterEmerg();
     notifyAlteracao('Emergência', e.cidade, [{label:'Status',valor:e.status},{label:'Serviço',valor:e.servico},{label:'Recebido',valor:e.recebido},{label:'Enviado',valor:e.enviado}], {semWhatsApp:e.status==='Resolvido'});
