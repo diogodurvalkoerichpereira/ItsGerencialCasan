@@ -3396,37 +3396,53 @@ function editarSituacao(id){
       <label>Situação atual</label>
       <div style="margin-bottom:12px">${situacaoBadge(a.situacao)}</div>
       <label>Nova situação</label>
-      <select id="mSituacao">
-        <option value="" ${!a.situacao?'selected':''}>Em aberto</option>
-        <option ${normSit(a.situacao)==='Concluído'?'selected':''}>Concluído</option>
-        <option ${a.situacao==='Prorrogado'?'selected':''}>Prorrogado</option>
-        <option ${a.situacao==='Cancelado pela ITS'?'selected':''}>Cancelado pela ITS</option>
-        <option ${a.situacao==='Cancelado pela CASAN'?'selected':''}>Cancelado pela CASAN</option>
+      <select id="mSituacao" onchange="onSitChange()">
+        <option value="Concluído" ${normSit(a.situacao)==='Concluído'?'selected':''}>Concluído</option>
+        <option value="Cancelado" ${(a.situacao==='Cancelado pela ITS'||a.situacao==='Cancelado pela CASAN')?'selected':''}>Cancelado</option>
       </select>
     </div>
-    <div class="form-group">
-      <label>Registro (Indicador 13)</label>
-      <select id="mRegistroOk">
-        <option value="ok" ${a.registroOk!==false?'selected':''}>Registrado corretamente</option>
-        <option value="nok" ${a.registroOk===false?'selected':''}>Informações incorretas</option>
+    <div class="form-group" id="mCancelBox" style="display:none">
+      <label>Cancelado por</label>
+      <select id="mCancelPor">
+        <option value="ITS" ${a.situacao==='Cancelado pela ITS'?'selected':''}>por iTS</option>
+        <option value="CASAN" ${a.situacao==='Cancelado pela CASAN'?'selected':''}>por CASAN</option>
       </select>
+      <div style="font-size:.75rem;color:var(--its-muted);margin-top:6px;line-height:1.5">
+        <strong>por iTS</strong>: considerado <strong style="color:var(--its-danger)">registrado incorretamente</strong> (negativo no SLA / Indicador 13).<br>
+        <strong>por CASAN</strong>: considerado <strong style="color:var(--its-success)">registrado corretamente</strong> para o SLA.
+      </div>
     </div>
     <div class="form-group">
       <label>Observações</label>
-      <input type="text" id="mObs" value="${esc(a.obs||'')}" placeholder="Ex.: Cancelado por ITS / Cancelado por CASAN">
+      <input type="text" id="mObs" value="${esc(a.obs||'')}" placeholder="Detalhes do cancelamento / conclusão...">
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-secondary" onclick="salvarSituacao(${id})"><i class="ti ti-device-floppy"></i> Salvar</button>
     </div>`;
   document.getElementById('modalOverlay').classList.add('open');
+  onSitChange();
+}
+// Mostra/oculta o sub-campo "Cancelado por" conforme a situação escolhida.
+function onSitChange(){
+  const sit=document.getElementById('mSituacao');
+  const box=document.getElementById('mCancelBox');
+  if(sit&&box) box.style.display=(sit.value==='Cancelado')?'block':'none';
 }
 
 function salvarSituacao(id){
   const a=AVISOS.find(x=>x.id===id);if(!a)return;
-  a.situacao=document.getElementById('mSituacao').value;
+  const sit=document.getElementById('mSituacao').value;
+  if(sit==='Cancelado'){
+    const por=document.getElementById('mCancelPor').value;
+    a.situacao = (por==='ITS') ? 'Cancelado pela ITS' : 'Cancelado pela CASAN';
+    // por iTS = registro incorreto (negativo SLA); por CASAN = registro correto.
+    a.registroOk = (por!=='ITS');
+  } else {
+    a.situacao='Concluído';
+    a.registroOk=true;
+  }
   a.obs=document.getElementById('mObs').value.trim();
-  const mr=document.getElementById('mRegistroOk'); if(mr) a.registroOk=(mr.value==='ok');
   saveAvisos();
   notifyAlteracao('Aviso', a.cidade, [{label:'Situação',valor:a.situacao||'Em aberto'},{label:'Bairro',valor:a.bairro},{label:'Serviço',valor:a.servico},{label:'Observação',valor:a.obs||'—'}]);
   logEvento('Situação do aviso', a.cidade+' → '+(a.situacao||'Em aberto'));
