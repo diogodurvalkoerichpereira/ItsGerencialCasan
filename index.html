@@ -3645,11 +3645,18 @@ function addRecipient(){
   document.getElementById('newRecipientEmail').value='';
   document.getElementById('newRecipientName').value='';
   document.getElementById('newRecipientPhone').value='';
+  persistRecipients();
   renderRecipients();
+}
+// Persiste os destinatários imediatamente (sem depender do botão Salvar).
+function persistRecipients(){
+  localStorage.setItem('its_cfg', JSON.stringify(CFG));
+  remoteSet('its_cfg', CFG);
 }
 
 function removeRecipient(i){
   CFG.recipients.splice(i,1);
+  persistRecipients();
   renderRecipients();
 }
 
