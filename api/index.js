@@ -68,6 +68,13 @@ async function initSchema() {
     );
     console.log('Usuario admin inicial criado.');
   }
+
+  // 2FA desativado: remove qualquer configuracao de TOTP existente.
+  const r2fa = await pool.query(
+    "UPDATE casan_usuarios SET totp_enabled = false, totp_secret = NULL WHERE totp_enabled = true OR totp_secret IS NOT NULL"
+  );
+  if (r2fa.rowCount) console.log(`2FA removido de ${r2fa.rowCount} usuario(s).`);
+
   console.log('Schema pronto.');
 }
 
@@ -178,13 +185,7 @@ app.post('/auth/login', asyncH(async (req, res) => {
   }
   limparTentativas(chave);
 
-  // Se tem 2FA ativo, exige o segundo passo.
-  if (u.totp_enabled) {
-    const loginToken = novoToken();
-    pending2fa.set(loginToken, { id: u.id, exp: Date.now() + 5 * 60 * 1000 });
-    return res.json({ need2fa: true, login_token: loginToken });
-  }
-
+  // Autenticação de dois passos (2FA) desativada — login direto por senha.
   const token = await criarSessao(u.id);
   res.json({ token, user: pubUser(u) });
 }));
@@ -219,8 +220,14 @@ app.get('/auth/me', requireAuth, asyncH(async (req, res) => {
 // ---------------------------------------------------------------------------
 // 2FA — cadastro do Google Authenticator
 // ---------------------------------------------------------------------------
-// Gera segredo e QR Code para o usuario escanear no app.
-app.post('/auth/2fa/setup', requireAuth, asyncH(async (req, res) => {
+// 2FA desativado no sistema — endpoints de cadastro retornam indisponivel.
+app.post('/auth/2fa/setup', requireAuth, (_req, res) =>
+  res.status(410).json({ error: 'Autenticacao de dois passos desativada.' }));
+app.post('/auth/2fa/enable', requireAuth, (_req, res) =>
+  res.status(410).json({ error: 'Autenticacao de dois passos desativada.' }));
+
+// (mantido apenas como referencia; nao utilizado)
+app.post('/auth/2fa/setup-legacy', requireAuth, asyncH(async (req, res) => {
   const secret = authenticator.generateSecret();
   await pool.query(
     'UPDATE casan_usuarios SET totp_secret = $2, updated_at = now() WHERE id = $1',
@@ -231,8 +238,8 @@ app.post('/auth/2fa/setup', requireAuth, asyncH(async (req, res) => {
   res.json({ qr, secret, otpauth });
 }));
 
-// Confirma o primeiro codigo e ativa o 2FA.
-app.post('/auth/2fa/enable', requireAuth, asyncH(async (req, res) => {
+// Confirma o primeiro codigo e ativa o 2FA. (legado — nao utilizado)
+app.post('/auth/2fa/enable-legacy', requireAuth, asyncH(async (req, res) => {
   const { code } = req.body || {};
   const { rows } = await pool.query('SELECT totp_secret FROM casan_usuarios WHERE id = $1', [req.user.id]);
   const secret = rows[0] && rows[0].totp_secret;
