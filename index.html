@@ -981,11 +981,6 @@ textarea{resize:vertical;min-height:72px}
             <div class="stat-label">Concluídos</div>
           </div>
           <div class="stat-card">
-            <div class="stat-icon" style="background:#fff3ee;color:var(--its-orange)"><i class="ti ti-clock-pause"></i></div>
-            <div class="stat-value" id="a-prorrogado">0</div>
-            <div class="stat-label">Prorrogados</div>
-          </div>
-          <div class="stat-card">
             <div class="stat-icon" style="background:#eef4fb;color:var(--its-info)"><i class="ti ti-loader"></i></div>
             <div class="stat-value" id="a-aberto">0</div>
             <div class="stat-label">Em Aberto</div>
@@ -1008,7 +1003,7 @@ textarea{resize:vertical;min-height:72px}
             <label>Situação</label>
             <select id="aFilterSit" onchange="filterAvisos()">
               <option value="">Todas</option>
-              <option>Concluído</option><option>Prorrogado</option><option>Cancelado pela ITS</option><option>Cancelado pela CASAN</option><option>Em aberto</option>
+              <option>Concluído</option><option>Cancelado pela ITS</option><option>Cancelado pela CASAN</option><option>Em aberto</option>
             </select>
           </div>
         </div>
@@ -1086,7 +1081,7 @@ textarea{resize:vertical;min-height:72px}
               <label>Situação</label>
               <select id="aSituacao">
                 <option value="">Em aberto</option>
-                <option>Concluído</option><option>Prorrogado</option><option>Cancelado pela ITS</option><option>Cancelado pela CASAN</option>
+                <option>Concluído</option><option>Cancelado pela ITS</option><option>Cancelado pela CASAN</option>
               </select>
             </div>
             <div class="form-group">
@@ -3520,7 +3515,6 @@ function filterAvisos(){
 function updateAvisosStats(){
   document.getElementById('a-total').textContent=AVISOS.length;
   document.getElementById('a-encerrado').textContent=AVISOS.filter(a=>normSit(a.situacao)==='Concluído').length;
-  document.getElementById('a-prorrogado').textContent=AVISOS.filter(a=>a.situacao==='Prorrogado').length;
   document.getElementById('a-aberto').textContent=AVISOS.filter(a=>!a.situacao).length;
 }
 
