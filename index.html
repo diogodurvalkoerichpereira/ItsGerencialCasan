@@ -1174,7 +1174,6 @@ function renderTasks(list){
           ${(isCliente()||t.arquivada)?'':`
           ${(podeEncaminhar()&&t.status!=='Concluído')?`<button class="btn btn-ghost btn-sm" style="color:var(--its-sidebar)" onclick="encaminharTarefa(${t.id})" title="Encaminhar para supervisão/monitoria"><i class="ti ti-send"></i></button>`:''}
           ${(podeResponderCliente()&&t.status!=='Concluído')?`<button class="btn btn-ghost btn-sm" style="color:var(--its-success)" onclick="responderTarefa(${t.id})" title="Responder e concluir"><i class="ti ti-message-reply"></i></button>`:''}
-          <button class="btn btn-ghost btn-sm" onclick="editTask(${t.id})" title="Editar"><i class="ti ti-edit"></i></button>
           <button class="btn btn-ghost btn-sm" onclick="cycleStatus(${t.id})" title="Próximo status"><i class="ti ti-refresh"></i></button>
           <button class="btn btn-ghost btn-sm" style="color:var(--its-danger)" onclick="deleteTask(${t.id})" title="Excluir"><i class="ti ti-trash"></i></button>`}
         </div>
