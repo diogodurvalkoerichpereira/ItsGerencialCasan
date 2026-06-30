@@ -1785,10 +1785,12 @@ function gerarRelatorioPonto(){
     </div>`;
   mostrarRelatorio();
 }
+// Aviso é "correto" se não foi marcado como incorreto E não foi Cancelado pela ITS.
+function avisoCorreto(a){ return a.registroOk!==false && a.situacao!=='Cancelado pela ITS'; }
 function gerarRelatorioInd13(){
   if(!AVISOS.length){showToast('Nenhum aviso registrado.','warn');return;}
   const total=AVISOS.length;
-  const corretos=AVISOS.filter(a=>a.registroOk!==false).length; // default: correto
+  const corretos=AVISOS.filter(avisoCorreto).length;
   const incorretos=total-corretos;
   const pct=((corretos/total)*100).toFixed(2);
   const cor=parseFloat(pct)>=100?'var(--its-success)':parseFloat(pct)>=90?'var(--its-warning)':'var(--its-danger)';
@@ -1843,7 +1845,7 @@ function gerarRelatorioInd13(){
           <td style="font-size:.8rem">${esc(a.servico)||'—'}</td>
           <td style="font-size:.8rem">${esc(a.canal)||'—'}</td>
           <td>${situacaoBadge(a.situacao)}</td>
-          <td style="text-align:center;font-weight:700;color:${a.registroOk!==false?'var(--its-success)':'var(--its-danger)'}">${a.registroOk!==false?'✓ Correto':'✗ Incorreto'}</td>
+          <td style="text-align:center;font-weight:700;color:${avisoCorreto(a)?'var(--its-success)':'var(--its-danger)'}">${avisoCorreto(a)?'✓ Correto':(a.situacao==='Cancelado pela ITS'?'✗ Cancelado ITS':'✗ Incorreto')}</td>
         </tr>`).join('')}</tbody>
       </table>
     </div>`;
@@ -3266,7 +3268,10 @@ function updateAvisosStats(){
   document.getElementById('a-aberto').textContent=AVISOS.filter(a=>!a.situacao).length;
 }
 
+// Quadro de Avisos: somente Supervisor (e gestão) cadastra.
+function podeCadastrarAviso(){ const s=getSession(); return !!(s&&(isAdminGestao()||s.cargo==='Supervisor')); }
 function registrarAviso(){
+  if(!podeCadastrarAviso()){ showToast('Apenas o Supervisor pode cadastrar avisos.'); return; }
   const data=document.getElementById('aData').value;
   if(!data){alert('Informe a data.');return}
   const recebido=document.getElementById('aRecebido').value;
