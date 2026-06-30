@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>iTS — Gestão de Tarefas</title>
+<title>iTS — Solicitações / Questionamentos</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
@@ -184,7 +184,7 @@ textarea{resize:vertical;min-height:72px}
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-title" id="modalTitle">Nova Tarefa</span>
+      <span class="modal-title" id="modalTitle">Nova Solicitação / Questionamento</span>
       <button class="close-btn" onclick="closeModal()"><i class="ti ti-x"></i></button>
     </div>
     <div id="modalContent"></div>
@@ -204,7 +204,7 @@ textarea{resize:vertical;min-height:72px}
   <div class="nav-item" onclick="setNav(this,'dashboard')"><i class="ti ti-chart-pie"></i> Dashboard</div>
   <div class="nav-item" onclick="setNav(this,'relatorio')"><i class="ti ti-file-analytics"></i> Relatórios</div>
   <div class="nav-section">Operação</div>
-  <div class="nav-item active" onclick="setNav(this,'tarefas')"><i class="ti ti-checklist"></i> Tarefas</div>
+  <div class="nav-item active" onclick="setNav(this,'tarefas')"><i class="ti ti-checklist"></i> Solicitações / Questionamentos</div>
   <div class="nav-item" onclick="setNav(this,'chamados')"><i class="ti ti-headset"></i> Chamados</div>
   <div class="nav-item" onclick="setNav(this,'emergencias')"><i class="ti ti-alert-octagon"></i> Emergências</div>
   <div class="nav-item" onclick="setNav(this,'avisos')"><i class="ti ti-speakerphone"></i> Quadro de Avisos</div>
@@ -222,9 +222,9 @@ textarea{resize:vertical;min-height:72px}
 <!-- MAIN -->
 <div class="main">
   <header class="topbar">
-    <div class="topbar-title" id="pageTitle">Gestão de Tarefas</div>
+    <div class="topbar-title" id="pageTitle">Solicitações / Questionamentos</div>
     <div class="topbar-right">
-      <button class="btn btn-primary btn-sm" id="topbarBtn" onclick="openNewTask()"><i class="ti ti-plus"></i> Nova Tarefa</button>
+      <button class="btn btn-primary btn-sm" id="topbarBtn" onclick="openNewTask()"><i class="ti ti-plus"></i> Nova Solicitação</button>
       <div id="notifBell" style="position:relative;cursor:pointer;padding:6px" onclick="toggleNotifs(event)" title="Notificações">
         <i class="ti ti-bell" style="font-size:20px;color:var(--its-sidebar)"></i>
         <span id="notifBadge" style="display:none;position:absolute;top:0;right:0;background:var(--its-orange);color:#fff;font-size:.6rem;font-weight:800;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px">0</span>
@@ -261,7 +261,7 @@ textarea{resize:vertical;min-height:72px}
     <div class="panel active" id="panel-tarefas">
       <div class="filter-row">
         <div class="form-group">
-          <label>Buscar tarefa</label>
+          <label>Buscar solicitação / questionamento</label>
           <input type="text" id="searchInput" name="busca-tarefa" placeholder="Título, área, responsável..." oninput="applyFilters()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" readonly onfocus="this.removeAttribute('readonly')">
         </div>
         <div class="form-group">
@@ -304,7 +304,7 @@ textarea{resize:vertical;min-height:72px}
         </table>
       </div>
       <div id="emptyMsg" class="empty-state" style="display:none">
-        <i class="ti ti-inbox"></i>Nenhuma tarefa encontrada
+        <i class="ti ti-inbox"></i>Nenhuma solicitação / questionamento encontrada
       </div>
     </div>
 
@@ -393,7 +393,7 @@ textarea{resize:vertical;min-height:72px}
             <option>Por responsável</option><option>Por área</option>
             <option value="ponto-ind06">Ponto – Indicador 06</option>
             <option value="emerg-ind09">Emergências – Indicador 09</option>
-            <option value="tarefas-ind11">Tarefas – Indicador 11</option>
+            <option value="tarefas-ind11">Solicitações / Questionamentos – Indicador 11</option>
             <option value="chamados-ind12">Chamados – Indicador 12</option>
             <option value="avisos-ind13">Quadro de Avisos – Indicador 13</option>
           </select>
@@ -433,7 +433,7 @@ textarea{resize:vertical;min-height:72px}
         <div class="stat-card">
           <div class="stat-icon" style="background:#eef4fb;color:var(--its-sidebar)"><i class="ti ti-checklist"></i></div>
           <div class="stat-value" id="d-total">0</div>
-          <div class="stat-label">Total de Tarefas</div>
+          <div class="stat-label">Total de Solicitações / Questionamentos</div>
           <div class="stat-delta-pos">↑ Atualizado agora</div>
         </div>
         <div class="stat-card">
@@ -457,11 +457,11 @@ textarea{resize:vertical;min-height:72px}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div class="card">
-          <div class="section-title" style="font-size:.78rem">Tarefas por Status</div>
+          <div class="section-title" style="font-size:.78rem">Solicitações / Questionamentos por Status</div>
           <div class="chart-bar-wrap" id="chartStatus"></div>
         </div>
         <div class="card">
-          <div class="section-title" style="font-size:.78rem">Tarefas por Área</div>
+          <div class="section-title" style="font-size:.78rem">Solicitações / Questionamentos por Área</div>
           <div class="chart-bar-wrap" id="chartArea"></div>
         </div>
       </div>
@@ -1210,7 +1210,7 @@ function applyFilters(){
 
 // ── MODAL / FORM ──────────────────────────────────────────────────────
 function openNewTask(){
-  document.getElementById('modalTitle').textContent='Nova Tarefa';
+  document.getElementById('modalTitle').textContent='Nova Solicitação / Questionamento';
   document.getElementById('modalContent').innerHTML=buildForm();
   document.getElementById('modalOverlay').classList.add('open');
   updatePrazoPreview(null);
@@ -1218,7 +1218,7 @@ function openNewTask(){
 }
 function editTask(id){
   const t=TASKS.find(x=>x.id===id);if(!t)return;
-  document.getElementById('modalTitle').textContent='Editar Tarefa';
+  document.getElementById('modalTitle').textContent='Editar Solicitação / Questionamento';
   document.getElementById('modalContent').innerHTML=buildForm(t);
   document.getElementById('modalOverlay').classList.add('open');
   updatePrazoPreview(t.criado||null);
@@ -1236,7 +1236,7 @@ function buildForm(t={}){
   const statuses=['Em andamento','Aguardando','Concluído','Cancelado pela iTS','Cancelado pela CASAN'];
   const sel=(arr,cur)=>arr.map(v=>`<option${cur===v?' selected':''}>${v}</option>`).join('');
   return `
-    <div class="form-group"><label>Título *</label><input type="text" id="fTitulo" value="${esc(t.titulo||'')}" placeholder="Descreva a tarefa..."></div>
+    <div class="form-group"><label>Título *</label><input type="text" id="fTitulo" value="${esc(t.titulo||'')}" placeholder="Descreva a solicitação / questionamento..."></div>
     <div class="form-row">
       <div class="form-group"><label>Área *</label><select id="fArea">${sel(areas,t.area)}</select></div>
     </div>
@@ -1282,7 +1282,7 @@ function saveTask(id){
         notifyWhatsApp(`📎 *Anexos adicionados na tarefa* — iTS Gerencial CASAN\n\n*${titulo}*\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})\n${novosAnexos.map(x=>x.name).join(', ')}`);
       }
       if(newStatus==='Concluído'&&prevStatus!=='Concluído'&&TASKS[i].criadoPorCliente) sendNotificacaoConclusao(TASKS[i]);
-      else notifyAlteracao('Tarefa', titulo, [{label:'Status',valor:newStatus},{label:'Área',valor:TASKS[i].area}]);
+      else notifyAlteracao('Solicitação / Questionamento',titulo, [{label:'Status',valor:newStatus},{label:'Área',valor:TASKS[i].area}]);
     }
   }else{
     const d=new Date();const p=n=>String(n).padStart(2,'0');
@@ -1299,8 +1299,8 @@ function saveTask(id){
   }
   saveTasks();
   closeModal();applyFilters();updateDashboard();
-  logEvento(id?'Tarefa editada':'Tarefa criada', titulo);
-  showToast(id?'Tarefa atualizada com sucesso!':'Tarefa criada com sucesso!');
+  logEvento(id?'Solicitação / Questionamento editada':'Solicitação / Questionamento criada', titulo);
+  showToast(id?'Solicitação / Questionamento atualizada com sucesso!':'Solicitação / Questionamento criada com sucesso!');
 }
 function cycleStatus(id){
   const t=TASKS.find(x=>x.id===id);if(!t)return;
@@ -1308,7 +1308,7 @@ function cycleStatus(id){
   const prev=t.status;
   t.status=opts[(opts.indexOf(t.status)+1)%opts.length];
   if(t.status==='Concluído'&&prev!=='Concluído'&&t.criadoPorCliente) sendNotificacaoConclusao(t);
-  else notifyAlteracao('Tarefa', t.titulo, [{label:'Status',valor:t.status},{label:'Área',valor:t.area}]);
+  else notifyAlteracao('Solicitação / Questionamento',t.titulo, [{label:'Status',valor:t.status},{label:'Área',valor:t.area}]);
   saveTasks();
   logEvento('Status da tarefa', t.titulo+' → '+t.status);
   applyFilters();updateDashboard();
@@ -1318,22 +1318,22 @@ function deleteTask(id){
   if(!confirm('Excluir esta tarefa?'))return;
   const i=TASKS.findIndex(x=>x.id===id);if(i>-1)TASKS.splice(i,1);
   saveTasks();
-  logEvento('Tarefa excluída', (TASKS.find(x=>x.id===id)||{}).titulo||('#'+id));
-  applyFilters();updateDashboard();showToast('Tarefa excluída.');
+  logEvento('Solicitação / Questionamento excluída', (TASKS.find(x=>x.id===id)||{}).titulo||('#'+id));
+  applyFilters();updateDashboard();showToast('Solicitação / Questionamento excluída.');
 }
 // Responder + concluir uma tarefa (com texto e anexos).
 function responderTarefa(id){
   const t=TASKS.find(x=>x.id===id);if(!t)return;
-  abrirResposta('Responder Tarefa — '+t.titulo, ({texto,anexos,em})=>{
+  abrirResposta('Responder Solicitação / Questionamento — '+t.titulo, ({texto,anexos,em})=>{
     t.resposta=texto; t.anexos=anexos; t.resolvidoEm=em; t.status='Concluído';
     t.historico=t.historico||[]; t.historico.push(novaInteracao('resposta',texto,anexos));
-    notificarInterno({icone:'ti-message-check',titulo:'Tarefa respondida/concluída',texto:t.titulo,audiencia:'cliente',paraNome:t.criadoPor||null,ref:{tipo:'tarefa',id:t.id}});
+    notificarInterno({icone:'ti-message-check',titulo:'Solicitação / Questionamento respondida/concluída',texto:t.titulo,audiencia:'cliente',paraNome:t.criadoPor||null,ref:{tipo:'tarefa',id:t.id}});
     saveTasks(); closeModal(); applyFilters(); updateDashboard();
-    notifyWhatsApp(`✅ *Tarefa Concluída* — iTS Gerencial CASAN\n\n*${t.titulo}*\nResposta: ${texto}\nConcluída em: ${em}${anexos.length?`\n📎 ${anexos.length} anexo(s)`:''}`);
-    notifyEmail(`✅ Tarefa Concluída: ${t.titulo}`, t.titulo, 'Tarefa concluída', 'Notificação de Tarefa',
+    notifyWhatsApp(`✅ *Solicitação / Questionamento Concluída* — iTS Gerencial CASAN\n\n*${t.titulo}*\nResposta: ${texto}\nConcluída em: ${em}${anexos.length?`\n📎 ${anexos.length} anexo(s)`:''}`);
+    notifyEmail(`✅ Solicitação / Questionamento Concluída: ${t.titulo}`, t.titulo, 'Solicitação / Questionamento concluída', 'Notificação de Solicitação / Questionamento',
       [{label:'Resposta',valor:texto},{label:'Área',valor:t.area},{label:'Concluída em',valor:em},{label:'Anexos',valor:anexos.length?anexos.map(a=>a.name).join(', '):'—'}]);
-    logEvento('Tarefa concluída', t.titulo);
-    showToast('Tarefa respondida e concluída!');
+    logEvento('Solicitação / Questionamento concluída', t.titulo);
+    showToast('Solicitação / Questionamento respondida e concluída!');
   });
 }
 
@@ -1342,7 +1342,7 @@ function encaminharTarefa(id){
   const t=TASKS.find(x=>x.id===id);if(!t)return;
   if(!podeEncaminhar()){ showToast('Apenas Gerência e Supervisão podem encaminhar.','warn'); return; }
   const destinos=USERS.filter(u=>u.status==='Ativo' && (u.cargo==='Supervisor'||u.cargo==='Monitor'));
-  document.getElementById('modalTitle').textContent='Encaminhar Tarefa — '+t.titulo;
+  document.getElementById('modalTitle').textContent='Encaminhar Solicitação / Questionamento — '+t.titulo;
   document.getElementById('modalContent').innerHTML=`
     <div style="font-size:.82rem;color:var(--its-muted);margin-bottom:12px">Encaminhe para a <strong>supervisão</strong> ou <strong>monitoria</strong> tratar. A resposta ao cliente continua sendo dada pela supervisão/gerência.</div>
     <div class="form-group">
@@ -1374,18 +1374,18 @@ function confirmarEncaminhar(id){
   t.historico=t.historico||[];
   t.historico.push(novaInteracao('encaminhamento', `Encaminhado para ${nome} (${cargo})`+(obs?` — ${obs}`:'')));
   saveTasks(); closeModal(); applyFilters();
-  notificarInterno({icone:'ti-send',titulo:'Tarefa encaminhada para você',texto:t.titulo,audiencia:'equipe',paraNome:nome,ref:{tipo:'tarefa',id:t.id}});
-  notifyWhatsApp(`➡️ *Tarefa Encaminhada* — iTS Gerencial CASAN\n\n*${t.titulo}*\nPara: ${nome} (${cargo})${obs?`\nObs: ${obs}`:''}\nPor: ${a.por}`);
-  notifyEmail(`➡️ Tarefa Encaminhada: ${t.titulo}`, t.titulo, 'Tarefa encaminhada', 'Notificação de Tarefa',
+  notificarInterno({icone:'ti-send',titulo:'Solicitação / Questionamento encaminhada para você',texto:t.titulo,audiencia:'equipe',paraNome:nome,ref:{tipo:'tarefa',id:t.id}});
+  notifyWhatsApp(`➡️ *Solicitação / Questionamento Encaminhada* — iTS Gerencial CASAN\n\n*${t.titulo}*\nPara: ${nome} (${cargo})${obs?`\nObs: ${obs}`:''}\nPor: ${a.por}`);
+  notifyEmail(`➡️ Solicitação / Questionamento Encaminhada: ${t.titulo}`, t.titulo, 'Solicitação / Questionamento encaminhada', 'Notificação de Solicitação / Questionamento',
     [{label:'Encaminhada para',valor:`${nome} (${cargo})`},{label:'Observação',valor:obs||'—'},{label:'Por',valor:`${a.por} (${a.perfil||'—'})`}]);
-  logEvento('Tarefa encaminhada', t.titulo+' → '+nome);
-  showToast('Tarefa encaminhada para '+nome+'.');
+  logEvento('Solicitação / Questionamento encaminhada', t.titulo+' → '+nome);
+  showToast('Solicitação / Questionamento encaminhada para '+nome+'.');
 }
 
 // Ver detalhes + resposta + anexos de uma tarefa.
 function verTarefa(id){
   const t=TASKS.find(x=>x.id===id);if(!t)return;
-  document.getElementById('modalTitle').textContent='Tarefa — '+t.titulo;
+  document.getElementById('modalTitle').textContent='Solicitação / Questionamento — '+t.titulo;
   document.getElementById('modalContent').innerHTML=`
     <div style="margin-bottom:12px">${statusBadge(t.status)} ${prioBadge(t.prio)}</div>
     <div class="form-group"><label>Título</label><div style="font-size:.9rem;font-weight:600">${esc(t.titulo)}</div></div>
@@ -1437,7 +1437,7 @@ function arquivarTarefa(id){
   const t=TASKS.find(x=>x.id===id);if(!t)return;
   const s=getSession();
   const motivos = isCliente() ? MOTIVOS_CLIENTE : MOTIVOS_EQUIPE;
-  document.getElementById('modalTitle').textContent='Arquivar Tarefa — '+t.titulo;
+  document.getElementById('modalTitle').textContent='Arquivar Solicitação / Questionamento — '+t.titulo;
   document.getElementById('modalContent').innerHTML=`
     <div style="font-size:.82rem;color:var(--its-muted);margin-bottom:14px">A tarefa sairá da lista ativa. O registro de arquivamento fica salvo (quem, quando e o motivo).</div>
     <div class="form-group">
@@ -1483,13 +1483,13 @@ function arquivarTarefa(id){
     }
     t.arquivada=true; t.arquivoInfo=info;
     saveTasks(); closeModal(); applyFilters(); updateDashboard();
-    logEvento('Tarefa arquivada', t.titulo+' — '+info.motivo);
-    notificarInterno({icone:'ti-archive',titulo:'Tarefa arquivada/cancelada',texto:t.titulo+' — '+info.motivo,audiencia:'equipe'});
+    logEvento('Solicitação / Questionamento arquivada', t.titulo+' — '+info.motivo);
+    notificarInterno({icone:'ti-archive',titulo:'Solicitação / Questionamento arquivada/cancelada',texto:t.titulo+' — '+info.motivo,audiencia:'equipe'});
     const pc=info.pedidoCliente;
-    notifyWhatsApp(`🗄️ *Tarefa Arquivada/Cancelada* — iTS Gerencial CASAN\n\n*${t.titulo}*\nMotivo: ${info.motivo}${info.obs?`\nObs: ${info.obs}`:''}\nPor: ${info.por} (${info.perfil||'—'})${pc?`\nSolicitado por (cliente): ${pc.solicitante}`:''}`);
-    notifyEmail(`🗄️ Tarefa Arquivada: ${t.titulo}`, t.titulo, 'Tarefa arquivada/cancelada', 'Notificação de Tarefa',
+    notifyWhatsApp(`🗄️ *Solicitação / Questionamento Arquivada/Cancelada* — iTS Gerencial CASAN\n\n*${t.titulo}*\nMotivo: ${info.motivo}${info.obs?`\nObs: ${info.obs}`:''}\nPor: ${info.por} (${info.perfil||'—'})${pc?`\nSolicitado por (cliente): ${pc.solicitante}`:''}`);
+    notifyEmail(`🗄️ Solicitação / Questionamento Arquivada: ${t.titulo}`, t.titulo, 'Solicitação / Questionamento arquivada/cancelada', 'Notificação de Solicitação / Questionamento',
       [{label:'Motivo',valor:info.motivo},{label:'Observação',valor:info.obs||'—'},{label:'Arquivada por',valor:`${info.por} (${info.perfil||'—'})`},{label:'Solicitante (cliente)',valor:pc?pc.solicitante:'—'},{label:'Em',valor:info.em}]);
-    showToast('Tarefa arquivada.');
+    showToast('Solicitação / Questionamento arquivada.');
   };
 }
 
@@ -1498,7 +1498,7 @@ function desarquivarTarefa(id){
   if(!confirm(`Desarquivar a tarefa "${t.titulo}"?`))return;
   t.arquivada=false;
   saveTasks(); applyFilters(); updateDashboard();
-  showToast('Tarefa desarquivada.');
+  showToast('Solicitação / Questionamento desarquivada.');
 }
 
 // Markup reutilizável do formulário de arquivamento/cancelamento.
@@ -1692,14 +1692,14 @@ function generateReport(){
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div>
-          <div style="font-size:1rem;font-weight:700;color:var(--its-sidebar)">Relatório de Tarefas — iTS Customer Service</div>
+          <div style="font-size:1rem;font-weight:700;color:var(--its-sidebar)">Relatório de Solicitações / Questionamentos — iTS Customer Service</div>
           <div style="font-size:.76rem;color:var(--its-muted)">Período: ${fmtDate(de)} a ${fmtDate(ate)} · Gerado em ${fmtDate(today())}</div>
         </div>
         <div class="logo-icon" style="width:40px;height:40px;font-size:13px">iTS</div>
       </div>
       <div class="stat-grid">${statsHtml}</div>
       <hr class="divider">
-      <div class="section-title" style="font-size:.78rem">Tarefas no período</div>
+      <div class="section-title" style="font-size:.78rem">Solicitações / Questionamentos no período</div>
       <table class="task-table">
         <thead><tr><th>Título</th><th>Área</th><th>Prazo</th><th>Prioridade</th><th>Status</th></tr></thead>
         <tbody>${rowsHtml}</tbody>
@@ -2034,7 +2034,7 @@ function gerarRelatorioInd11(){
     if(ate&&cr&&cr>ate)return false;
     return true;
   });
-  if(!lista.length){showToast('Nenhuma tarefa no período informado.','warn');return;}
+  if(!lista.length){showToast('Nenhuma solicitação / questionamento no período informado.','warn');return;}
   const prios=['Simples','Intermediária','Complexa'];
   const slaRef={Simples:'4h úteis',Intermediária:'12h úteis',Complexa:'36h úteis'};
   const total=lista.length;
@@ -2060,7 +2060,7 @@ function gerarRelatorioInd11(){
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div>
-          <div style="font-size:1rem;font-weight:700;color:var(--its-sidebar)">Relatório de Tarefas – Indicador 11</div>
+          <div style="font-size:1rem;font-weight:700;color:var(--its-sidebar)">Relatório de Solicitações / Questionamentos – Indicador 11</div>
           <div style="font-size:.76rem;color:var(--its-muted)">${periodo} · Gerado em ${fmtDate(today())}</div>
         </div>
         <div class="logo-icon" style="width:40px;height:40px;font-size:13px">iTS</div>
@@ -2156,7 +2156,7 @@ function updateDashboard(){
     .sort((a,b)=>a.prazo.localeCompare(b.prazo));
   document.getElementById('upcoming').innerHTML=up.length
     ?up.map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--its-border)"><span class="priority-dot ${prioClass(t.prio)}"></span><div style="flex:1"><div style="font-size:.83rem;font-weight:600">${esc(t.titulo)}</div><div style="font-size:.75rem;color:var(--its-muted)">${esc(t.area)}</div></div><span style="font-size:.78rem;color:var(--its-danger);font-weight:600">${fmtPrazo(t.prazo)}</span>${statusBadge(t.status)}</div>`).join('')
-    :`<div class="empty-state"><i class="ti ti-circle-check" style="color:var(--its-success)"></i>Nenhuma tarefa vencendo nos próximos 7 dias</div>`;
+    :`<div class="empty-state"><i class="ti ti-circle-check" style="color:var(--its-success)"></i>Nenhuma solicitação / questionamento vencendo nos próximos 7 dias</div>`;
 }
 
 // ── CHAMADOS ──────────────────────────────────────────────────────────
@@ -2430,14 +2430,14 @@ function comentarChamado(id){
 // Adicionar comentário (interação) SEM concluir — tarefa.
 function comentarTarefa(id){
   const t=TASKS.find(x=>x.id===id);if(!t)return;
-  abrirResposta('Comentar na Tarefa — '+t.titulo, ({texto,anexos})=>{
+  abrirResposta('Comentar na Solicitação / Questionamento — '+t.titulo, ({texto,anexos})=>{
     t.historico=t.historico||[]; t.historico.push(novaInteracao('nota',texto,anexos));
     saveTasks(); closeModal(); applyFilters();
     const a=autorAtual();
     notifyWhatsApp(`💬 *Comentário na tarefa* — iTS Gerencial CASAN\n\n*${t.titulo}*\nPor: ${a.por} (${a.ehCliente?'Cliente':'Equipe'})\n${texto||'(anexo)'}`);
-    notifyEmail(`💬 Comentário na tarefa: ${t.titulo}`, t.titulo, 'Novo comentário', 'Notificação de Tarefa',
+    notifyEmail(`💬 Comentário na solicitação / questionamento: ${t.titulo}`, t.titulo, 'Novo comentário', 'Notificação de Solicitação / Questionamento',
       [{label:'Autor',valor:`${a.por} (${a.ehCliente?'Cliente':'Equipe'})`},{label:'Comentário',valor:texto||'—'},{label:'Anexos',valor:anexos.length?anexos.map(x=>x.name).join(', '):'—'}]);
-    logEvento('Comentário em tarefa', t.titulo); notificarInterno({icone:'ti-message',titulo:'Novo comentário na tarefa',texto:t.titulo,audiencia:autorAtual().ehCliente?'equipe':'cliente',paraNome:autorAtual().ehCliente?null:(t.criadoPor||null),ref:{tipo:'tarefa',id:t.id}}); showToast('Comentário adicionado.'); verTarefa(id);
+    logEvento('Comentário em solicitação / questionamento', t.titulo); notificarInterno({icone:'ti-message',titulo:'Novo comentário na solicitação / questionamento',texto:t.titulo,audiencia:autorAtual().ehCliente?'equipe':'cliente',paraNome:autorAtual().ehCliente?null:(t.criadoPor||null),ref:{tipo:'tarefa',id:t.id}}); showToast('Comentário adicionado.'); verTarefa(id);
   },{btnLabel:'Adicionar comentário',btnIcon:'ti-message-plus',label:'Comentário'});
 }
 function agoraISO(){ const d=new Date();const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
@@ -3472,7 +3472,7 @@ function setNav(el,tab){
   const isUsuarios=tab==='usuarios';
   const isRelatorio=tab==='relatorio';
   const isChamados=tab==='chamados';
-  const titulos={tarefas:'Gestão de Tarefas',chamados:'Chamados',relatorio:'Relatórios',dashboard:'Dashboard',emergencias:'Emergências',avisos:'Quadro de Avisos',ponto:'Controle de Ponto',usuarios:'Gestão de Usuários',config:'Configurações',logs:'Logs de Atividade'};
+  const titulos={tarefas:'Solicitações / Questionamentos',chamados:'Chamados',relatorio:'Relatórios',dashboard:'Dashboard',emergencias:'Emergências',avisos:'Quadro de Avisos',ponto:'Controle de Ponto',usuarios:'Gestão de Usuários',config:'Configurações',logs:'Logs de Atividade'};
   if(titulos[tab])document.getElementById('pageTitle').textContent=titulos[tab];
   document.getElementById('mainTabs').style.display='none';
   document.getElementById('emergTabs').style.display=isEmerg?'flex':'none';
@@ -3518,7 +3518,7 @@ function setNav(el,tab){
     btn.style.display='none';
     renderLogs();
   } else {
-    btn.innerHTML='<i class="ti ti-plus"></i> Nova Tarefa';
+    btn.innerHTML='<i class="ti ti-plus"></i> Nova Solicitação';
     btn.onclick=openNewTask;
     const names=['tarefas','relatorio','dashboard'];
     const idx=names.indexOf(tab);
@@ -3774,7 +3774,7 @@ function sendNotification(task){
   notificarInterno({icone:'ti-clipboard-plus',titulo:'Nova tarefa',texto:task.titulo,audiencia:'equipe',ref:{tipo:'tarefa',id:task.id}});
   // WhatsApp (independente do e-mail; respeita destinatários com telefone).
   notifyWhatsApp(
-    `🔔 *Nova Tarefa* — iTS Gerencial CASAN\n\n`+
+    `🔔 *Nova Solicitação / Questionamento* — iTS Gerencial CASAN\n\n`+
     `*${task.titulo}*\n`+
     `Área: ${task.area||'—'}\n`+
     `Prazo: ${fmtPrazo(task.prazo)||'—'}\n`+
@@ -3803,16 +3803,16 @@ function sendNotification(task){
     }),
   }).then(r=>{
     if(r.ok) showToast('Notificação enviada por e-mail!');
-    else showToast('Tarefa criada. Falha ao enviar e-mail.');
+    else showToast('Solicitação / Questionamento criada. Falha ao enviar e-mail.');
   }).catch(()=>{
-    showToast('Tarefa criada. Serviço de e-mail indisponível.');
+    showToast('Solicitação / Questionamento criada. Serviço de e-mail indisponível.');
   });
 }
 
 function sendNotificacaoConclusao(task){
-  notificarInterno({icone:'ti-checkbox',titulo:'Tarefa concluída',texto:task.titulo,audiencia:'cliente',paraNome:task.criadoPor||null,ref:{tipo:'tarefa',id:task.id}});
+  notificarInterno({icone:'ti-checkbox',titulo:'Solicitação / Questionamento concluída',texto:task.titulo,audiencia:'cliente',paraNome:task.criadoPor||null,ref:{tipo:'tarefa',id:task.id}});
   notifyWhatsApp(
-    `✅ *Tarefa Concluída* — iTS Gerencial CASAN\n\n`+
+    `✅ *Solicitação / Questionamento Concluída* — iTS Gerencial CASAN\n\n`+
     `*${task.titulo}*\n`+
     `Área: ${task.area||'—'}\n`+
     `Concluída por: ${task.criadoPor||'—'}`
@@ -3827,7 +3827,7 @@ function sendNotificacaoConclusao(task){
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       bcc:destinatarios,
-      assunto:`✅ Tarefa concluída: ${task.titulo}`,
+      assunto:`✅ Solicitação / Questionamento concluída: ${task.titulo}`,
       task:{
         titulo:task.titulo,
         area:task.area,
