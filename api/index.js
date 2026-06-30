@@ -276,6 +276,55 @@ app.post('/auth/password', requireAuth, asyncH(async (req, res) => {
 }));
 
 // ---------------------------------------------------------------------------
+// Autocadastro publico (landing page do operador). Cria o usuario com perfil
+// 'Operador' e INATIVO (ativo=false): ele so consegue logar depois que um
+// gestor ativar a conta em Usuarios. Rota publica (antes do requireAuth), com
+// rate limit simples por IP para evitar abuso.
+// ---------------------------------------------------------------------------
+const CADASTRO_MAX = 5;             // cadastros por janela
+const CADASTRO_JANELA = 60 * 60e3; // 1 hora
+const cadastroTentativas = new Map(); // ip -> { n, reset }
+function cadastroBloqueado(ip) {
+  const e = cadastroTentativas.get(ip);
+  if (!e) return false;
+  if (Date.now() > e.reset) { cadastroTentativas.delete(ip); return false; }
+  return e.n >= CADASTRO_MAX;
+}
+function registrarCadastro(ip) {
+  const e = cadastroTentativas.get(ip);
+  if (!e || Date.now() > e.reset) cadastroTentativas.set(ip, { n: 1, reset: Date.now() + CADASTRO_JANELA });
+  else e.n += 1;
+}
+
+app.post('/auth/registrar', asyncH(async (req, res) => {
+  const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim();
+  if (cadastroBloqueado(ip)) {
+    return res.status(429).json({ error: 'Muitos cadastros deste local. Tente novamente mais tarde.' });
+  }
+  const { nome, email, senha } = req.body || {};
+  const nomeT = String(nome || '').trim();
+  const emailT = String(email || '').trim().toLowerCase();
+  if (!nomeT || !emailT) return res.status(400).json({ error: 'Nome completo e e-mail são obrigatórios.' });
+  if (nomeT.length < 3 || !nomeT.includes(' ')) return res.status(400).json({ error: 'Informe o nome completo.' });
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailT)) return res.status(400).json({ error: 'E-mail inválido.' });
+  if (!senha || String(senha).length < 4) return res.status(400).json({ error: 'A senha deve ter ao menos 4 caracteres.' });
+
+  registrarCadastro(ip);
+
+  const existe = await pool.query('SELECT id, ativo FROM casan_usuarios WHERE email = $1', [emailT]);
+  if (existe.rows[0]) {
+    return res.status(409).json({ error: 'Este e-mail já está cadastrado. Aguarde a ativação ou faça login.' });
+  }
+  const hash = await bcrypt.hash(String(senha), 12);
+  await pool.query(
+    `INSERT INTO casan_usuarios (nome, email, senha_hash, perfil, ativo)
+     VALUES ($1, $2, $3, 'Operador', false)`,
+    [nomeT, emailT, hash]
+  );
+  res.status(201).json({ ok: true });
+}));
+
+// ---------------------------------------------------------------------------
 // A PARTIR DAQUI todas as rotas exigem token de sessao valido.
 // ---------------------------------------------------------------------------
 app.use(requireAuth);

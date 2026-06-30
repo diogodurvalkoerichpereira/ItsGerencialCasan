@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solicitar acesso — iTS Gerencial CASAN</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Segoe UI',system-ui,Arial,sans-serif;
+      background:linear-gradient(135deg,#183c5a 0%,#0f2a40 100%);
+      min-height:100vh;display:flex;align-items:center;justify-content:center;
+      padding:24px;color:#1e293b;
+    }
+    .card{
+      background:#fff;width:100%;max-width:460px;border-radius:16px;overflow:hidden;
+      box-shadow:0 12px 40px rgba(0,0,0,.28);
+    }
+    .head{background:#183c5a;padding:26px 30px;display:flex;align-items:center;gap:12px}
+    .logo{background:#E85928;width:42px;height:42px;border-radius:9px;display:flex;
+      align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:14px}
+    .head h1{color:#fff;font-size:18px;font-weight:700;line-height:1.2}
+    .head p{color:rgba(255,255,255,.65);font-size:12px;margin-top:2px}
+    .stripe{height:4px;background:#E85928}
+    .body{padding:30px}
+    .body>.intro{font-size:14px;color:#475569;line-height:1.55;margin-bottom:22px}
+    label{display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:6px;margin-top:16px}
+    label:first-of-type{margin-top:0}
+    input{
+      width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:9px;
+      font-size:15px;transition:border-color .15s,box-shadow .15s;
+    }
+    input:focus{outline:none;border-color:#E85928;box-shadow:0 0 0 3px rgba(232,89,40,.15)}
+    .hint{font-size:12px;color:#94a3b8;margin-top:5px}
+    button{
+      width:100%;margin-top:24px;padding:13px;border:none;border-radius:9px;
+      background:#E85928;color:#fff;font-size:15px;font-weight:700;cursor:pointer;
+      transition:background .15s,opacity .15s;
+    }
+    button:hover{background:#d24d20}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .msg{margin-top:18px;padding:14px 16px;border-radius:9px;font-size:14px;line-height:1.5;display:none}
+    .msg.ok{display:block;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0}
+    .msg.err{display:block;background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+    .foot{background:#f8fafc;padding:16px 30px;border-top:1px solid #e2e8f0;
+      font-size:12px;color:#94a3b8;text-align:center}
+    .foot a{color:#183c5a;text-decoration:none;font-weight:600}
+    .success-box{text-align:center;padding:10px 0}
+    .success-box .check{width:56px;height:56px;border-radius:50%;background:#dcfce7;
+      color:#16a34a;font-size:30px;display:flex;align-items:center;justify-content:center;
+      margin:0 auto 16px}
+    .success-box h2{font-size:18px;color:#183c5a;margin-bottom:10px}
+    .success-box p{font-size:14px;color:#475569;line-height:1.6}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="head">
+      <div class="logo">iTS</div>
+      <div>
+        <h1>iTS Gerencial CASAN</h1>
+        <p>Solicitação de acesso — Operador</p>
+      </div>
+    </div>
+    <div class="stripe"></div>
+
+    <div class="body">
+      <div id="form-area">
+        <p class="intro">
+          Preencha seus dados para solicitar acesso ao sistema. Sua conta será criada com o
+          perfil <strong>Operador</strong> e ficará <strong>inativa</strong> até que um
+          responsável a ative.
+        </p>
+
+        <form id="form" novalidate>
+          <label for="nome">Nome completo</label>
+          <input type="text" id="nome" name="nome" autocomplete="name" required placeholder="Ex.: João da Silva Souza">
+
+          <label for="email">E-mail</label>
+          <input type="email" id="email" name="email" autocomplete="email" required placeholder="seu.email@exemplo.com">
+
+          <label for="senha">Crie uma senha</label>
+          <input type="password" id="senha" name="senha" autocomplete="new-password" required placeholder="Mínimo de 4 caracteres">
+          <div class="hint">Você usará esta senha para entrar após a ativação da conta.</div>
+
+          <button type="submit" id="btn">Solicitar acesso</button>
+        </form>
+
+        <div id="msg" class="msg"></div>
+      </div>
+
+      <div id="success-area" style="display:none">
+        <div class="success-box">
+          <div class="check">✓</div>
+          <h2>Solicitação enviada!</h2>
+          <p>
+            Sua conta foi criada com o perfil <strong>Operador</strong> e está
+            <strong>aguardando ativação</strong>. Assim que um responsável ativar seu
+            acesso, você poderá entrar no sistema com o e-mail e a senha cadastrados.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot">
+      Já tem acesso? <a href="/">Entrar no sistema</a>
+    </div>
+  </div>
+
+  <script>
+    // Mesma origem HTTPS via prefixo /api (Traefik roteia ate o its-api).
+    var ITS_API = location.origin + '/api';
+    var form = document.getElementById('form');
+    var btn = document.getElementById('btn');
+    var msg = document.getElementById('msg');
+
+    function showErr(t){ msg.className = 'msg err'; msg.textContent = t; }
+
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      msg.className = 'msg'; msg.textContent = '';
+
+      var nome = document.getElementById('nome').value.trim();
+      var email = document.getElementById('email').value.trim();
+      var senha = document.getElementById('senha').value;
+
+      if(!nome || nome.indexOf(' ') === -1){ showErr('Informe seu nome completo.'); return; }
+      if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ showErr('Informe um e-mail válido.'); return; }
+      if(senha.length < 4){ showErr('A senha deve ter ao menos 4 caracteres.'); return; }
+
+      btn.disabled = true; btn.textContent = 'Enviando...';
+
+      fetch(ITS_API + '/auth/registrar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome: nome, email: email, senha: senha })
+      }).then(function(r){
+        return r.json().catch(function(){ return {}; }).then(function(d){ return { ok: r.ok, d: d }; });
+      }).then(function(res){
+        if(res.ok){
+          document.getElementById('form-area').style.display = 'none';
+          document.getElementById('success-area').style.display = 'block';
+        } else {
+          showErr((res.d && res.d.error) || 'Não foi possível concluir o cadastro. Tente novamente.');
+          btn.disabled = false; btn.textContent = 'Solicitar acesso';
+        }
+      }).catch(function(){
+        showErr('Falha de conexão com o servidor. Verifique sua internet e tente novamente.');
+        btn.disabled = false; btn.textContent = 'Solicitar acesso';
+      });
+    });
+  </script>
+</body>
+</html>
