@@ -2948,16 +2948,18 @@ function registrarEmerg(){
   });
   saveEmergs();
   const atendenteEm=(getSession()||{}).nome||'';
+  const protocoloEm=document.getElementById('eProtocolo').value.trim();
   notificarInterno({icone:'ti-alert-octagon',titulo:'Nova emergência',texto:cidade+(atendenteEm?` · Atendente: ${atendenteEm}`:''),audiencia:'operador',ref:{tipo:'emergencia',id:EMERGS[0].id}});
   notifyWhatsApp(
     `🚨 *Nova Emergência* — iTS Gerencial CASAN\n\n`+
     `Cidade: ${cidade}\n`+
     `Serviço: ${servico}\n`+
     `Recebido: ${recebido}\n`+
+    `Protocolo: ${protocoloEm||'—'}\n`+
     `Atendente: ${atendenteEm||'—'}`
   );
   notifyEmail(`🚨 Nova Emergência: ${cidade}`, `Emergência — ${cidade}`, 'Nova ocorrência de emergência', 'Notificação de Emergência',
-    [{label:'Cidade',valor:cidade},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Atendente',valor:atendenteEm||'—'}]);
+    [{label:'Cidade',valor:cidade},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Protocolo',valor:protocoloEm||'—'},{label:'Atendente',valor:atendenteEm||'—'}]);
   ['eData','eRecebido','eCidade','eProtocolo','eDesc'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('eServico').selectedIndex=0;
   const firstTab=document.querySelector('#emergTabs .tab');
