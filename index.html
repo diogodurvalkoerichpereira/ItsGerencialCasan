@@ -3745,9 +3745,9 @@ function registrarAviso(){
     criadoPor:atendente
   });
   saveAvisos();
-  notificarInterno({icone:'ti-alert-triangle',titulo:'Alerta de Emergência',texto:cidade+(atendente?` · Atendente: ${atendente}`:''),audiencia:'operador'});
+  notificarInterno({icone:'ti-speakerphone',titulo:'Novo Aviso de Indisponibilidade',texto:cidade+(atendente?` · Atendente: ${atendente}`:''),audiencia:'operador'});
   notifyWhatsApp(
-    `🚨 *ALERTA EMERGÊNCIA* — iTS Gerencial CASAN\n\n`+
+    `📢 *NOVO AVISO — Indisponibilidade de Serviço* — iTS Gerencial CASAN\n\n`+
     `Cidade: ${cidade}\n`+
     `Bairro: ${bairro}\n`+
     `Serviço: ${servico}\n`+
@@ -3755,7 +3755,7 @@ function registrarAviso(){
     `Canal: ${canal}\n`+
     `Atendente: ${atendente||'—'}`
   );
-  notifyEmail(`🚨 Alerta Emergência: ${cidade}`, `Emergência — ${cidade}`, 'Alerta de emergência registrado', 'Notificação de Emergência',
+  notifyEmail(`📢 Novo Aviso — Indisponibilidade: ${cidade}`, `Aviso — ${cidade}`, 'Novo aviso de indisponibilidade de serviço', 'Notificação — Quadro de Avisos',
     [{label:'Cidade',valor:cidade},{label:'Bairro',valor:bairro},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Canal',valor:canal},{label:'Atendente',valor:atendente||'—'}]);
   ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aPrevNormData','aInserido','aInseridoData','aObs'].forEach(id=>document.getElementById(id).value='');
   ['aServico','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
