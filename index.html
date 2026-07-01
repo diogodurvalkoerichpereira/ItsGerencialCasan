@@ -2954,11 +2954,10 @@ function registrarEmerg(){
     `Cidade: ${cidade}\n`+
     `Serviço: ${servico}\n`+
     `Recebido: ${recebido}\n`+
-    `Dentro do prazo: ${prazo}\n`+
     `Atendente: ${atendenteEm||'—'}`
   );
   notifyEmail(`🚨 Nova Emergência: ${cidade}`, `Emergência — ${cidade}`, 'Nova ocorrência de emergência', 'Notificação de Emergência',
-    [{label:'Cidade',valor:cidade},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Dentro do prazo',valor:prazo},{label:'Atendente',valor:atendenteEm||'—'}]);
+    [{label:'Cidade',valor:cidade},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Atendente',valor:atendenteEm||'—'}]);
   ['eData','eRecebido','eCidade','eProtocolo','eDesc'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('eServico').selectedIndex=0;
   const firstTab=document.querySelector('#emergTabs .tab');
