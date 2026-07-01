@@ -1875,6 +1875,9 @@ function gerarRelatorioPonto(){
   const cor=pct===null?'var(--its-muted)':parseFloat(pct)>=100?'var(--its-success)':parseFloat(pct)>=90?'var(--its-warning)':'var(--its-danger)';
   // Operador-dia: soma da coluna "operador" nos dias trabalhados (Duração>0).
   const operadorDia=data.reduce((s,r)=>s+((typeof r.durMin==='number'&&r.durMin>0&&r.operadores)?(+r.operadores||0):0),0);
+  // Nº de supervisores e média de operadores por supervisor (total ÷ supervisores).
+  const nSupervisores=rows.filter(r=>ehSupervisorPonto(mes, r.nome, r.funcao)).length||rows.length;
+  const opPorSup = nSupervisores>0 ? (operadorDia/nSupervisores).toFixed(1).replace('.',',') : '—';
   // Cliente não pode ver o nome dos operadores — apenas supervisores.
   const linhasRel = isCliente() ? rows.filter(r=>ehSupervisorPonto(mes, r.nome, r.funcao)) : rows;
   const mLabel=fmtMesLabel(mes);
@@ -1914,14 +1917,18 @@ function gerarRelatorioPonto(){
             <div style="font-size:1.4rem;font-weight:800;font-variant-numeric:tabular-nums;color:${cor}">${pct!==null?`${pct.replace('.',',')}%`:'—'}</div>
           </div>
         </div>
-        ${operadorDia>0?`<div style="display:grid;grid-template-columns:repeat(2,1fr);background:#fff;border-top:1px solid var(--its-border)">
+        ${operadorDia>0?`<div style="display:grid;grid-template-columns:repeat(3,1fr);background:#fff;border-top:1px solid var(--its-border)">
           <div style="padding:14px 18px;border-right:1px solid var(--its-border)">
             <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Supervisores</div>
-            <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar)">${rows.filter(r=>ehSupervisorPonto(mes, r.nome, r.funcao)).length||rows.length}</div>
+            <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar)">${nSupervisores}</div>
           </div>
-          <div style="padding:14px 18px">
+          <div style="padding:14px 18px;border-right:1px solid var(--its-border)">
             <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Operadores atendidos (operador-dia)</div>
             <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar)">${operadorDia}</div>
+          </div>
+          <div style="padding:14px 18px">
+            <div style="font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--its-muted);margin-bottom:4px">Operadores por Supervisor</div>
+            <div style="font-size:1.4rem;font-weight:800;color:var(--its-sidebar)">${opPorSup}</div>
           </div>
         </div>`:''}
         <div style="background:#f8fafc;padding:8px 16px;font-size:.74rem;color:var(--its-muted);border-top:1px solid var(--its-border)">
