@@ -1192,18 +1192,7 @@ textarea{resize:vertical;min-height:72px}
 <script>
 // ── DATA ──────────────────────────────────────────────────────────────
 let nextId = 11;
-let TASKS = JSON.parse(localStorage.getItem('its_tasks')||'null') || [
-  {id:1,titulo:'Atualizar base de conhecimento CRM',area:'TI',resp:'Carlos Souza',prazo:'2026-06-28',prio:'Complexa',status:'Em andamento',desc:'Revisar e atualizar os artigos de suporte no sistema CRM para refletir novos produtos.'},
-  {id:2,titulo:'Revisar contratos de fornecedores',area:'Financeiro',resp:'Diogo',prazo:'2026-06-30',prio:'Complexa',status:'Aguardando',desc:'Análise dos contratos vigentes com fornecedores de telecom e TI.'},
-  {id:3,titulo:'Treinamento equipe operações',area:'Operações',resp:'Ana Lima',prazo:'2026-07-05',prio:'Intermediária',status:'Em andamento',desc:'Ministrar treinamento sobre novos procedimentos de atendimento.'},
-  {id:4,titulo:'Emissão de notas fiscais junho',area:'Financeiro',resp:'Mariana R.',prazo:'2026-06-27',prio:'Complexa',status:'Concluído',desc:'Emissão das NFs referentes às competências de junho 2026.'},
-  {id:5,titulo:'Configurar VPN para acesso remoto',area:'TI',resp:'Carlos Souza',prazo:'2026-07-10',prio:'Intermediária',status:'Aguardando',desc:'Implementar solução de VPN para colaboradores home office.'},
-  {id:6,titulo:'Relatório de indicadores Q2',area:'Operações',resp:'Diogo',prazo:'2026-07-01',prio:'Complexa',status:'Em andamento',desc:'Consolidar indicadores de atendimento do segundo trimestre.'},
-  {id:7,titulo:'Processo seletivo analistas',area:'RH',resp:'Ana Lima',prazo:'2026-07-15',prio:'Simples',status:'Em andamento',desc:'Conduzir processo seletivo para 3 vagas de analistas de suporte.'},
-  {id:8,titulo:'Auditoria de acessos sistemas',area:'TI',resp:'Carlos Souza',prazo:'2026-06-26',prio:'Complexa',status:'Concluído',desc:'Revisar permissões e acessos de todos os colaboradores.'},
-  {id:9,titulo:'Proposta comercial cliente X',area:'Comercial',resp:'Mariana R.',prazo:'2026-07-03',prio:'Intermediária',status:'Em andamento',desc:'Elaborar proposta de contact center para cliente do setor bancário.'},
-  {id:10,titulo:'Backup mensal dados operacionais',area:'TI',resp:'Carlos Souza',prazo:'2026-06-30',prio:'Simples',status:'Concluído',desc:'Realizar backup e verificação de integridade dos dados.'},
-];
+let TASKS = JSON.parse(localStorage.getItem('its_tasks')||'null') || [];
 function saveTasks(){localStorage.setItem('its_tasks',JSON.stringify(TASKS));remoteSet('its_tasks',TASKS);}
 nextId = Math.max(0,...TASKS.map(t=>t.id))+1;
 
@@ -1451,8 +1440,9 @@ function cycleStatus(id){
 function deleteTask(id){
   if(!confirm('Excluir esta tarefa?'))return;
   const i=TASKS.findIndex(x=>x.id===id);if(i>-1)TASKS.splice(i,1);
+  tombstone('tasks', id);
   saveTasks();
-  logEvento('Solicitação / Questionamento excluída', (TASKS.find(x=>x.id===id)||{}).titulo||('#'+id));
+  logEvento('Solicitação / Questionamento excluída', '#'+id);
   applyFilters();updateDashboard();showToast('Solicitação / Questionamento excluída.');
 }
 // Responder + concluir uma tarefa (com texto e anexos).
@@ -2435,10 +2425,7 @@ function updateDashboardModulos(){
 
 // ── CHAMADOS ──────────────────────────────────────────────────────────
 let nextChamadoId=3;
-let CHAMADOS = JSON.parse(localStorage.getItem('its_chamados')||'null') || [
-  {id:1,titulo:'Sistema indisponível — módulo relatórios',desc:'Usuários sem acesso ao módulo de relatórios desde as 08h.',criado:'2026-06-25 08:00',status:'Resolvido',resolvidoEm:'2026-06-25 08:42'},
-  {id:2,titulo:'Falha de login — sistema principal',desc:'Clientes reportam erro 403 ao tentar acessar o sistema.',criado:'2026-06-26 14:10',status:'Em Atendimento',resolvidoEm:null},
-];
+let CHAMADOS = JSON.parse(localStorage.getItem('its_chamados')||'null') || [];
 function saveChamados(){localStorage.setItem('its_chamados',JSON.stringify(CHAMADOS));remoteSet('its_chamados',CHAMADOS);}
 nextChamadoId = Math.max(0,...CHAMADOS.map(c=>c.id))+1;
 function diffMinChamado(criado,resolvidoEm){
@@ -2842,18 +2829,15 @@ function resolverChamado(id){
 function deleteChamado(id){
   if(!confirm('Excluir este chamado?'))return;
   const i=CHAMADOS.findIndex(x=>x.id===id);if(i>-1)CHAMADOS.splice(i,1);
+  tombstone('chamados', id);
   saveChamados();
-  logEvento('Chamado excluído', (CHAMADOS.find(x=>x.id===id)||{}).titulo||('#'+id));
+  logEvento('Chamado excluído', '#'+id);
   filterChamados();showToast('Chamado excluído.');
 }
 
 // ── EMERGÊNCIAS ───────────────────────────────────────────────────────
 let nextEmergId = 4;
-let EMERGS = JSON.parse(localStorage.getItem('its_emergs')||'null') || [
-  {id:1,data:'25/06',cidade:'São José',recebido:'17:00',enviado:'17:01',supervisor:'Bruno',protocolo:'23/06/2026 17:19 301920',servico:'Água',canal:'WhatsApp',prazo:'00:01',status:'Resolvido'},
-  {id:2,data:'25/06',cidade:'Florianópolis',recebido:'17:42',enviado:'18:26',supervisor:'Bruno',protocolo:'25/06/2026 17:35 301807',servico:'Água',canal:'WhatsApp',prazo:'00:44',status:'Resolvido'},
-  {id:3,data:'26/06',cidade:'Florianópolis',recebido:'07:06',enviado:'07:07',supervisor:'Erick',protocolo:'26/06/2026 06:59 301826',servico:'Água',canal:'WhatsApp',prazo:'00:01',status:'Em Atendimento'},
-];
+let EMERGS = JSON.parse(localStorage.getItem('its_emergs')||'null') || [];
 function saveEmergs(){localStorage.setItem('its_emergs',JSON.stringify(EMERGS));remoteSet('its_emergs',EMERGS);}
 nextEmergId = Math.max(0,...EMERGS.map(e=>e.id))+1;
 
@@ -3066,6 +3050,7 @@ function cycleEmergStatus(id){
 function deleteEmerg(id){
   if(!confirm('Excluir esta ocorrência?'))return;
   const i=EMERGS.findIndex(x=>x.id===id);if(i>-1)EMERGS.splice(i,1);
+  tombstone('emergs', id);
   saveEmergs();
   filterEmerg();showToast('Ocorrência excluída.');
 }
@@ -3660,14 +3645,7 @@ function filterPonto(){
 
 // ── QUADRO DE AVISOS ──────────────────────────────────────────────────
 let nextAvisoId = 4;
-let AVISOS = JSON.parse(localStorage.getItem('its_avisos')||'null') || [
-  {id:1,data:'25/06',cidade:'Florianópolis',bairro:'Centro',servico:'Água',recebido:'16:01',inserido:'16:07',supervisor:'Bruno',prevNorm:'21:00',canal:'WhatsApp',situacao:''},
-  {id:2,data:'25/06',cidade:'Florianópolis',bairro:'Trindade',servico:'Esgoto',recebido:'17:08',inserido:'17:16',supervisor:'Bruno',prevNorm:'02:00',canal:'WhatsApp',situacao:'Concluído'},
-  {id:3,data:'25/06',cidade:'Laguna',bairro:'Mar Grosso',servico:'Água',recebido:'17:08',inserido:'17:20',supervisor:'Bruno',prevNorm:'00:00',canal:'E-mail',situacao:''},
-  {id:4,data:'25/06',cidade:'Ascurra',bairro:'Centro',servico:'Água e Esgoto',recebido:'19:29',inserido:'19:33',supervisor:'Wilson',prevNorm:'15:00',canal:'WhatsApp',situacao:''},
-  {id:5,data:'25/06',cidade:'Angelina',bairro:'Sede',servico:'Água',recebido:'19:35',inserido:'20:08',supervisor:'Wilson',prevNorm:'00:00',canal:'E-mail',situacao:''},
-  {id:6,data:'26/06',cidade:'Biguaçu',bairro:'Ponta de Baixo',servico:'Água',recebido:'07:49',inserido:'07:49',supervisor:'Janaina',prevNorm:'18:00',canal:'E-mail',situacao:''},
-];
+let AVISOS = JSON.parse(localStorage.getItem('its_avisos')||'null') || [];
 function saveAvisos(){localStorage.setItem('its_avisos',JSON.stringify(AVISOS));remoteSet('its_avisos',AVISOS);}
 nextAvisoId = Math.max(0,...AVISOS.map(a=>a.id))+1;
 
@@ -3860,6 +3838,7 @@ function salvarSituacao(id){
 function deleteAviso(id){
   if(!confirm('Excluir este aviso?'))return;
   const i=AVISOS.findIndex(x=>x.id===id);if(i>-1)AVISOS.splice(i,1);
+  tombstone('avisos', id);
   saveAvisos();
   filterAvisos();showToast('Aviso excluído.');
 }
@@ -5029,20 +5008,35 @@ async function remoteGet(chave){
   }catch(_){ return undefined; }
 }
 
-// Mescla lista do servidor com a local por ID. Mantém o servidor como base e
-// acrescenta itens que só existem localmente (cadastros ainda não sincronizados).
-// Retorna { arr, healed } — healed=true quando havia itens locais a reenviar.
-function mergeArrById(server, local){
-  const arrServer = Array.isArray(server) ? server : [];
+// ── Registro de exclusões (tombstones) ────────────────────────────────
+// Guarda os IDs excluídos por tipo para que a mesclagem NUNCA ressuscite um
+// item apagado (mesmo que outra sessão ainda tenha ele em cache). É aditivo:
+// tombstones só crescem e são unidos entre sessões.
+let DELETADOS = JSON.parse(localStorage.getItem('its_deletados')||'null') || {tasks:[],chamados:[],emergs:[],avisos:[]};
+function saveDeletados(){ localStorage.setItem('its_deletados', JSON.stringify(DELETADOS)); remoteSet('its_deletados', DELETADOS); }
+function tombstone(tipo, id){
+  DELETADOS[tipo]=DELETADOS[tipo]||[];
+  if(!DELETADOS[tipo].includes(id)){ DELETADOS[tipo].push(id); saveDeletados(); }
+}
+
+// Mescla lista do servidor com a local por ID. Mantém o servidor como base,
+// acrescenta itens que só existem localmente (cadastros ainda não sincronizados)
+// e REMOVE tudo que estiver na lista de exclusões (tombstones).
+// Retorna { arr, healed } — healed=true quando é preciso reenviar ao servidor.
+function mergeArrById(server, local, tipo){
+  const del = new Set((DELETADOS[tipo]||[]));
+  const arrServerRaw = Array.isArray(server) ? server : [];
+  const arrServer = arrServerRaw.filter(x => x && !del.has(x.id));
   const arrLocal  = Array.isArray(local)  ? local  : [];
   const ids = new Set(arrServer.map(x => x && x.id));
-  const extras = arrLocal.filter(x => x && x.id != null && !ids.has(x.id));
-  return extras.length ? { arr: arrServer.concat(extras), healed: true } : { arr: arrServer, healed: false };
+  const extras = arrLocal.filter(x => x && x.id != null && !ids.has(x.id) && !del.has(x.id));
+  const healed = extras.length>0 || arrServer.length!==arrServerRaw.length; // reenviar se houve extras ou remoção de tombstones
+  return { arr: arrServer.concat(extras), healed };
 }
 
 // Puxa os dados do servidor; reatribui as variáveis em memória e re-renderiza.
 async function hydrateFromAPI(){
-  const [ponto, cfg, users, adminHash, tasks, chamados, emergs, avisos, logs, notifs, medicao] = await Promise.all([
+  const [ponto, cfg, users, adminHash, tasks, chamados, emergs, avisos, logs, notifs, medicao, deletados] = await Promise.all([
     remoteGet('its_ponto_db'),
     remoteGet('its_cfg'),
     remoteGet('its_users'),
@@ -5054,7 +5048,16 @@ async function hydrateFromAPI(){
     remoteGet('its_logs'),
     remoteGet('its_notifs'),
     remoteGet('its_medicao'),
+    remoteGet('its_deletados'),
   ]);
+  // Une os tombstones do servidor aos locais (aditivo) ANTES de mesclar as listas.
+  if(deletados && typeof deletados==='object'){
+    ['tasks','chamados','emergs','avisos'].forEach(t=>{
+      const set=new Set([...(DELETADOS[t]||[]), ...((deletados[t])||[])]);
+      DELETADOS[t]=[...set];
+    });
+    localStorage.setItem('its_deletados', JSON.stringify(DELETADOS));
+  }
   if(ponto && typeof ponto==='object'){ PONTO_DB = ponto; localStorage.setItem('its_ponto_db', JSON.stringify(ponto)); }
   if(cfg && typeof cfg==='object'){ CFG = cfg; localStorage.setItem('its_cfg', JSON.stringify(cfg)); }
   if(Array.isArray(users) && users.length){
@@ -5065,10 +5068,10 @@ async function hydrateFromAPI(){
   if(typeof adminHash==='string' && adminHash){ localStorage.setItem('its_admin_hash', adminHash); }
   // Mescla por ID: o servidor é a fonte, mas itens locais ainda não sincronizados
   // são preservados (e reenviados). Evita perder cadastros por corrida/sobrescrita.
-  if(Array.isArray(tasks)){ const r=mergeArrById(tasks, TASKS); TASKS=r.arr; nextId=Math.max(0,...TASKS.map(t=>t.id),0)+1; localStorage.setItem('its_tasks', JSON.stringify(TASKS)); if(r.healed) remoteSet('its_tasks', TASKS); }
-  if(Array.isArray(chamados)){ const r=mergeArrById(chamados, CHAMADOS); CHAMADOS=r.arr; nextChamadoId=Math.max(0,...CHAMADOS.map(c=>c.id),0)+1; localStorage.setItem('its_chamados', JSON.stringify(CHAMADOS)); if(r.healed) remoteSet('its_chamados', CHAMADOS); }
-  if(Array.isArray(emergs)){ const r=mergeArrById(emergs, EMERGS); EMERGS=r.arr; nextEmergId=Math.max(0,...EMERGS.map(e=>e.id),0)+1; localStorage.setItem('its_emergs', JSON.stringify(EMERGS)); if(r.healed) remoteSet('its_emergs', EMERGS); }
-  if(Array.isArray(avisos)){ const r=mergeArrById(avisos, AVISOS); AVISOS=r.arr; nextAvisoId=Math.max(0,...AVISOS.map(a=>a.id),0)+1; localStorage.setItem('its_avisos', JSON.stringify(AVISOS)); if(r.healed) remoteSet('its_avisos', AVISOS); }
+  if(Array.isArray(tasks)){ const r=mergeArrById(tasks, TASKS, 'tasks'); TASKS=r.arr; nextId=Math.max(0,...TASKS.map(t=>t.id),0)+1; localStorage.setItem('its_tasks', JSON.stringify(TASKS)); if(r.healed) remoteSet('its_tasks', TASKS); }
+  if(Array.isArray(chamados)){ const r=mergeArrById(chamados, CHAMADOS, 'chamados'); CHAMADOS=r.arr; nextChamadoId=Math.max(0,...CHAMADOS.map(c=>c.id),0)+1; localStorage.setItem('its_chamados', JSON.stringify(CHAMADOS)); if(r.healed) remoteSet('its_chamados', CHAMADOS); }
+  if(Array.isArray(emergs)){ const r=mergeArrById(emergs, EMERGS, 'emergs'); EMERGS=r.arr; nextEmergId=Math.max(0,...EMERGS.map(e=>e.id),0)+1; localStorage.setItem('its_emergs', JSON.stringify(EMERGS)); if(r.healed) remoteSet('its_emergs', EMERGS); }
+  if(Array.isArray(avisos)){ const r=mergeArrById(avisos, AVISOS, 'avisos'); AVISOS=r.arr; nextAvisoId=Math.max(0,...AVISOS.map(a=>a.id),0)+1; localStorage.setItem('its_avisos', JSON.stringify(AVISOS)); if(r.healed) remoteSet('its_avisos', AVISOS); }
   // Logs agora vêm da tabela dedicada casan_logs (não do blob its_logs).
   try{ carregarLogs(); }catch(_){}
   if(Array.isArray(notifs)){ const r=mergeArrById(notifs, NOTIFS); NOTIFS=r.arr; _nextNotifId = NOTIFS.length?Math.max(0,...NOTIFS.map(n=>n.id||0))+1:1; localStorage.setItem('its_notifs', JSON.stringify(NOTIFS)); if(r.healed) remoteSet('its_notifs', NOTIFS); try{renderNotifBadge(); notifsDoUsuario().forEach(n=>_notifVistos.add(n.id));}catch(_){} }
@@ -5092,6 +5095,7 @@ async function hydrateFromAPI(){
   if(emergs===null) remoteSet('its_emergs', EMERGS);
   if(avisos===null) remoteSet('its_avisos', AVISOS);
   if(notifs===null) remoteSet('its_notifs', NOTIFS);
+  if(deletados===null) remoteSet('its_deletados', DELETADOS); else saveDeletados();
 }
 
 // ── Municípios de Santa Catarina (para o campo Cidade do Quadro de Avisos) ──
