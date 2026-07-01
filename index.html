@@ -304,7 +304,7 @@ textarea{resize:vertical;min-height:72px}
           <thead>
             <tr>
               <th>Título</th><th>Área</th>
-              <th>Prazo</th><th>Prioridade</th><th>Status</th><th>Ações</th>
+              <th>Prazo</th><th>Tempo Restante</th><th>Prioridade</th><th>Status</th><th>Ações</th>
             </tr>
           </thead>
           <tbody id="taskBody"></tbody>
@@ -1235,6 +1235,49 @@ function esc(s){
   ));
 }
 
+// ── CONTAGEM REGRESSIVA ATÉ O PRAZO ───────────────────────────────────
+// Célula da tabela: um span que é atualizado a cada segundo por tickCountdowns().
+function countdownCell(t){
+  if(!t.prazo) return '<span style="color:var(--its-muted)">—</span>';
+  const encerrada = t.status==='Concluído' || String(t.status||'').indexOf('Cancelado')===0 || t.arquivada;
+  if(encerrada) return '<span style="color:var(--its-muted)">—</span>';
+  return `<span class="task-countdown" data-prazo="${esc(t.prazo)}"></span>`;
+}
+function _prazoMs(prazo){
+  const iso = prazo.includes(' ') ? prazo.replace(' ','T') : prazo+'T23:59';
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? null : d.getTime();
+}
+function fmtCountdown(diffMs){
+  const venc = diffMs<=0;
+  let ms = Math.abs(diffMs);
+  const dia=Math.floor(ms/86400000); ms-=dia*86400000;
+  const h=Math.floor(ms/3600000);    ms-=h*3600000;
+  const m=Math.floor(ms/60000);      ms-=m*60000;
+  const s=Math.floor(ms/1000);
+  const p=n=>String(n).padStart(2,'0');
+  let txt;
+  if(dia>0) txt=`${dia}d ${p(h)}h ${p(m)}m`;
+  else if(h>0) txt=`${p(h)}h ${p(m)}m ${p(s)}s`;
+  else txt=`${p(m)}m ${p(s)}s`;
+  if(venc) return `<span style="color:var(--its-danger);font-weight:700">⏰ Vencido há ${txt}</span>`;
+  // Urgência: <1h vermelho, <24h laranja, senão verde.
+  const cor = diffMs<3600000 ? 'var(--its-danger)' : (diffMs<86400000 ? 'var(--its-orange)' : 'var(--its-success)');
+  return `<span style="color:${cor};font-weight:600;font-variant-numeric:tabular-nums">${txt}</span>`;
+}
+function tickCountdowns(){
+  const els=document.querySelectorAll('.task-countdown');
+  els.forEach(el=>{
+    const ms=_prazoMs(el.getAttribute('data-prazo'));
+    el.innerHTML = ms==null ? '<span style="color:var(--its-muted)">—</span>' : fmtCountdown(ms-Date.now());
+  });
+}
+let _countdownTimer=null;
+function startCountdowns(){
+  tickCountdowns();
+  if(!_countdownTimer) _countdownTimer=setInterval(tickCountdowns,1000);
+}
+
 // ── RENDER TASKS ──────────────────────────────────────────────────────
 function renderTasks(list){
   const tb=document.getElementById('taskBody');
@@ -1247,6 +1290,7 @@ function renderTasks(list){
       <td><span class="priority-dot ${prioClass(t.prio)}"></span><strong style="font-size:.83rem">${esc(t.titulo)}</strong>${t.encaminhadoPara?`<span title="Encaminhada para ${esc(t.encaminhadoPara.nome)}" style="font-size:.68rem;color:var(--its-sidebar);background:#eef4fb;border-radius:4px;padding:1px 6px;margin-left:6px;white-space:nowrap"><i class="ti ti-send"></i> ${esc(t.encaminhadoPara.nome)}</span>`:''}</td>
       <td style="color:var(--its-muted);font-size:.8rem">${esc(t.area)}</td>
       <td style="font-size:.8rem">${fmtPrazo(t.prazo)}</td>
+      <td style="font-size:.8rem">${countdownCell(t)}</td>
       <td>${prioBadge(t.prio)}</td>
       <td>${statusBadge(t.status)}</td>
       <td>
@@ -1263,6 +1307,7 @@ function renderTasks(list){
         </div>
       </td>
     </tr>`).join('');
+  startCountdowns();
 }
 
 // Coordenador, Gerente e Admin veem todas as tarefas; os demais só veem
