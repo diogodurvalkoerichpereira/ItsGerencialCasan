@@ -4865,7 +4865,7 @@ function limparLogs(){
 // Seções visíveis por cargo (null/ausente = acesso total: Gerente, Coordenador, Admin).
 const NAV_PERMISSIONS={
   Operador:['emergencias'],                                          // só criar emergência
-  Supervisor:['emergencias','chamados','avisos','tarefas','relatorio'],
+  Supervisor:['emergencias','chamados','avisos','tarefas'],           // sem acesso a Relatórios
   Monitor:['tarefas'],                                              // só tarefas atribuídas a ele
   Cliente:['tarefas','relatorio'],                                   // criar tarefa + relatórios (demais módulos só via relatório)
 };
