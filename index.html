@@ -580,7 +580,7 @@ textarea{resize:vertical;min-height:72px}
               <tr>
                 <th>Data</th><th>Cidade</th><th>Recebido</th><th>Enviado</th>
                 <th>Protocolo</th><th>Serviço</th><th>Canal</th>
-                <th>Prazo</th><th>Status</th><th>Ações</th>
+                <th>Prazo</th><th>Atendente</th><th>Status</th><th>Ações</th>
               </tr>
             </thead>
             <tbody id="emergBody"></tbody>
@@ -2877,6 +2877,7 @@ function renderEmerg(list){
       <td><span class="badge ${e.servico==='Esgoto'?'badge-orange':'badge-blue'}">${esc(e.servico)||'—'}</span></td>
       <td style="font-size:.8rem">${esc(e.canal)||'—'}</td>
       <td><span style="font-size:.8rem;font-weight:700;color:var(--its-success);background:#f0fdf4;padding:2px 8px;border-radius:4px">${esc(e.prazo)||'00:00'}</span></td>
+      <td style="font-size:.8rem">${esc(e.criadoPor||e.supervisor)||'—'}</td>
       <td>${emergStatusBadge(e.status)}</td>
       <td>
         <div style="display:flex;gap:4px">
