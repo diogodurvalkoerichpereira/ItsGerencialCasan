@@ -58,5 +58,17 @@ CREATE TABLE IF NOT EXISTS casan_config (
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Logs de atividade (append-only, sem risco de sobrescrita por blob compartilhado)
+CREATE TABLE IF NOT EXISTS casan_logs (
+  id          BIGSERIAL PRIMARY KEY,
+  em          TEXT,
+  usuario     TEXT,
+  perfil      TEXT,
+  acao        TEXT NOT NULL,
+  detalhe     TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_logs_created ON casan_logs (created_at DESC);
+
 CREATE INDEX IF NOT EXISTS idx_tarefas_status  ON casan_tarefas (status);
 CREATE INDEX IF NOT EXISTS idx_chamados_status ON casan_chamados (status);

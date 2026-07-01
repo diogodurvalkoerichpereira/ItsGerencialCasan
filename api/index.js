@@ -383,6 +383,36 @@ app.delete('/usuarios/:id', requirePerfil(...PERFIS_GESTAO), asyncH(async (req, 
 }));
 
 // ---------------------------------------------------------------------------
+// Logs de atividade (append-only, tabela dedicada). Qualquer usuario autenticado
+// registra (POST); apenas gestao consulta/limpa. Sem risco de concorrencia.
+// ---------------------------------------------------------------------------
+app.post('/logs', asyncH(async (req, res) => {
+  const { em, acao, detalhe } = req.body || {};
+  if (!acao) return res.status(400).json({ error: 'acao obrigatoria' });
+  await pool.query(
+    `INSERT INTO casan_logs (em, usuario, perfil, acao, detalhe)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [em || null, req.user.nome, req.user.perfil, String(acao).slice(0, 200), (detalhe || '').slice(0, 1000)]
+  );
+  res.status(201).json({ ok: true });
+}));
+
+app.get('/logs', requirePerfil(...PERFIS_GESTAO), asyncH(async (req, res) => {
+  const limite = Math.min(parseInt(req.query.limit, 10) || 1000, 5000);
+  const { rows } = await pool.query(
+    `SELECT em, usuario, perfil, acao, detalhe
+       FROM casan_logs ORDER BY id DESC LIMIT $1`,
+    [limite]
+  );
+  res.json(rows);
+}));
+
+app.delete('/logs', requirePerfil(...PERFIS_GESTAO), asyncH(async (_req, res) => {
+  await pool.query('TRUNCATE casan_logs');
+  res.json({ ok: true });
+}));
+
+// ---------------------------------------------------------------------------
 // Ponto (por mes)
 // ---------------------------------------------------------------------------
 app.get('/ponto', asyncH(async (_req, res) => {

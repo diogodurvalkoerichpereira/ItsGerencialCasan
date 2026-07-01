@@ -3927,7 +3927,7 @@ function setNav(el,tab){
     syncUsersFromAPI().then(mudou=>{ if(mudou) renderUsers(); });
   } else if(tab==='logs'){
     btn.style.display='none';
-    renderLogs();
+    carregarLogs();
   } else if(tab==='medicao'){
     btn.style.display='none';
     renderMedicao();
@@ -4650,15 +4650,32 @@ function podeEditarEmerg(){return !isCliente()&&!isOperador();}
 // ── LOGS DE ATIVIDADE (auditoria) ─────────────────────────────────────
 const LOG_MAX=800; // mantém os últimos N registros
 let LOGS = JSON.parse(localStorage.getItem('its_logs')||'null') || [];
-function saveLogs(){ localStorage.setItem('its_logs', JSON.stringify(LOGS)); remoteSet('its_logs', LOGS); }
+function saveLogs(){ localStorage.setItem('its_logs', JSON.stringify(LOGS)); } // cache local apenas
 // Registra uma interação do usuário logado.
+// Persistência definitiva na TABELA dedicada casan_logs (append-only, sem risco
+// de sobrescrita). Mantém cópia local para UI imediata e modo offline.
 function logEvento(acao, detalhe){
   try{
     const s=getSession();
-    LOGS.unshift({ em:agoraISO(), usuario:(s&&s.nome)||'—', perfil:(s&&s.cargo)||'', acao, detalhe:detalhe||'' });
+    const entry={ em:agoraISO(), usuario:(s&&s.nome)||'—', perfil:(s&&s.cargo)||'', acao, detalhe:detalhe||'' };
+    LOGS.unshift(entry);
     if(LOGS.length>LOG_MAX) LOGS.length=LOG_MAX;
     saveLogs();
+    if(sessionStorage.its_token){
+      fetch(`${ITS_API}/logs`,{method:'POST',headers:authHeaders({'Content-Type':'application/json'}),
+        body:JSON.stringify({em:entry.em, acao:entry.acao, detalhe:entry.detalhe})}).catch(()=>{});
+    }
   }catch(_){}
+}
+// Busca os logs da tabela dedicada (fonte da verdade) e re-renderiza.
+async function carregarLogs(){
+  if(sessionStorage.its_token){
+    try{
+      const r=await fetch(`${ITS_API}/logs`,{headers:authHeaders()});
+      if(r.ok){ const rows=await r.json(); if(Array.isArray(rows)){ LOGS=rows; localStorage.setItem('its_logs',JSON.stringify(rows)); } }
+    }catch(_){}
+  }
+  try{ renderLogs(); }catch(_){}
 }
 // ── NOTIFICAÇÕES INTERNAS (sino) ──────────────────────────────────────
 const NOTIF_MAX=400;
@@ -4839,6 +4856,9 @@ function exportLogsCSV(){
 }
 function limparLogs(){
   if(!confirm('Limpar TODOS os registros de log? Esta ação não pode ser desfeita.'))return;
+  if(sessionStorage.its_token){
+    fetch(`${ITS_API}/logs`,{method:'DELETE',headers:authHeaders()}).catch(()=>{});
+  }
   LOGS=[]; saveLogs(); renderLogs(); logEvento('Logs','Logs limpos pelo administrador');
 }
 // Mapa de permissões: cargo → seções visíveis (null = acesso total)
@@ -5023,7 +5043,8 @@ async function hydrateFromAPI(){
   if(Array.isArray(chamados)){ CHAMADOS = chamados; nextChamadoId = Math.max(0,...CHAMADOS.map(c=>c.id))+1; localStorage.setItem('its_chamados', JSON.stringify(chamados)); }
   if(Array.isArray(emergs)){ EMERGS = emergs; nextEmergId = Math.max(0,...EMERGS.map(e=>e.id))+1; localStorage.setItem('its_emergs', JSON.stringify(emergs)); }
   if(Array.isArray(avisos)){ AVISOS = avisos; nextAvisoId = Math.max(0,...AVISOS.map(a=>a.id))+1; localStorage.setItem('its_avisos', JSON.stringify(avisos)); }
-  if(Array.isArray(logs)){ LOGS = logs; localStorage.setItem('its_logs', JSON.stringify(logs)); try{renderLogs();}catch(_){} }
+  // Logs agora vêm da tabela dedicada casan_logs (não do blob its_logs).
+  try{ carregarLogs(); }catch(_){}
   if(Array.isArray(notifs)){ NOTIFS = notifs; _nextNotifId = NOTIFS.length?Math.max(0,...NOTIFS.map(n=>n.id||0))+1:1; localStorage.setItem('its_notifs', JSON.stringify(notifs)); try{renderNotifBadge(); notifsDoUsuario().forEach(n=>_notifVistos.add(n.id));}catch(_){} }
   if(medicao && typeof medicao==='object'){ MEDICAO = medicao; localStorage.setItem('its_medicao', JSON.stringify(medicao)); try{ if(document.getElementById('panel-medicao').classList.contains('active')) renderMedicao(); }catch(_){} }
 
@@ -5044,7 +5065,6 @@ async function hydrateFromAPI(){
   if(chamados===null) remoteSet('its_chamados', CHAMADOS);
   if(emergs===null) remoteSet('its_emergs', EMERGS);
   if(avisos===null) remoteSet('its_avisos', AVISOS);
-  if(logs===null) remoteSet('its_logs', LOGS);
   if(notifs===null) remoteSet('its_notifs', NOTIFS);
 }
 
