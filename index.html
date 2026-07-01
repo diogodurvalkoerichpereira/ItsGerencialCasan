@@ -49,6 +49,16 @@ body{display:flex;overflow:hidden}
 .avatar{width:32px;height:32px;border-radius:50%;background:var(--its-sidebar);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.7rem;font-weight:700}
 .content{flex:1;overflow-y:auto;padding:18px 20px}
 
+/* IMPRESSÃO (Ctrl+P): oculta menu/topo e imprime só o conteúdo ativo */
+@media print{
+  .sidebar,.topbar,#notifBell,#notifPanel,#topbarBtn,.filter-row,.tabs,#reportToolbar,.no-print{display:none!important}
+  .main,.content{overflow:visible!important;height:auto!important;display:block!important;padding:0!important}
+  .panel:not(.active){display:none!important}
+  .card{border:none!important;box-shadow:none!important}
+  html,body{background:#fff!important;height:auto!important;overflow:visible!important}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+
 /* TABS */
 .tabs{display:flex;gap:4px;margin-bottom:18px;background:#fff;border:1px solid var(--its-border);border-radius:var(--radius-md);padding:4px}
 .tab{flex:1;padding:7px 12px;border-radius:7px;font-size:.82rem;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--its-muted);transition:background .15s,color .15s;text-align:center;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px}
