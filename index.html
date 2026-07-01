@@ -1685,9 +1685,9 @@ function mostrarRelatorio(){
 
 // Abre uma janela de impressão com o relatório (o usuário escolhe "Salvar
 // como PDF" no diálogo de impressão do navegador). Sem dependências externas.
-function imprimirRelatorio(){
-  const conteudo=document.getElementById('reportResult');
-  if(!conteudo||conteudo.style.display==='none'){showToast('Gere um relatório primeiro.','warn');return;}
+function imprimirRelatorio(elId){
+  const conteudo=document.getElementById(elId||'reportResult');
+  if(!conteudo||!conteudo.innerHTML.trim()||conteudo.style.display==='none'){showToast('Gere um relatório primeiro.','warn');return;}
   const w=window.open('','_blank','width=900,height=700');
   if(!w){showToast('Permita pop-ups para imprimir/baixar.','warn');return;}
   // Dados do rodapé: usuário logado + data/hora de geração.
@@ -1719,6 +1719,7 @@ function imprimirRelatorio(){
       .pagina:after{counter-increment:page;content:"Página " counter(page) " de " counter(pages);}
       @page{margin:14mm 12mm 22mm;
         @bottom-right{content:"Página " counter(page) " de " counter(pages);font-size:9px;color:#64748b;}}
+      .no-print{display:none!important}
       @media print{body{padding:0 0 70px}.card{border:none}}
     </style></head><body>${conteudo.innerHTML}
     <div class="rodape">
@@ -3377,8 +3378,8 @@ function renderMedicao(){
         <thead><tr><th>Indicador</th><th style="text-align:center">Medida</th><th style="text-align:center">Meta</th><th style="text-align:center">Entregue</th><th style="text-align:center">Critério</th><th style="text-align:center">Glosa</th></tr></thead>
         <tbody>${linhas}</tbody>
       </table>`:''}
-      <div style="display:flex;justify-content:flex-end;margin-top:14px">
-        <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="ti ti-printer"></i> Imprimir / PDF</button>
+      <div class="no-print" style="display:flex;justify-content:flex-end;margin-top:14px">
+        <button class="btn btn-outline btn-sm" onclick="imprimirRelatorio('medicaoResult')"><i class="ti ti-printer"></i> Imprimir / PDF</button>
       </div>
     </div>`;
 }
