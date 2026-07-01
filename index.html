@@ -1092,7 +1092,7 @@ textarea{resize:vertical;min-height:72px}
               <tr>
                 <th>Data</th><th>Cidade</th><th>Bairro</th><th>Serviço</th><th>Recebido</th><th>Inserido</th>
                 <th>Prev. Normalização</th><th>Canal</th>
-                <th style="text-align:center">Dentro do Prazo</th>
+                <th style="text-align:center" id="thPrazoAviso">Dentro do Prazo</th>
                 <th>Situação</th><th>Ações</th>
               </tr>
             </thead>
@@ -3674,6 +3674,10 @@ function situacaoBadge(s){
 function renderAvisos(list){
   const tb=document.getElementById('avisosBody');
   const em=document.getElementById('avisosEmpty');
+  // O Supervisor não visualiza a coluna "Dentro do Prazo".
+  const ocultarPrazo=(getSession()||{}).cargo==='Supervisor';
+  const thPrazo=document.getElementById('thPrazoAviso');
+  if(thPrazo) thPrazo.style.display=ocultarPrazo?'none':'';
   if(!list||!list.length){tb.innerHTML='';em.style.display='block';return}
   em.style.display='none';
   tb.innerHTML=list.map(a=>`
@@ -3686,7 +3690,7 @@ function renderAvisos(list){
       <td style="font-size:.8rem">${esc(a.inserido)}</td>
       <td style="font-size:.8rem;font-weight:600;color:var(--its-sidebar)">${esc(a.prevNorm)||'—'}</td>
       <td style="font-size:.8rem">${esc(a.canal)}</td>
-      <td style="text-align:center;font-size:.78rem;font-weight:700;color:${avisoDentroPrazo(a)?'var(--its-success)':'var(--its-danger)'}">${avisoDentroPrazo(a)?'✓ Sim':'✗ Não'}</td>
+      ${ocultarPrazo?'':`<td style="text-align:center;font-size:.78rem;font-weight:700;color:${avisoDentroPrazo(a)?'var(--its-success)':'var(--its-danger)'}">${avisoDentroPrazo(a)?'✓ Sim':'✗ Não'}</td>`}
       <td>${situacaoBadge(a.situacao)}${a.obs?`<div style="font-size:.7rem;color:var(--its-muted);margin-top:3px">${esc(a.obs)}</div>`:''}</td>
       <td>
         <div style="display:flex;gap:4px">
