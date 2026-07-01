@@ -3759,9 +3759,9 @@ function registrarAviso(){
     criadoPor:atendente
   });
   saveAvisos();
-  notificarInterno({icone:'ti-speakerphone',titulo:'Novo Aviso de Indisponibilidade',texto:cidade+(atendente?` · Atendente: ${atendente}`:''),audiencia:'operador'});
+  notificarInterno({icone:'ti-speakerphone',titulo:'Novo Aviso',texto:cidade+(atendente?` · Atendente: ${atendente}`:''),audiencia:'operador'});
   notifyWhatsApp(
-    `📢 *NOVO AVISO — Indisponibilidade de Serviço* — iTS Gerencial CASAN\n\n`+
+    `📢 *NOVO AVISO* — iTS Gerencial CASAN\n\n`+
     `Cidade: ${cidade}\n`+
     `Bairro: ${bairro}\n`+
     `Serviço: ${servico}\n`+
@@ -3769,7 +3769,7 @@ function registrarAviso(){
     `Canal: ${canal}\n`+
     `Atendente: ${atendente||'—'}`
   );
-  notifyEmail(`📢 Novo Aviso — Indisponibilidade: ${cidade}`, `Aviso — ${cidade}`, 'Novo aviso de indisponibilidade de serviço', 'Notificação — Quadro de Avisos',
+  notifyEmail(`📢 Novo Aviso: ${cidade}`, `Aviso — ${cidade}`, 'Novo aviso registrado', 'Notificação — Quadro de Avisos',
     [{label:'Cidade',valor:cidade},{label:'Bairro',valor:bairro},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Canal',valor:canal},{label:'Atendente',valor:atendente||'—'}]);
   ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aPrevNormData','aInserido','aInseridoData','aObs'].forEach(id=>document.getElementById(id).value='');
   ['aServico','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
@@ -5016,6 +5016,17 @@ async function remoteGet(chave){
   }catch(_){ return undefined; }
 }
 
+// Mescla lista do servidor com a local por ID. Mantém o servidor como base e
+// acrescenta itens que só existem localmente (cadastros ainda não sincronizados).
+// Retorna { arr, healed } — healed=true quando havia itens locais a reenviar.
+function mergeArrById(server, local){
+  const arrServer = Array.isArray(server) ? server : [];
+  const arrLocal  = Array.isArray(local)  ? local  : [];
+  const ids = new Set(arrServer.map(x => x && x.id));
+  const extras = arrLocal.filter(x => x && x.id != null && !ids.has(x.id));
+  return extras.length ? { arr: arrServer.concat(extras), healed: true } : { arr: arrServer, healed: false };
+}
+
 // Puxa os dados do servidor; reatribui as variáveis em memória e re-renderiza.
 async function hydrateFromAPI(){
   const [ponto, cfg, users, adminHash, tasks, chamados, emergs, avisos, logs, notifs, medicao] = await Promise.all([
@@ -5039,13 +5050,15 @@ async function hydrateFromAPI(){
     localStorage.setItem('its_users', JSON.stringify(users));
   }
   if(typeof adminHash==='string' && adminHash){ localStorage.setItem('its_admin_hash', adminHash); }
-  if(Array.isArray(tasks)){ TASKS = tasks; nextId = Math.max(0,...TASKS.map(t=>t.id))+1; localStorage.setItem('its_tasks', JSON.stringify(tasks)); }
-  if(Array.isArray(chamados)){ CHAMADOS = chamados; nextChamadoId = Math.max(0,...CHAMADOS.map(c=>c.id))+1; localStorage.setItem('its_chamados', JSON.stringify(chamados)); }
-  if(Array.isArray(emergs)){ EMERGS = emergs; nextEmergId = Math.max(0,...EMERGS.map(e=>e.id))+1; localStorage.setItem('its_emergs', JSON.stringify(emergs)); }
-  if(Array.isArray(avisos)){ AVISOS = avisos; nextAvisoId = Math.max(0,...AVISOS.map(a=>a.id))+1; localStorage.setItem('its_avisos', JSON.stringify(avisos)); }
+  // Mescla por ID: o servidor é a fonte, mas itens locais ainda não sincronizados
+  // são preservados (e reenviados). Evita perder cadastros por corrida/sobrescrita.
+  if(Array.isArray(tasks)){ const r=mergeArrById(tasks, TASKS); TASKS=r.arr; nextId=Math.max(0,...TASKS.map(t=>t.id),0)+1; localStorage.setItem('its_tasks', JSON.stringify(TASKS)); if(r.healed) remoteSet('its_tasks', TASKS); }
+  if(Array.isArray(chamados)){ const r=mergeArrById(chamados, CHAMADOS); CHAMADOS=r.arr; nextChamadoId=Math.max(0,...CHAMADOS.map(c=>c.id),0)+1; localStorage.setItem('its_chamados', JSON.stringify(CHAMADOS)); if(r.healed) remoteSet('its_chamados', CHAMADOS); }
+  if(Array.isArray(emergs)){ const r=mergeArrById(emergs, EMERGS); EMERGS=r.arr; nextEmergId=Math.max(0,...EMERGS.map(e=>e.id),0)+1; localStorage.setItem('its_emergs', JSON.stringify(EMERGS)); if(r.healed) remoteSet('its_emergs', EMERGS); }
+  if(Array.isArray(avisos)){ const r=mergeArrById(avisos, AVISOS); AVISOS=r.arr; nextAvisoId=Math.max(0,...AVISOS.map(a=>a.id),0)+1; localStorage.setItem('its_avisos', JSON.stringify(AVISOS)); if(r.healed) remoteSet('its_avisos', AVISOS); }
   // Logs agora vêm da tabela dedicada casan_logs (não do blob its_logs).
   try{ carregarLogs(); }catch(_){}
-  if(Array.isArray(notifs)){ NOTIFS = notifs; _nextNotifId = NOTIFS.length?Math.max(0,...NOTIFS.map(n=>n.id||0))+1:1; localStorage.setItem('its_notifs', JSON.stringify(notifs)); try{renderNotifBadge(); notifsDoUsuario().forEach(n=>_notifVistos.add(n.id));}catch(_){} }
+  if(Array.isArray(notifs)){ const r=mergeArrById(notifs, NOTIFS); NOTIFS=r.arr; _nextNotifId = NOTIFS.length?Math.max(0,...NOTIFS.map(n=>n.id||0))+1:1; localStorage.setItem('its_notifs', JSON.stringify(NOTIFS)); if(r.healed) remoteSet('its_notifs', NOTIFS); try{renderNotifBadge(); notifsDoUsuario().forEach(n=>_notifVistos.add(n.id));}catch(_){} }
   if(medicao && typeof medicao==='object'){ MEDICAO = medicao; localStorage.setItem('its_medicao', JSON.stringify(medicao)); try{ if(document.getElementById('panel-medicao').classList.contains('active')) renderMedicao(); }catch(_){} }
 
   // Re-renderiza com os dados do servidor.
