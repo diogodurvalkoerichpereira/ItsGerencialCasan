@@ -565,6 +565,13 @@ textarea{resize:vertical;min-height:72px}
               <option>Água</option><option>Esgoto</option>
             </select>
           </div>
+          <div class="form-group">
+            <label>Data</label>
+            <div style="display:flex;gap:6px">
+              <input type="date" id="eFilterData" onchange="filterEmerg()" style="flex:1">
+              <button class="btn btn-ghost btn-sm" onclick="document.getElementById('eFilterData').value='';filterEmerg()" title="Limpar data"><i class="ti ti-x"></i></button>
+            </div>
+          </div>
         </div>
 
         <div class="card" style="padding:0;overflow:hidden">
@@ -2885,9 +2892,13 @@ function filterEmerg(){
   const q=document.getElementById('eSearch').value.toLowerCase();
   const st=document.getElementById('eFilterStatus').value;
   const sv=document.getElementById('eFilterSev').value;
+  // Data guardada como "DD/MM"; o input <date> traz "YYYY-MM-DD".
+  const dataIso=document.getElementById('eFilterData').value;
+  const dataDDMM=dataIso?`${dataIso.slice(8,10)}/${dataIso.slice(5,7)}`:'';
   renderEmerg(emergsVisiveis().filter(e=>
     (!q||e.cidade.toLowerCase().includes(q)||e.protocolo.toLowerCase().includes(q))&&
-    (!st||e.status===st)&&(!sv||e.servico===sv)
+    (!st||e.status===st)&&(!sv||e.servico===sv)&&
+    (!dataDDMM||e.data===dataDDMM)
   ));
 }
 
