@@ -3751,9 +3751,9 @@ function registrarAviso(){
     criadoPor:atendente
   });
   saveAvisos();
-  notificarInterno({icone:'ti-speakerphone',titulo:'Novo Aviso',texto:cidade+(atendente?` · Atendente: ${atendente}`:''),audiencia:'operador'});
+  notificarInterno({icone:'ti-speakerphone',titulo:'Quadro de Avisos',texto:cidade+(atendente?` · Atendente: ${atendente}`:''),audiencia:'operador'});
   notifyWhatsApp(
-    `📢 *NOVO AVISO* — iTS Gerencial CASAN\n\n`+
+    `📢 *QUADRO DE AVISOS* — iTS Gerencial CASAN\n\n`+
     `Cidade: ${cidade}\n`+
     `Bairro: ${bairro}\n`+
     `Serviço: ${servico}\n`+
