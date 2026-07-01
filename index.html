@@ -303,7 +303,7 @@ textarea{resize:vertical;min-height:72px}
         <table class="task-table">
           <thead>
             <tr>
-              <th>Título</th><th>Área</th>
+              <th>ID</th><th>Título</th><th>Área</th>
               <th>Prazo</th><th>Tempo Restante</th><th>Prioridade</th><th>Status</th><th>Ações</th>
             </tr>
           </thead>
@@ -344,7 +344,7 @@ textarea{resize:vertical;min-height:72px}
         <table class="task-table">
           <thead>
             <tr>
-              <th>Título</th><th>Abertura</th><th>Resolução</th>
+              <th>ID</th><th>Título</th><th>Abertura</th><th>Resolução</th>
               <th>Tempo</th><th>Status</th><th>Prazo (1h)</th><th>Ações</th>
             </tr>
           </thead>
@@ -1287,6 +1287,7 @@ function renderTasks(list){
   list=list.slice().sort((a,b)=>b.id-a.id);
   tb.innerHTML=list.map(t=>`
     <tr>
+      <td style="font-size:.78rem;font-weight:700;color:var(--its-sidebar);white-space:nowrap">#${String(t.id).padStart(4,'0')}</td>
       <td><span class="priority-dot ${prioClass(t.prio)}"></span><strong style="font-size:.83rem">${esc(t.titulo)}</strong>${t.encaminhadoPara?`<span title="Encaminhada para ${esc(t.encaminhadoPara.nome)}" style="font-size:.68rem;color:var(--its-sidebar);background:#eef4fb;border-radius:4px;padding:1px 6px;margin-left:6px;white-space:nowrap"><i class="ti ti-send"></i> ${esc(t.encaminhadoPara.nome)}</span>`:''}</td>
       <td style="color:var(--its-muted);font-size:.8rem">${esc(t.area)}</td>
       <td style="font-size:.8rem">${fmtPrazo(t.prazo)}</td>
@@ -2451,6 +2452,7 @@ function renderChamados(list){
       :noPrazo?'<span style="color:var(--its-success);font-weight:600">✓ No prazo</span>'
       :'<span style="color:var(--its-danger);font-weight:600">✗ Fora do prazo</span>';
     return`<tr>
+      <td style="font-size:.78rem;font-weight:700;color:var(--its-sidebar);white-space:nowrap">#${String(c.id).padStart(4,'0')}</td>
       <td style="font-weight:600;max-width:180px">${esc(c.titulo)}</td>
       <td style="font-size:.78rem">${esc(c.criado)}</td>
       <td style="font-size:.78rem">${esc(c.resolvidoEm)||'—'}</td>
