@@ -2965,8 +2965,7 @@ function registrarEmerg(){
     `Protocolo: ${protocoloEm||'—'}\n`+
     `Atendente: ${atendenteEm||'—'}`
   );
-  notifyEmail(`🚨 Nova Emergência: ${cidade}`, `Emergência — ${cidade}`, 'Nova ocorrência de emergência', 'Notificação de Emergência',
-    [{label:'Cidade',valor:cidade},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Protocolo',valor:protocoloEm||'—'},{label:'Atendente',valor:atendenteEm||'—'}]);
+  // Emergências: notificação por e-mail desativada (apenas WhatsApp + interna).
   ['eData','eRecebido','eCidade','eProtocolo','eDesc'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('eServico').selectedIndex=0;
   const firstTab=document.querySelector('#emergTabs .tab');
@@ -3780,8 +3779,7 @@ function registrarAviso(){
     `Canal: ${canal}\n`+
     `Atendente: ${atendente||'—'}`
   );
-  notifyEmail(`📢 Novo Aviso: ${cidade}`, `Aviso — ${cidade}`, 'Novo aviso registrado', 'Notificação — Quadro de Avisos',
-    [{label:'Cidade',valor:cidade},{label:'Bairro',valor:bairro},{label:'Serviço',valor:servico},{label:'Recebido',valor:recebido},{label:'Canal',valor:canal},{label:'Atendente',valor:atendente||'—'}]);
+  // Quadro de Avisos: notificação por e-mail desativada (apenas WhatsApp + interna).
   ['aData','aRecebido','aCidade','aBairro','aPrevNorm','aPrevNormData','aInserido','aInseridoData','aObs'].forEach(id=>document.getElementById(id).value='');
   ['aServico','aCanal','aSituacao'].forEach(id=>document.getElementById(id).selectedIndex=0);
   const firstTab=document.querySelector('#avisosTabs .tab');
