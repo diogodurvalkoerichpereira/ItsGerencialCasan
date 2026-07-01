@@ -3272,8 +3272,20 @@ function parseMoeda(v){
   if(typeof v==='number') return v;
   let s=String(v).trim();
   if(/n\s*\/?\s*a/i.test(s)) return null;       // "N/A"
-  s=s.replace(/r\$/i,'').replace(/\s/g,'');
-  s=s.replace(/\./g,'').replace(',', '.');       // formato BR
+  s=s.replace(/r\$/i,'').replace(/\s/g,'');     // remove "R$" e espaços
+  if(!s || !/\d/.test(s)) return null;          // vazio ou " - "
+  const hasDot=s.includes('.'), hasComma=s.includes(',');
+  if(hasDot&&hasComma){
+    // O último separador é o decimal. Ex.: 520.827,95 (BR) ou 520,827.95 (US).
+    if(s.lastIndexOf(',')>s.lastIndexOf('.')) s=s.replace(/\./g,'').replace(',', '.');
+    else s=s.replace(/,/g,'');
+  } else if(hasComma){
+    // Só vírgula: decimal se houver 1–2 dígitos ao final; senão é milhar.
+    s = /,\d{1,2}$/.test(s) ? s.replace(',', '.') : s.replace(/,/g,'');
+  } else if(hasDot){
+    // Só ponto: se for "\.\d{3}" (milhar) e não terminar em decimal, remove.
+    if(/\.\d{3}(\D|$)/.test(s) && !/\.\d{1,2}$/.test(s)) s=s.replace(/\./g,'');
+  }
   const n=parseFloat(s);
   return isNaN(n)?null:n;
 }
