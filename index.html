@@ -1698,12 +1698,13 @@ function imprimirRelatorio(elId){
   w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
     <title>Relatório iTS Gerencial CASAN</title>
     <style>
-      *{box-sizing:border-box;margin:0;padding:0}
+      *{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       body{font-family:'Segoe UI',system-ui,Arial,sans-serif;color:#1e293b;padding:24px 24px 70px;background:#fff}
-      .card{border:1px solid #e2e8f0;border-radius:10px;padding:18px}
-      table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+      .card{border:1px solid #e2e8f0;border-radius:10px;padding:18px;max-width:100%;overflow:hidden}
+      table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;table-layout:fixed;word-break:break-word}
       th{background:#183c5a;color:#fff;padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
-      td{padding:7px 10px;border-bottom:1px solid #e2e8f0}
+      td{padding:7px 10px;border-bottom:1px solid #e2e8f0;word-break:break-word;overflow-wrap:anywhere}
+      img{max-width:100%}
       .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
       .stat-card{border-radius:8px;padding:12px;text-align:center}
       .stat-value{font-size:1.4rem;font-weight:800}
