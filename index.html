@@ -2867,6 +2867,8 @@ function renderEmerg(list){
   const em=document.getElementById('emergEmpty');
   if(!list||!list.length){tb.innerHTML='';em.style.display='block';return}
   em.style.display='none';
+  // Mais recentes primeiro (por id de criação).
+  list=list.slice().sort((a,b)=>(b.id||0)-(a.id||0));
   tb.innerHTML=list.map(e=>`
     <tr>
       <td style="color:var(--its-muted);font-size:.78rem">${esc(e.data)||'—'}</td>
