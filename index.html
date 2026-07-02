@@ -2524,7 +2524,7 @@ function salvarChamado(){
     `Aberto em: ${criadoIso}`
   );
   notifyEmail(`🆘 Novo Chamado: ${titulo}`, titulo, 'Um novo chamado foi aberto', 'Notificação de Chamado',
-    [{label:'Descrição',valor:descCh},{label:'Aberto em',valor:criadoIso},{label:'Status',valor:'Em Atendimento'}]);
+    [{label:'Descrição',valor:descCh},{label:'Aberto em',valor:criadoIso},{label:'Status',valor:'Em Atendimento'}], emailsGestao());
   logEvento('Chamado aberto', titulo);
   closeModal();filterChamados();showToast('Chamado registrado com sucesso!');
 }
@@ -4163,11 +4163,21 @@ function notifyAlteracao(tipoLabel, titulo, linhas, opts={}){
     [...linhas, {label:'Alterado por', valor:`${a.por} (${a.perfil||'—'})`}]);
 }
 
+// E-mails dos gestores ativos (Gerente/Coordenador) — sempre notificados em
+// eventos-chave (nova solicitação / novo chamado), independentemente da lista.
+function emailsGestao(){
+  return (USERS||[])
+    .filter(u=>u.status==='Ativo' && (u.cargo==='Gerente'||u.cargo==='Coordenador') && u.email && u.email.includes('@'))
+    .map(u=>u.email);
+}
+
 // Envia e-mail genérico (chamados, emergências, avisos) para destinatários
 // com e-mail válido, usando o email-service. Silencioso.
-function notifyEmail(assunto, titulo, subtitulo, cabecalho, linhas){
+// extraBcc: e-mails adicionais que devem receber (ex.: gestores).
+function notifyEmail(assunto, titulo, subtitulo, cabecalho, linhas, extraBcc){
   if(!CFG.ativo||!CFG.smtpEmail||!CFG.smtpHost) return;
-  const dest=(CFG.recipients||[]).map(r=>r.email).filter(e=>e&&e.includes('@')).join(',');
+  const lista=[...(CFG.recipients||[]).map(r=>r.email), ...(extraBcc||[])].filter(e=>e&&e.includes('@'));
+  const dest=[...new Set(lista)].join(',');
   if(!dest) return;
   fetch(`${location.origin}/email/send`,{
     method:'POST',
@@ -4188,9 +4198,10 @@ function sendNotification(task){
     `Status: ${task.status||'—'}`
   );
   if(!CFG.ativo||!CFG.smtpEmail||!CFG.smtpHost) return;
-  if(!CFG.recipients||!CFG.recipients.length) return;
   // O envio SMTP é feito pelo its-email-service (backend nodemailer) na rede interna.
-  const destinatarios = CFG.recipients.map(r=>r.email).filter(e=>e&&e.includes('@')).join(',');
+  // Gerente/Coordenador ativos são SEMPRE incluídos, além dos destinatários da lista.
+  const listaEmails=[...(CFG.recipients||[]).map(r=>r.email), ...emailsGestao()].filter(e=>e&&e.includes('@'));
+  const destinatarios = [...new Set(listaEmails)].join(',');
   if(!destinatarios) return; // ninguém com e-mail válido (pode ter só WhatsApp)
   const emailServiceUrl = `${location.origin}/email/send`;
   fetch(emailServiceUrl, {
