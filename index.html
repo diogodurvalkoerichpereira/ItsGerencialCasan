@@ -609,7 +609,7 @@ textarea{resize:vertical;min-height:72px}
           <div class="form-row">
             <div class="form-group">
               <label>Cidade *</label>
-              <input type="text" id="eCidade" placeholder="Ex: Florianópolis, São José...">
+              <input type="text" id="eCidade" list="cidadesSC" placeholder="Selecione a cidade (SC)..." autocomplete="off">
             </div>
             <div class="form-group"></div>
           </div>
@@ -1275,6 +1275,11 @@ function startCountdowns(){
   if(!_countdownTimer) _countdownTimer=setInterval(tickCountdowns,1000);
 }
 
+// Gera um ID único e crescente (baseado no tempo). Nunca reutiliza ids antigos,
+// evitando colisão com registros já excluídos (tombstones) e entre sessões.
+let _idSeq=0;
+function novoId(){ _idSeq=(_idSeq+1)%1000; return Date.now()*1000+_idSeq; }
+
 // ── RENDER TASKS ──────────────────────────────────────────────────────
 function renderTasks(list){
   const tb=document.getElementById('taskBody');
@@ -1423,7 +1428,7 @@ function saveTask(id){
       criado:criadoIso,prazo:calcPrazo(prio,criadoIso),
       criadoPorCliente:s&&s.cargo==='Cliente',criadoPor:s?s.nome:'',
       historico:[novaInteracao('abertura',descTask,anexosAbertura)]};
-    obj.id=nextId++;TASKS.push(obj);sendNotification(obj);
+    obj.id=novoId();TASKS.push(obj);sendNotification(obj);
   }
   saveTasks();
   closeModal();applyFilters();updateDashboard();
@@ -2517,7 +2522,7 @@ function salvarChamado(){
     :`${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}`;
   const descCh=document.getElementById('cDesc').value;
   const anexosAbertura=(typeof _anexosResp!=='undefined')?_anexosResp.slice():[];
-  CHAMADOS.unshift({id:nextChamadoId++,titulo,desc:descCh,criado:criadoIso,status:'Em Atendimento',resolvidoEm:null,
+  CHAMADOS.unshift({id:novoId(),titulo,desc:descCh,criado:criadoIso,status:'Em Atendimento',resolvidoEm:null,
     criadoPor:(getSession()||{}).nome||'',
     historico:[novaInteracao('abertura',descCh,anexosAbertura)]});
   saveChamados();
@@ -2922,8 +2927,10 @@ function calcPrazoEmerg(recebido, enviado){
   return String(Math.floor(diff/60)).padStart(2,'0')+':'+String(diff%60).padStart(2,'0');
 }
 function registrarEmerg(){
-  const cidade=document.getElementById('eCidade').value.trim();
-  if(!cidade){alert('Informe a cidade.');return}
+  const cidadeIn=document.getElementById('eCidade').value.trim();
+  if(!cidadeIn){alert('Informe a cidade.');return}
+  const cidade=cidadeValidaSC(cidadeIn);
+  if(!cidade){alert('Selecione uma cidade válida de Santa Catarina na lista.');return}
   const servico=document.getElementById('eServico').value;
   if(!servico){alert('Selecione o serviço.');return}
   const supervisor='';
@@ -2935,7 +2942,7 @@ function registrarEmerg(){
   const prazo=calcPrazoEmerg(recebido, enviado);
   const [dy,dm,dd]=data.split('-');
   EMERGS.unshift({
-    id:nextEmergId++,
+    id:novoId(),
     data:`${dd}/${dm}`,
     cidade,recebido,enviado,supervisor,
     protocolo:document.getElementById('eProtocolo').value,
@@ -3720,8 +3727,10 @@ function registrarAviso(){
   if(!data){alert('Informe a data.');return}
   const recebido=document.getElementById('aRecebido').value;
   if(!recebido){alert('Informe o horário recebido.');return}
-  const cidade=document.getElementById('aCidade').value.trim();
-  if(!cidade){alert('Informe a cidade.');return}
+  const cidadeIn=document.getElementById('aCidade').value.trim();
+  if(!cidadeIn){alert('Informe a cidade.');return}
+  const cidade=cidadeValidaSC(cidadeIn);
+  if(!cidade){alert('Selecione uma cidade válida de Santa Catarina na lista.');return}
   const bairro=document.getElementById('aBairro').value.trim();
   if(!bairro){alert('Informe o bairro afetado.');return}
   const servico=document.getElementById('aServico').value;
@@ -3747,7 +3756,7 @@ function registrarAviso(){
   else if(_pnData) prevNorm=`${_pnData.slice(8,10)}/${_pnData.slice(5,7)}`;
   const atendente=(getSession()||{}).nome||'';
   AVISOS.unshift({
-    id:nextAvisoId++,
+    id:novoId(),
     data:`${dd}/${dm}`,cidade,bairro,servico,recebido,inserido,supervisor:atendente,
     prevNorm,
     canal,
@@ -5148,6 +5157,14 @@ const CIDADES_SC=["Abdon Batista","Abelardo Luz","Agrolândia","Agronômica","Á
 function popularCidadesSC(){
   const dl=document.getElementById('cidadesSC'); if(!dl) return;
   dl.innerHTML=CIDADES_SC.map(c=>`<option value="${c}"></option>`).join('');
+}
+// Valida/normaliza o nome digitado contra a lista oficial de municípios de SC.
+// Ignora acentos e caixa. Retorna o nome canônico, ou null se não for válido.
+function normalizaTxt(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').trim().toLowerCase(); }
+function cidadeValidaSC(v){
+  const alvo=normalizaTxt(v);
+  if(!alvo) return null;
+  return CIDADES_SC.find(c=>normalizaTxt(c)===alvo)||null;
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────
