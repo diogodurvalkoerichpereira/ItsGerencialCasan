@@ -1314,6 +1314,11 @@ function podeVerTodasTarefas(){
   const s=getSession();
   return !!(s&&(s.isAdmin||s.cargo==='Gerente'||s.cargo==='Coordenador'));
 }
+// Supervisão/gestão enxerga também as solicitações abertas pelo Cliente.
+function ehSupervisaoOuGestao(){
+  const s=getSession();
+  return !!(s&&(s.isAdmin||s.cargo==='Gerente'||s.cargo==='Coordenador'||s.cargo==='Supervisor'));
+}
 function applyFilters(){
   const q=document.getElementById('searchInput').value.toLowerCase();
   const st=document.getElementById('filterStatus').value;
@@ -1323,7 +1328,7 @@ function applyFilters(){
   const meuNome=(getSession()||{}).nome||'';
   const verTodas=podeVerTodasTarefas();
   renderTasks(TASKS.filter(t=>
-    (verTodas || (t.encaminhadoPara&&t.encaminhadoPara.nome===meuNome) || t.criadoPor===meuNome)&&
+    (verTodas || (t.encaminhadoPara&&t.encaminhadoPara.nome===meuNome) || t.criadoPor===meuNome || (t.criadoPorCliente&&ehSupervisaoOuGestao()))&&
     (verArq?t.arquivada:!t.arquivada)&&
     (!encMim||(t.encaminhadoPara&&t.encaminhadoPara.nome===meuNome))&&
     (!q||t.titulo.toLowerCase().includes(q)||t.area.toLowerCase().includes(q))&&
@@ -4635,7 +4640,7 @@ function applySession(){
     applyNavPermissions(s.cargo);
     try{ renderNotifBadge(); startNotifPolling(); }catch(_){}
     try{ applyFilters(); }catch(_){}
-    if(sessionStorage.getItem('its_token')) hydrateFromAPI();
+    if(sessionStorage.getItem('its_token')){ hydrateFromAPI(); startEntitySync(); }
   }else{
     document.getElementById('loginScreen').style.display='flex';
   }
@@ -4742,6 +4747,31 @@ function startNotifPolling(){
   notifsDoUsuario().forEach(n=>_notifVistos.add(n.id));
   if(_notifPollTimer) clearInterval(_notifPollTimer);
   _notifPollTimer=setInterval(pollNotifs, 45000);
+}
+
+// Sincroniza as entidades (tarefas/chamados/emergências/avisos) com o servidor
+// periodicamente, mesclando por ID e respeitando exclusões. Assim, uma
+// solicitação criada pelo Cliente aparece para Gerente/Supervisor sem recarregar
+// e não é perdida por sobrescrita entre sessões (last-write-wins).
+let _syncTimer=null;
+async function syncEntidades(){
+  if(!sessionStorage.getItem('its_token')) return;
+  const [tasks,chamados,emergs,avisos]=await Promise.all([
+    remoteGet('its_tasks'), remoteGet('its_chamados'), remoteGet('its_emergs'), remoteGet('its_avisos')
+  ]);
+  if(Array.isArray(tasks)){ const r=mergeArrById(tasks,TASKS,'tasks'); TASKS=r.arr; nextId=Math.max(0,...TASKS.map(t=>t.id),0)+1; localStorage.setItem('its_tasks',JSON.stringify(TASKS)); if(r.healed) remoteSet('its_tasks',TASKS); }
+  if(Array.isArray(chamados)){ const r=mergeArrById(chamados,CHAMADOS,'chamados'); CHAMADOS=r.arr; nextChamadoId=Math.max(0,...CHAMADOS.map(c=>c.id),0)+1; localStorage.setItem('its_chamados',JSON.stringify(CHAMADOS)); if(r.healed) remoteSet('its_chamados',CHAMADOS); }
+  if(Array.isArray(emergs)){ const r=mergeArrById(emergs,EMERGS,'emergs'); EMERGS=r.arr; nextEmergId=Math.max(0,...EMERGS.map(e=>e.id),0)+1; localStorage.setItem('its_emergs',JSON.stringify(EMERGS)); if(r.healed) remoteSet('its_emergs',EMERGS); }
+  if(Array.isArray(avisos)){ const r=mergeArrById(avisos,AVISOS,'avisos'); AVISOS=r.arr; nextAvisoId=Math.max(0,...AVISOS.map(a=>a.id),0)+1; localStorage.setItem('its_avisos',JSON.stringify(AVISOS)); if(r.healed) remoteSet('its_avisos',AVISOS); }
+  try{ if(document.getElementById('panel-tarefas').classList.contains('active')) applyFilters(); }catch(_){}
+  try{ if(document.getElementById('panel-chamados').classList.contains('active')) filterChamados(); }catch(_){}
+  try{ if(document.getElementById('panel-emergencias').classList.contains('active')) filterEmerg(); }catch(_){}
+  try{ if(document.getElementById('panel-avisos').classList.contains('active')) filterAvisos(); }catch(_){}
+  try{ if(document.getElementById('panel-dashboard').classList.contains('active')) updateDashboard(); }catch(_){}
+}
+function startEntitySync(){
+  if(_syncTimer) clearInterval(_syncTimer);
+  _syncTimer=setInterval(syncEntidades, 30000);
 }
 // A notificação é destinada ao usuário atual?
 function notifParaMim(n){
