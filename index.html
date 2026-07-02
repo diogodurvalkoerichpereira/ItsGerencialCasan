@@ -4715,7 +4715,11 @@ async function pollNotifs(){
   if(!sessionStorage.getItem('its_token')) return;
   const remote=await remoteGet('its_notifs');
   if(!Array.isArray(remote)) return;
-  NOTIFS=remote; localStorage.setItem('its_notifs', JSON.stringify(remote));
+  // União por ID: nunca perde notificações que já conhecemos e recupera no
+  // servidor as que faltavam (evita last-write-wins entre sessões).
+  const r=mergeArrById(remote, NOTIFS);
+  NOTIFS=r.arr; localStorage.setItem('its_notifs', JSON.stringify(NOTIFS));
+  if(r.healed) remoteSet('its_notifs', NOTIFS);
   _nextNotifId = NOTIFS.length?Math.max(0,...NOTIFS.map(n=>n.id||0))+1:1;
   renderNotifBadge();
   const s=getSession(); const id=s?s.nome:'';
